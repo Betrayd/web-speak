@@ -4,6 +4,10 @@ import net.betrayd.webspeak.WebSpeak;
 
 public class WebSpeakTest {
     public static void main(String[] args) {
-        System.out.println(new WebSpeak().getTestString());
+
+        WebSpeak server = new WebSpeak();
+
+        System.out.println(server.getTestString());
+        server.start();
     }
 }
