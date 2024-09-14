@@ -1,0 +1,15 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral();
+}
+
+dependencies {
+    implementation project(':webspeak')
+}
+
+application {
+    mainClass = "net.betrayd.webspeaktest.WebSpeakTest"
+}
