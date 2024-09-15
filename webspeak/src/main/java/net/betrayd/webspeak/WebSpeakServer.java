@@ -1,6 +1,8 @@
 package net.betrayd.webspeak;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -15,6 +17,7 @@ import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.player.WebSpeakPlayer;
 import net.betrayd.webspeak.player.WebSpeakPlayerData;
+import net.betrayd.webspeak.util.DoubleValueArray;
 
 /**
  * The primary WebSpeak server
@@ -28,6 +31,8 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
      * All the players that are relevent to the game
      */
     private final Set<WebSpeakPlayerData<T>> players = new HashSet<>();
+
+    private final DoubleValueArray<WebSpeakPlayerData<T>> rtcConnections = new DoubleValueArray<>();
 
     /**
      * All the websocket connections, orginized by their "session ID"
@@ -53,6 +58,52 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
                 .ws("/connect", this::setupWebsocket);
         
         app.start(port);
+    }
+
+    /**
+     * ticks the werver, updates connections on distance ETC.
+     */
+    //TODO: learn how to supress warnings
+    public void tick() {  
+        //Get the list of player  datas in a form I understand how to work with
+        List<WebSpeakPlayerData<T>> allPlayers = new ArrayList<>();
+        for(var player : players.toArray()) {
+            allPlayers.add((WebSpeakPlayerData<T>)player);
+        }
+        List<WebSpeakPlayerData<T>> untestedPlayers = new ArrayList<>(allPlayers);
+
+        for(WebSpeakPlayerData<T> player : allPlayers) {
+            //remove the first player from the list because they don't need to check with themselves, and no one else will need to check with them since they already checked everyone
+            untestedPlayers.remove(player);
+            for(WebSpeakPlayerData<T> player2 : untestedPlayers) {
+
+                WsContext player1context = wsSessions.get(player.getSessionId());
+                WsContext player2context = wsSessions.get(player2.getSessionId());
+                if(!rtcConnections.hasValueSet(player, player2)) {
+                    //players not yet connected
+                    //Asks Player to send a connect request for player2
+                    if(player.getPlayer().isInScope(player2.getPlayer()))
+                    {
+                        //TODO: writing json is lame use a class with a string type and object data instead (if we don't need more data in the future)
+                        player1context.send("{type:connectionRequest,"+"data:"+player2.getPlayerId()+"}");
+                    }
+                }
+                else {
+                    //players are curretnly connected
+                    //asks player1 to disconnect player2 (if this isn't how RTC works we will send it to both)
+                    if(!player.getPlayer().isInScope(player2.getPlayer()))
+                    {
+                        player1context.send("{type:disconnectRequest,"+"data:"+player2.getPlayerId()+"}");
+                    }
+                    else
+                    {
+                        //if we are connected and not sending anything send coords instead
+                        player1context.send("{type:position,data:"+player2.getPlayer().getWebSpeakLocation()+"}");
+                        player2context.send("{type:position,data:"+player.getPlayer().getWebSpeakLocation()+"}");
+                    }
+                }
+            }
+        }
     }
 
     private void setupWebsocket(WsConfig ws) {

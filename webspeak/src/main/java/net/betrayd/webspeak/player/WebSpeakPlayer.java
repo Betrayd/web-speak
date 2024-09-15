@@ -7,4 +7,11 @@ import net.betrayd.webspeak.util.WebSpeakVector;
  */
 public interface WebSpeakPlayer {
     public WebSpeakVector getWebSpeakLocation();
+
+    /**
+     * This has to be bi-dirrectional
+     * @param player
+     * @return
+     */
+    public boolean isInScope(WebSpeakPlayer player);
 }
