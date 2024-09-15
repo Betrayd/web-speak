@@ -1,13 +1,11 @@
 package net.betrayd.webspeaktest;
 
-import net.betrayd.webspeak.WebSpeak;
+import net.betrayd.webspeak.WebSpeakServer;
 
 public class WebSpeakTest {
     public static void main(String[] args) {
 
-        WebSpeak server = new WebSpeak();
-
-        System.out.println(server.getTestString());
-        server.start();
+        WebSpeakServer<?> server = new WebSpeakServer<>();
+        server.start(9090);
     }
 }
