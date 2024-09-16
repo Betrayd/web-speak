@@ -17,7 +17,7 @@ import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.player.WebSpeakPlayer;
 import net.betrayd.webspeak.player.WebSpeakPlayerData;
-import net.betrayd.webspeak.util.DoubleValueArray;
+import net.betrayd.webspeak.util.RelationGraph;
 
 /**
  * The primary WebSpeak server
@@ -33,7 +33,7 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
      */
     private final Set<WebSpeakPlayerData<T>> players = new HashSet<>();
 
-    private final DoubleValueArray<WebSpeakPlayerData<T>> rtcConnections = new DoubleValueArray<>();
+    private final RelationGraph<WebSpeakPlayerData<T>> rtcConnections = new RelationGraph<>();
 
     /**
      * All the websocket connections, orginized by their "session ID"
@@ -69,8 +69,8 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
     public void tick() {
         // Get the list of player datas in a form I understand how to work with
         List<WebSpeakPlayerData<T>> allPlayers = new ArrayList<>();
-        for (var player : players.toArray()) {
-            allPlayers.add((WebSpeakPlayerData<T>) player);
+        for (var player : players) {
+            allPlayers.add(player);
         }
         List<WebSpeakPlayerData<T>> untestedPlayers = new ArrayList<>(allPlayers);
 
@@ -86,7 +86,7 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
                 player2context = wsSessions.get(player2.getSessionId());
                 player1context = wsSessions.get(player.getSessionId());
                 if (player2context != null && player1context != null) {
-                    if (!rtcConnections.hasValueSet(player, player2)) {
+                    if (!rtcConnections.containsRelation(player, player2)) {
                         // players not yet connected
                         // Asks Player to send a connect request for player2
                         if (player.getPlayer().isInScope(player2.getPlayer())) {
@@ -104,16 +104,19 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
                             rtcConnections.remove(player, player2);
                         } else {
                             // if we are connected and not sending anything send coords instead
-                            /*player1context
-                                    .send("{type:position,data:" + player2.getPlayer().getWebSpeakLocation() + "}");
-                            player2context
-                                    .send("{type:position,data:" + player.getPlayer().getWebSpeakLocation() + "}");*/
+                            /*
+                             * player1context
+                             * .send("{type:position,data:" + player2.getPlayer().getWebSpeakLocation() +
+                             * "}");
+                             * player2context
+                             * .send("{type:position,data:" + player.getPlayer().getWebSpeakLocation() +
+                             * "}");
+                             */
                         }
                     }
-                }
-                else
-                {
-                    //someones WS connection stopped. you have to DC the other clients RTC connection here
+                } else {
+                    // someones WS connection stopped. you have to DC the other clients RTC
+                    // connection here
                 }
             }
         }
@@ -178,7 +181,7 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
      * @return the newly created playerData if the player was successfully added.
      *         <code>null</code> if it was not because it was already there.
      */
-    public WebSpeakPlayerData addPlayer(T player) {
+    public WebSpeakPlayerData<T> addPlayer(T player) {
         if (player == null)
             throw new NullPointerException("player");
 
