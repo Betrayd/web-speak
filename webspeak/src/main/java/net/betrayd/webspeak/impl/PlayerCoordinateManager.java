@@ -49,12 +49,15 @@ public class PlayerCoordinateManager {
                 continue;
 
             for (var entry : newTransforms.entrySet()) {
-                WebSpeakPlayer key = entry.getKey();
+                WebSpeakPlayer otherPlayer = entry.getKey();
+                if (!player.isInScope(otherPlayer))
+                    continue;
+
                 WebSpeakTransform transform = entry.getValue();
 
                 ws.send(String.format(
                         "{\"type\":\"updateTransform\",\"player\":\"%s\",\"pos\":[%f,%f,%f],\"rot\":[%f,%f,%f]}",
-                        key.getPlayerId(),
+                        otherPlayer.getPlayerId(),
                         transform.pos.x(), transform.pos.y(), transform.pos.z(),
                         transform.rot.x(), transform.rot.y(), transform.rot.z()));
             }
