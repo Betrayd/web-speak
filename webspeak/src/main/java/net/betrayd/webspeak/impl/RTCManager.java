@@ -32,7 +32,7 @@ public class RTCManager {
                 WsContext player1Context = player1.getWsContext();
 
                 if (player1Context == null)
-                    return;
+                    continue;
                 
                 if (connections.containsRelation(player1, player2) && !player1.isInScope(player2)) {
                     player1Context.send("{type:disconnectRequest," + "data:" + player2.getPlayerId() + "}");
