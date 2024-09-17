@@ -65,6 +65,10 @@ public class WebSpeakServer {
         app.start(port);
     }
 
+    public void stop() {
+        app.stop();
+    }
+
     /**
      * ticks the werver, updates connections on distance ETC.
      */

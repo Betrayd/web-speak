@@ -1,39 +1,35 @@
 package net.betrayd.webspeaktest;
 
 import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import net.betrayd.webspeak.WebSpeakServer;
 
 public class WebSpeakTest extends Application {
-    public static void main(String[] args) throws Exception {
 
-        WebSpeakServer server = new WebSpeakServer();
-        server.start(9090);
-
-        TestWebPlayer player1 = server.addPlayer(TestWebPlayer::new);
-        System.out.println("SessionID for player1 is: " + player1.getSessionId());
-
-        TestWebPlayer player2 = server.addPlayer(TestWebPlayer::new);
-        System.out.println("SessionID for player2 is: " + player2.getSessionId());
-
-        while (true) {
-            server.tick();
-            Thread.sleep(20);
-        }
-    }
+    private WebSpeakTestServer server;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        primaryStage.setTitle("Hello World!");
-        Label label = new Label();
-        label.setText("Hello World!");;
+        server = new WebSpeakTestServer(9090);
 
-        StackPane root = new StackPane();
-        root.getChildren().add(label);
-        primaryStage.setScene(new Scene(root, 1280, 720));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/ui/mainUI.fxml"));
+        Parent root = loader.load();
+
+        Scene scene = new Scene(root);
+        primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    @Override
+    public void stop() throws Exception {
+        if (server != null)
+            server.shutdown();
+        super.stop();
+    }
+
+    public WebSpeakTestServer getServer() {
+        return server;
     }
 }
