@@ -13,6 +13,7 @@ import io.javalin.Javalin;
 import io.javalin.websocket.WsCloseStatus;
 import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
 
 /**
@@ -35,6 +36,7 @@ public class WebSpeakServer {
 
     // private final RelationGraph<WebSpeakPlayer> rtcConnections = new RelationGraph<>();
     private final RTCManager rtcManager = new RTCManager(this);
+    private final PlayerCoordinateManager playerCoordinateManager = new PlayerCoordinateManager(this);
 
     /**
      * All the websocket connections, orginized by their "session ID"
@@ -68,6 +70,7 @@ public class WebSpeakServer {
      */
     public void tick() {
         rtcManager.tickRTC();
+        playerCoordinateManager.tick();
     }
 
     private void setupWebsocket(WsConfig ws) {
