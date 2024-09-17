@@ -12,8 +12,12 @@ public class TestWebPlayer extends WebSpeakPlayer {
 
     @Override
     public WebSpeakVector getLocation() {
-        return new WebSpeakVector(0, 0, 0);
+        return WebSpeakVector.ZERO;
     }
+    
+    public WebSpeakVector getRotation() {
+        return WebSpeakVector.ZERO;
+    };
 
     @Override
     public boolean isInScope(WebSpeakPlayer player) {
