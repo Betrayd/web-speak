@@ -1,4 +1,4 @@
-package net.betrayd.webspeak.util;
+package net.betrayd.webspeak.impl;
 
 import java.util.Collections;
 import java.util.HashMap;

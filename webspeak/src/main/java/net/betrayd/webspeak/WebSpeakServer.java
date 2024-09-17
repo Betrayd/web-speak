@@ -1,11 +1,9 @@
 package net.betrayd.webspeak;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.collect.BiMap;
@@ -15,32 +13,35 @@ import io.javalin.Javalin;
 import io.javalin.websocket.WsCloseStatus;
 import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
-import net.betrayd.webspeak.player.WebSpeakPlayer;
-import net.betrayd.webspeak.player.WebSpeakPlayerData;
-import net.betrayd.webspeak.util.RelationGraph;
+import net.betrayd.webspeak.impl.RTCManager;
 
 /**
  * The primary WebSpeak server
  * 
  * @param <T> The player implementation to use
  */
-public class WebSpeakServer<T extends WebSpeakPlayer> {
+public class WebSpeakServer {
+
+    public static interface WebSpeakPlayerFactory<T extends WebSpeakPlayer> {
+        public T create(WebSpeakServer server, String playerId, String sessionId);
+    }
 
     private Javalin app;
 
     /**
      * All the players that are relevent to the game
      */
-    private final Set<WebSpeakPlayerData<T>> players = new HashSet<>();
+    private final Set<WebSpeakPlayer> players = new HashSet<>();
 
-    private final RelationGraph<WebSpeakPlayerData<T>> rtcConnections = new RelationGraph<>();
+    // private final RelationGraph<WebSpeakPlayer> rtcConnections = new RelationGraph<>();
+    private final RTCManager rtcManager = new RTCManager(this);
 
     /**
      * All the websocket connections, orginized by their "session ID"
      * The session ID is a unique value stored with each player, defined in
      * WebSpeakPlayerData
      */
-    private final BiMap<String, WsContext> wsSessions = HashBiMap.create();
+    private final BiMap<WebSpeakPlayer, WsContext> wsSessions = HashBiMap.create();
 
     /**
      * Get the base Javalin app
@@ -65,81 +66,34 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
     /**
      * ticks the werver, updates connections on distance ETC.
      */
-    // TODO: learn how to supress warnings
     public void tick() {
-        // Get the list of player datas in a form I understand how to work with
-        List<WebSpeakPlayerData<T>> allPlayers = new ArrayList<>();
-        for (var player : players) {
-            allPlayers.add(player);
-        }
-        List<WebSpeakPlayerData<T>> untestedPlayers = new ArrayList<>(allPlayers);
-
-        WsContext player2context;
-        WsContext player1context;
-        for (WebSpeakPlayerData<T> player : allPlayers) {
-            // remove the first player from the list because they don't need to check with
-            // themselves, and no one else will need to check with them since they already
-            // checked everyone
-            untestedPlayers.remove(player);
-            for (WebSpeakPlayerData<T> player2 : untestedPlayers) {
-
-                player2context = wsSessions.get(player2.getSessionId());
-                player1context = wsSessions.get(player.getSessionId());
-                if (player2context != null && player1context != null) {
-                    if (!rtcConnections.containsRelation(player, player2)) {
-                        // players not yet connected
-                        // Asks Player to send a connect request for player2
-                        if (player.getPlayer().isInScope(player2.getPlayer())) {
-                            // TODO: writing json is lame use a class with a string type and object data
-                            // instead (if we don't need more data in the future)
-                            player1context.send("{type:connectionRequest," + "data:" + player2.getPlayerId() + "}");
-                            rtcConnections.add(player, player2);
-                        }
-                    } else {
-                        // players are curretnly connected
-                        // asks player1 to disconnect player2 (if this isn't how RTC works we will send
-                        // it to both)
-                        if (!player.getPlayer().isInScope(player2.getPlayer())) {
-                            player1context.send("{type:disconnectRequest," + "data:" + player2.getPlayerId() + "}");
-                            rtcConnections.remove(player, player2);
-                        } else {
-                            // if we are connected and not sending anything send coords instead
-                            /*
-                             * player1context
-                             * .send("{type:position,data:" + player2.getPlayer().getWebSpeakLocation() +
-                             * "}");
-                             * player2context
-                             * .send("{type:position,data:" + player.getPlayer().getWebSpeakLocation() +
-                             * "}");
-                             */
-                        }
-                    }
-                } else {
-                    // someones WS connection stopped. you have to DC the other clients RTC
-                    // connection here
-                }
-            }
-        }
+        rtcManager.tickRTC();
     }
 
     private void setupWebsocket(WsConfig ws) {
         ws.onConnect(ctx -> {
+            System.out.print(Thread.currentThread().getName());
             String sessionId = ctx.queryParam("id");
-            if (wsSessions.containsKey(sessionId)) {
-                ctx.closeSession(WsCloseStatus.POLICY_VIOLATION,
-                        "Session " + sessionId + " already has a client connected.");
-            }
-
-            var playerData = players.stream().filter(p -> p.getSessionId().equals(sessionId)).findAny();
-            if (playerData.isEmpty()) {
+            WebSpeakPlayer player = playerFromSessionId(sessionId);
+            if (player == null) {
                 ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "No session found with ID " + sessionId);
+                return;
             }
 
-            wsSessions.put(sessionId, ctx);
+            // Will be non-null if something was already there.
+            if (wsSessions.putIfAbsent(player, ctx) != null) {
+                ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "Session " + sessionId + " already has a client connected.");
+            }
+            
+            player.wsContext = ctx;
+            wsSessions.put(player, ctx);
         });
 
         ws.onClose(ctx -> {
-            wsSessions.inverse().remove(ctx);
+            WebSpeakPlayer player = wsSessions.inverse().remove(ctx);
+            if (player != null) {
+                player.wsContext = null;
+            }
         });
     }
 
@@ -148,8 +102,9 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
      * 
      * @return Player stream.
      */
-    public Stream<T> streamPlayers() {
-        return players.stream().map(WebSpeakPlayerData::getPlayer);
+    @Deprecated
+    public Stream<WebSpeakPlayer> streamPlayers() {
+        return players.stream();
     }
 
     /**
@@ -157,8 +112,8 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
      * 
      * @return All webspeak players
      */
-    public Set<T> getPlayers() {
-        return streamPlayers().collect(Collectors.toSet());
+    public Set<WebSpeakPlayer> getPlayers() {
+        return Collections.unmodifiableSet(players);
     }
 
     /**
@@ -171,28 +126,44 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
         if (player == null)
             return false;
 
-        return players.stream().anyMatch(p -> p.getPlayer().equals(player));
+        return players.contains(player);
+        // return players.stream().anyMatch(p -> p.getPlayer().equals(player));
+    }
+    
+    public <T extends WebSpeakPlayer> T addPlayer(WebSpeakPlayerFactory<T> factory) {
+        T player = factory.create(this, UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        addPlayer(player, true);
+        return player;
     }
 
     /**
      * Add a player to the webspeak server.
      * 
      * @param player Player to add.
-     * @return the newly created playerData if the player was successfully added.
-     *         <code>null</code> if it was not because it was already there.
+     * @return If the player was added. False if it was already there.
      */
-    public WebSpeakPlayerData<T> addPlayer(T player) {
-        if (player == null)
+    public boolean addPlayer(WebSpeakPlayer player) {
+        return addPlayer(player, false);
+    }
+
+    protected boolean addPlayer(WebSpeakPlayer player, boolean noCheck) {
+        if (player == null) {
             throw new NullPointerException("player");
+        }
+        if (players.contains(player))
+            return false;
 
-        if (hasPlayer(player))
-            return null;
-
-        WebSpeakPlayerData<T> playerData = new WebSpeakPlayerData<>(player,
-                UUID.randomUUID().toString(), UUID.randomUUID().toString());
-
-        players.add(playerData);
-        return playerData;
+        if (!noCheck) {
+            if (player.getServer() != this) {
+                throw new IllegalArgumentException("player belongs to the wrong server");
+            }
+            for (WebSpeakPlayer p : players) {
+                if (p.getPlayerId().equals(player.getPlayerId()) || p.getSessionId().equals(player.getSessionId())) {
+                    throw new IllegalArgumentException("Player must have a unique player ID and session ID.");
+                }
+            }
+        }
+        return players.add(player);
     }
 
     /**
@@ -202,28 +173,29 @@ public class WebSpeakServer<T extends WebSpeakPlayer> {
      * @return If the player was in the webspeak server.
      */
     public boolean removePlayer(Object player) {
-        if (player == null)
+        if (player == null || !(player instanceof WebSpeakPlayer webPlayer))
             return false;
 
-        boolean success = false;
-        var iterator = players.iterator();
-        WebSpeakPlayerData<T> playerData;
-        while (iterator.hasNext()) {
-
-            playerData = iterator.next();
-            if (!playerData.getPlayer().equals(player))
-                continue;
-
-            WsContext ws = wsSessions.get(playerData.getSessionId());
-            if (ws != null) {
-                ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
-                wsSessions.remove(playerData.getSessionId());
-            }
-
-            success = true;
-            iterator.remove();
+        if (players.remove(webPlayer)) {
+            onRemovePlayer(webPlayer);
+            return true;
         }
+        return false;
+    }
 
-        return success;
+    protected void onRemovePlayer(WebSpeakPlayer player) {
+        WsContext ws = wsSessions.remove(player);
+        if (ws != null) {
+            ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
+        }
+        player.wsContext = null;
+    }
+    
+    private WebSpeakPlayer playerFromSessionId(String sessionId) {
+        for (WebSpeakPlayer player : players) {
+            if (player.getSessionId().equals(sessionId))
+                return player;
+        }
+        return null;
     }
 }

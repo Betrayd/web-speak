@@ -1,32 +1,22 @@
 package net.betrayd.webspeaktest;
 
 import net.betrayd.webspeak.WebSpeakServer;
-import net.betrayd.webspeak.player.WebSpeakPlayerData;
 
 public class WebSpeakTest {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 
-        WebSpeakServer<TestWebPlayer> server = new WebSpeakServer<>();
+        WebSpeakServer server = new WebSpeakServer();
         server.start(9090);
 
-        TestWebPlayer player1 = new TestWebPlayer();
-        WebSpeakPlayerData<TestWebPlayer> data1 = server.addPlayer(player1);
-        System.out.println("SessionID for player1 is: " + data1.getSessionId());
+        TestWebPlayer player1 = server.addPlayer(TestWebPlayer::new);
+        System.out.println("SessionID for player1 is: " + player1.getSessionId());
 
-        TestWebPlayer player2 = new TestWebPlayer();
-        WebSpeakPlayerData<TestWebPlayer> data2 = server.addPlayer(player2);
-        System.out.println("SessionID for player2 is: " + data2.getSessionId());
+        TestWebPlayer player2 = server.addPlayer(TestWebPlayer::new);
+        System.out.println("SessionID for player2 is: " + player2.getSessionId());
 
-        while(true)
-        {
+        while (true) {
             server.tick();
-            try{
-            Thread.sleep(1000/20);
-            }
-            catch(InterruptedException e)
-            {
-                
-            }
+            Thread.sleep(20);
         }
     }
 }

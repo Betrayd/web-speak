@@ -1,12 +1,17 @@
 package net.betrayd.webspeaktest;
 
-import net.betrayd.webspeak.player.WebSpeakPlayer;
+import net.betrayd.webspeak.WebSpeakPlayer;
+import net.betrayd.webspeak.WebSpeakServer;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
-public class TestWebPlayer implements WebSpeakPlayer {
+public class TestWebPlayer extends WebSpeakPlayer {
+    
+    public TestWebPlayer(WebSpeakServer server, String playerId, String sessionId) {
+        super(server, playerId, sessionId);
+    }
 
     @Override
-    public WebSpeakVector getWebSpeakLocation() {
+    public WebSpeakVector getLocation() {
         return new WebSpeakVector(0, 0, 0);
     }
 
