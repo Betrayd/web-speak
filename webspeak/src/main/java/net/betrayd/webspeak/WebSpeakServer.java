@@ -66,33 +66,37 @@ public class WebSpeakServer {
     /**
      * ticks the werver, updates connections on distance ETC.
      */
-    public void tick() {
+    public synchronized void tick() {
         rtcManager.tickRTC();
     }
 
     private void setupWebsocket(WsConfig ws) {
         ws.onConnect(ctx -> {
-            System.out.print(Thread.currentThread().getName());
-            String sessionId = ctx.queryParam("id");
-            WebSpeakPlayer player = playerFromSessionId(sessionId);
-            if (player == null) {
-                ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "No session found with ID " + sessionId);
-                return;
+            synchronized(this) {
+                System.out.print(Thread.currentThread().getName());
+                String sessionId = ctx.queryParam("id");
+                WebSpeakPlayer player = playerFromSessionId(sessionId);
+                if (player == null) {
+                    ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "No session found with ID " + sessionId);
+                    return;
+                }
+    
+                // Will be non-null if something was already there.
+                if (wsSessions.putIfAbsent(player, ctx) != null) {
+                    ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "Session " + sessionId + " already has a client connected.");
+                }
+                
+                player.wsContext = ctx;
+                wsSessions.put(player, ctx);
             }
-
-            // Will be non-null if something was already there.
-            if (wsSessions.putIfAbsent(player, ctx) != null) {
-                ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "Session " + sessionId + " already has a client connected.");
-            }
-            
-            player.wsContext = ctx;
-            wsSessions.put(player, ctx);
         });
 
         ws.onClose(ctx -> {
-            WebSpeakPlayer player = wsSessions.inverse().remove(ctx);
-            if (player != null) {
-                player.wsContext = null;
+            synchronized(this) {
+                WebSpeakPlayer player = wsSessions.inverse().remove(ctx);
+                if (player != null) {
+                    player.wsContext = null;
+                }
             }
         });
     }

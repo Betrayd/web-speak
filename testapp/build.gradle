@@ -1,5 +1,6 @@
 plugins {
     id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
 repositories {
@@ -13,5 +14,10 @@ dependencies {
 }
 
 application {
-    mainClass = "net.betrayd.webspeaktest.WebSpeakTest"
+    mainClass = "net.betrayd.webspeaktest.Entrypoint"
+}
+
+javafx {
+    version = "21.0.4"
+    modules = [ 'javafx.controls', 'javafx.fxml' ]
 }
