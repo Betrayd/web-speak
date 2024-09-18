@@ -1,0 +1,5 @@
+.grid-background {
+    -fx-background-color: #D3D3D333,
+        linear-gradient(from 0.0px 0.0px to 20.0px  0.0px, repeat, black 5%, transparent 5%),
+        linear-gradient(from 0.0px 0.0px to  0.0px 20.0px, repeat, black 5%, transparent 5%);
+}

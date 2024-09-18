@@ -55,7 +55,7 @@ public class WebSpeakTestServer implements Executor {
                 task.run();
             }
 
-            webSpeakServer.tick();
+            tick();
             try {
                 Thread.sleep(30);
             } catch (InterruptedException e) {
@@ -65,6 +65,10 @@ public class WebSpeakTestServer implements Executor {
 
         webSpeakServer.stop();
         shutdownFuture.complete(null);
+    }
+
+    protected void tick() {
+        webSpeakServer.tick();
     }
     
     public boolean isShutdownQueued() {
