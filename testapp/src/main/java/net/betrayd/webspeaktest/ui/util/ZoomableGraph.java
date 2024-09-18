@@ -1,4 +1,4 @@
-package net.betrayd.webspeaktest.ui;
+package net.betrayd.webspeaktest.ui.util;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
