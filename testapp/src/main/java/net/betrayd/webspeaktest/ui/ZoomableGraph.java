@@ -7,9 +7,9 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
@@ -24,18 +24,15 @@ public class ZoomableGraph extends Region {
     public ZoomableGraph() {
         pane.getStyleClass().add("grid-background");
         pane.getTransforms().addAll(translation, scale);
-        
-        // pane.setClip(clipRect);
-        clipRect.setFill(Color.GRAY);
-        clipRect.setStroke(Color.RED);
         setClip(clipRect);
-
 
         getChildren().addAll(pane);
 
-
         setOnMousePressed(this::onMousePressed);
         setOnMouseDragged(this::onMouseDragged);
+
+        translation.xProperty().bindBidirectional(xOffsetProperty);
+        translation.yProperty().bindBidirectional(yOffsetProperty);
 
         zoomAmountProperty.addListener((prop, oldVal, newVal) -> {
             double val = Math.pow(2, newVal.doubleValue());
@@ -46,6 +43,11 @@ public class ZoomableGraph extends Region {
         setOnScroll(e -> {
             setZoomAmount(getZoomAmount() + e.getDeltaY() * 0.005);
         });
+
+        zoomAmountProperty.addListener((prop, oldVal, newVal) -> updateBackground());
+        xOffsetProperty.addListener((prop, oldVal, newVal) -> updateBackground());
+        yOffsetProperty.addListener((prop, oldVal, newVal) -> updateBackground());
+        updateBackground();
     }
 
     @Override
@@ -53,10 +55,6 @@ public class ZoomableGraph extends Region {
         super.layoutChildren();
         clipRect.setWidth(getWidth());
         clipRect.setHeight(getHeight());
-        // Point2D globalCoord = localToScene(0, 0);
-
-        // clipRect.setX(globalCoord.getX());
-        // clipRect.setY(globalCoord.getY());
     }
 
 
@@ -74,8 +72,32 @@ public class ZoomableGraph extends Region {
         return allowManualTransform;
     }
 
-    public Translate getTranslation() {
-        return translation;
+    private DoubleProperty xOffsetProperty = new SimpleDoubleProperty();
+
+    public double getXOffset() {
+        return xOffsetProperty.get();
+    }
+
+    public void setXOffset(double xOffset) {
+        xOffsetProperty.set(xOffset);
+    }
+
+    public DoubleProperty xOffsetProperty() {
+        return xOffsetProperty;
+    }
+
+    public DoubleProperty yOffsetProperty = new SimpleDoubleProperty();
+
+    public double getYOffset() {
+        return yOffsetProperty.get();
+    }
+
+    public void setYOffset(double yOffset) {
+        yOffsetProperty.set(yOffset);
+    }
+
+    public DoubleProperty yOffsetProperty() {
+        return yOffsetProperty;
     }
 
     private DoubleProperty zoomAmountProperty = new SimpleDoubleProperty(0);
@@ -90,6 +112,20 @@ public class ZoomableGraph extends Region {
 
     public DoubleProperty zoomAmountProperty() {
         return zoomAmountProperty;
+    }
+
+    private DoubleProperty graphScaleProperty = new SimpleDoubleProperty(20);
+
+    public double getGraphScale() {
+        return graphScaleProperty.get();
+    }
+
+    public void setGraphScale(double graphScale) {
+        graphScaleProperty.set(graphScale);
+    }
+
+    public DoubleProperty graphScaleProperty() {
+        return graphScaleProperty;
     }
 
     public final ObservableList<Node> getGraphChildren() {
@@ -116,4 +152,34 @@ public class ZoomableGraph extends Region {
         translation.setY(translation.getY() + deltaY);
         e.consume();
     }
+
+    private void updateBackground() {
+        double size = getGraphScale() * Math.pow(2, getZoomAmount());
+        setBackground(Background.fill(JavaFXUtils.createGridPattern(size, getXOffset(), getYOffset())));
+        
+    }
+
+    // protected String createBackgroundCSS() {
+    //     double minX = -getXOffset();
+    //     double maxX = minX + getGraphScale();
+    //     double minY = -getYOffset() * getGraphScale();
+    //     double maxY = minY + getGraphScale();
+
+    //     return """
+    //             .root {
+    //                 -fx-background-color: #D3D3D333,
+    //                     linear-gradient(from {minX}px 0.0px to {maxX}px  0.0px, repeat, black 5%, transparent 5%),
+    //                     linear-gradient(from 0.0px {minY}px to  0.0px {maxY}px, repeat, black 5%, transparent 5%);
+    //             }
+    //                 """
+    //             .replace("{minX}", Double.toString(minX))
+    //             .replace("{maxX}", Double.toString(maxX))
+    //             .replace("{minY}", Double.toString(minY))
+    //             .replace("{maxY}", Double.toString(maxY));
+    // }
+
+    // private void updateBackgroundCSS() {
+    //     // pane.setStyle(createBackgroundCSS());
+    //     setBackground(Background.fill(Color.BLACK));
+    // }
 }

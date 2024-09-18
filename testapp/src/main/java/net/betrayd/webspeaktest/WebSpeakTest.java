@@ -18,8 +18,10 @@ public class WebSpeakTest extends Application {
         Parent root = loader.load();
 
         Scene scene = new Scene(root);
+
         primaryStage.setScene(scene);
         primaryStage.show();
+
     }
 
     @Override
