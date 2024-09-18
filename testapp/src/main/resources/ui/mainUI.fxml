@@ -30,7 +30,7 @@
       </MenuBar>
       <AnchorPane prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
          <children>
-            <ZoomableGraph fx:id="zoomGraph" layoutX="80.0" layoutY="34.0" prefHeight="331.0" prefWidth="625.0" styleClass="grid-background" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+            <ZoomableGraph fx:id="zoomGraph" layoutX="80.0" layoutY="34.0" prefHeight="331.0" prefWidth="625.0" style="-fx-background-color: red;" styleClass="grid-background" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
          </children></AnchorPane>
    </children>
 </VBox>

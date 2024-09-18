@@ -6,6 +6,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Pane;
@@ -15,18 +16,20 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 
 public class ZoomableGraph extends Region {
-    private Pane pane = new Pane();
+    private final Pane pane = new Pane();
 
     private final Translate translation = new Translate();
     private final Scale scale = new Scale();
     private final Rectangle clipRect = new Rectangle();
+
+    private final Region graph = new Region();
 
     public ZoomableGraph() {
         pane.getStyleClass().add("grid-background");
         pane.getTransforms().addAll(translation, scale);
         setClip(clipRect);
 
-        getChildren().addAll(pane);
+        getChildren().addAll(graph, pane);
 
         setOnMousePressed(this::onMousePressed);
         setOnMouseDragged(this::onMouseDragged);
@@ -47,7 +50,7 @@ public class ZoomableGraph extends Region {
         zoomAmountProperty.addListener((prop, oldVal, newVal) -> updateBackground());
         xOffsetProperty.addListener((prop, oldVal, newVal) -> updateBackground());
         yOffsetProperty.addListener((prop, oldVal, newVal) -> updateBackground());
-        updateBackground();
+        
     }
 
     @Override
@@ -55,10 +58,12 @@ public class ZoomableGraph extends Region {
         super.layoutChildren();
         clipRect.setWidth(getWidth());
         clipRect.setHeight(getHeight());
+        graph.resizeRelocate(0, 0, getWidth(), getHeight());
+        updateBackground();
     }
 
 
-    private BooleanProperty allowManualTransform = new SimpleBooleanProperty();
+    private BooleanProperty allowManualTransform = new SimpleBooleanProperty(true);
 
     public boolean getAllowManualTransform() {
         return allowManualTransform.get();
@@ -136,12 +141,16 @@ public class ZoomableGraph extends Region {
     private double lastY;
 
     private void onMousePressed(MouseEvent e) {
-        lastX = e.getSceneX();
-        lastY = e.getSceneY();
-        e.consume();
+        if (e.getButton() == MouseButton.SECONDARY) {
+            lastX = e.getSceneX();
+            lastY = e.getSceneY();
+            e.consume();
+        }
     }
     
     private void onMouseDragged(MouseEvent e) {
+        if (!allowManualTransform.get() || e.getButton() != MouseButton.SECONDARY)
+            return;
         double deltaX = e.getSceneX() - lastX;
         double deltaY = e.getSceneY() - lastY;
 
@@ -155,31 +164,7 @@ public class ZoomableGraph extends Region {
 
     private void updateBackground() {
         double size = getGraphScale() * Math.pow(2, getZoomAmount());
-        setBackground(Background.fill(JavaFXUtils.createGridPattern(size, getXOffset(), getYOffset())));
-        
+        graph.setBackground(Background.fill(JavaFXUtils.createGridPattern(size, getXOffset(), getYOffset())));
     }
 
-    // protected String createBackgroundCSS() {
-    //     double minX = -getXOffset();
-    //     double maxX = minX + getGraphScale();
-    //     double minY = -getYOffset() * getGraphScale();
-    //     double maxY = minY + getGraphScale();
-
-    //     return """
-    //             .root {
-    //                 -fx-background-color: #D3D3D333,
-    //                     linear-gradient(from {minX}px 0.0px to {maxX}px  0.0px, repeat, black 5%, transparent 5%),
-    //                     linear-gradient(from 0.0px {minY}px to  0.0px {maxY}px, repeat, black 5%, transparent 5%);
-    //             }
-    //                 """
-    //             .replace("{minX}", Double.toString(minX))
-    //             .replace("{maxX}", Double.toString(maxX))
-    //             .replace("{minY}", Double.toString(minY))
-    //             .replace("{maxY}", Double.toString(maxY));
-    // }
-
-    // private void updateBackgroundCSS() {
-    //     // pane.setStyle(createBackgroundCSS());
-    //     setBackground(Background.fill(Color.BLACK));
-    // }
 }

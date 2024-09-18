@@ -12,19 +12,21 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.ImagePattern;
 
 public class JavaFXUtils {
-    private static Map<Double, Image> gridImages = new MapMaker().weakValues().makeMap();
+    private static record ColorSizeKey(Color lineColor, Double size) {};
 
-    public static ImagePattern createGridPattern(double gridSize, double x, double y, Color fillColor, Color lineColor) {
+    private static Map<ColorSizeKey, Image> gridImages = new MapMaker().weakValues().makeMap();
+
+    public static ImagePattern createGridPattern(double gridSize, double x, double y, Color lineColor) {
         double w = gridSize;
         double h = gridSize;
+        ColorSizeKey key = new ColorSizeKey(lineColor, gridSize);
 
-        Image image = gridImages.computeIfAbsent(gridSize, s -> {
+        Image image = gridImages.computeIfAbsent(key, s -> {
             Canvas canvas = new Canvas(w, h);
             GraphicsContext gc = canvas.getGraphicsContext2D();
     
             gc.setStroke(Color.BLACK);
-            gc.setFill(Color.LIGHTGRAY.deriveColor(1, 1, 1, 0.2));
-            gc.fillRect(0, 0, w, h);
+            // gc.fillRect(0, 0, w, h);
             gc.strokeRect(0, 0, w, h);
             return canvas.snapshot(new SnapshotParameters(), null);
         });
@@ -35,6 +37,6 @@ public class JavaFXUtils {
     }
 
     public static ImagePattern createGridPattern(double gridSize, double x, double y) {
-        return createGridPattern(gridSize, x, y, Color.LIGHTGRAY, Color.BLACK);
+        return createGridPattern(gridSize, x, y, Color.BLACK);
     }
 }
