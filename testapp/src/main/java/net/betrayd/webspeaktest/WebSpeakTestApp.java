@@ -86,7 +86,7 @@ public class WebSpeakTestApp extends Application {
         }
     }
 
-    public CompletableFuture<Void> stopServer(int port) {
+    public CompletableFuture<Void> stopServer() {
         if (!isServerRunning()) {
             LOGGER.error("Server is not running!");
             return CompletableFuture.completedFuture(null);

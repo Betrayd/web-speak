@@ -92,4 +92,12 @@ public class WebSpeakTestServer implements Executor {
         shutdown();
         thread.join();
     }
+
+    public String getLocalConnectionUrl() {
+        if (webSpeakServer == null) {
+            return "";
+        }
+
+        return "http://localhost:" + port;
+    }
 }
