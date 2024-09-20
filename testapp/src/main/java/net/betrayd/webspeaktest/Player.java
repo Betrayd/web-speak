@@ -17,19 +17,16 @@ public class Player {
 
     private static final URL AVATAR_URL = Player.class.getResource("/ui/avatar.fxml");
 
-    public static Node loadAvatar(Color color) {
+    public static PlayerAvatarController loadAvatar() {
         FXMLLoader fxmlLoader = new FXMLLoader(AVATAR_URL);
 
-        Node node;
         try {
-            node = fxmlLoader.load();
+            fxmlLoader.load();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        PlayerAvatarController controller = fxmlLoader.getController();
-        controller.setFill(color);
-
-        return node;
+        return fxmlLoader.getController();
+        
     }
 
     // public static ImageView loadAvatar(double hue) {
@@ -50,25 +47,38 @@ public class Player {
     // }
 
     public static final Player create(Color color) {
-        return new Player(loadAvatar(color), color);
+        PlayerAvatarController controller = loadAvatar();
+        Player player = new Player(controller.getRoot(), color);
+        controller.fillProperty().bind(player.colorProperty());
+        return player;
     }
+    
 
     private final Node node;
-    private final Color color;
 
     private final StringProperty nameProperty = new SimpleStringProperty("player");
     
     public Player(Node node, Color color) {
         this.node = node;
-        this.color = color;
+        this.colorProperty.set(color);
     }
 
     public Node getNode() {
         return node;
     }
 
+    private final ObjectProperty<Color> colorProperty = new SimpleObjectProperty<>(Color.RED);
+
     public Color getColor() {
-        return color;
+        return colorProperty.get();
+    }
+
+    public void setColor(Color color) {
+        colorProperty.set(color);
+    }
+
+    public ObjectProperty<Color> colorProperty() {
+        return colorProperty;
     }
 
     public String getName() {

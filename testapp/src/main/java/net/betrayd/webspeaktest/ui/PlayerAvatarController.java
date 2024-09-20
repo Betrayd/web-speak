@@ -48,4 +48,8 @@ public class PlayerAvatarController {
             e.consume();
         }
     }
+
+    public Group getRoot() {
+        return root;
+    }
 }
