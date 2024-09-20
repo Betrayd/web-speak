@@ -98,7 +98,7 @@ public final class MainUIController {
 
     @FXML
     private void addPlayer() {
-        app.addPlayer(Player.create(Color.RED));
+        app.addPlayer(Player.create(Color.color(Math.random(), Math.random(), Math.random())));
     }
 
     public void onAddPlayer(Player player) {

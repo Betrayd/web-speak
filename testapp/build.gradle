@@ -11,10 +11,8 @@ repositories {
 dependencies {
     implementation project(':webspeak')
 
-    implementation "org.slf4j:slf4j-simple:2.0.16"
+    implementation 'org.slf4j:slf4j-simple:2.0.16'
     implementation 'com.google.guava:guava:32.1.2-jre'
-
-    implementation "com.github.hervegirod:fxsvgimage:1.1"
 }
 
 application {

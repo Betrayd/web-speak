@@ -1,53 +1,53 @@
 package net.betrayd.webspeaktest;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.stream.Collectors;
-
-import org.girod.javafx.svgimage.SVGImage;
-import org.girod.javafx.svgimage.SVGLoader;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
-import net.betrayd.webspeaktest.ui.Avatar;
+import net.betrayd.webspeaktest.ui.PlayerAvatarController;
 
 public class Player {
 
-    private static final URL AVATAR_URL = Avatar.class.getResource("/ui/avatar.svg");
-    private static String avatarSvgContents;
+    private static final URL AVATAR_URL = Player.class.getResource("/ui/avatar.fxml");
 
-    public static SVGImage loadAvatar(Color color) {
-        if (avatarSvgContents == null) {
-            try {
-                avatarSvgContents = loadSvgContents();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+    public static Node loadAvatar(Color color) {
+        FXMLLoader fxmlLoader = new FXMLLoader(AVATAR_URL);
+
+        Node node;
+        try {
+            node = fxmlLoader.load();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+        PlayerAvatarController controller = fxmlLoader.getController();
+        controller.setFill(color);
 
-        return SVGLoader.load(avatarSvgContents, ".avatar-body {fill:" + colorToCss(color) + ";}");
+        return node;
     }
 
-    private static String loadSvgContents() throws IOException {
-        try(BufferedReader reader = new BufferedReader(new InputStreamReader(AVATAR_URL.openStream()))) {
-            return reader.lines().collect(Collectors.joining(System.lineSeparator()));
-        }
-    }
+    // public static ImageView loadAvatar(double hue) {
+    //     if (avatarImage == null) {
+    //         avatarImage = new Image(AVATAR_URL.toString(), 32, 32, true, true);
+    //     }
 
-    private static String colorToCss(Color color) {
-        return String.format("rgba(%d,%d,%d,%d)",
-                (int) (color.getRed() * 255),
-                (int) (color.getGreen() * 255),
-                (int) (color.getBlue() * 255),
-                (int) (color.getOpacity() * 255));
-    }
+    //     ImageView image = new ImageView(avatarImage);
+    //     image.setFitWidth(32);
+    //     image.setFitHeight(32);
+
+    //     ColorAdjust colorAdjust = new ColorAdjust();
+    //     colorAdjust.setHue(hue);
+
+    //     image.setEffect(colorAdjust);
+
+    //     return image;
+    // }
 
     public static final Player create(Color color) {
         return new Player(loadAvatar(color), color);
