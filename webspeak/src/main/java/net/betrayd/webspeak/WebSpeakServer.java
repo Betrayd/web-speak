@@ -52,6 +52,10 @@ public class WebSpeakServer {
         return app;
     }
 
+    public int getPort() {
+        return app.port();
+    }
+
     /**
      * Start the server.
      * 

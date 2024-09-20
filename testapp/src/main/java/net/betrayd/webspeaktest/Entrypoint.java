@@ -4,6 +4,6 @@ import javafx.application.Application;
 
 public class Entrypoint {
     public static void main(String[] args) {
-        Application.launch(WebSpeakTest.class, args);
+        Application.launch(WebSpeakTestApp.class, args);
     }
 }

@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import net.betrayd.webspeak.WebSpeakServer;
 
 public class WebSpeakTestServer implements Executor {
-    private static final Logger LOGGER = LoggerFactory.getLogger("WebSpeak Server");
+    public static final Logger LOGGER = LoggerFactory.getLogger("WebSpeak Server");
 
     private final Thread thread;
     private final int port;
