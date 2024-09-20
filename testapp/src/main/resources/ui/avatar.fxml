@@ -4,7 +4,7 @@
 <?import javafx.scene.paint.Color?>
 <?import javafx.scene.shape.Circle?>
 
-<Group id="_root" translateX="-16.0" translateY="-16.0" xmlns:fxsvg="http://efxclipse.org/fxml-svg" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/21.0.1" fx:controller="net.betrayd.webspeaktest.ui.PlayerAvatarController">
+<Group id="_root" fx:id="root" onMouseDragged="#onMouseDragged" onMousePressed="#onMousePressed" translateX="-16.0" translateY="-16.0" xmlns:fxsvg="http://efxclipse.org/fxml-svg" xmlns="http://javafx.com/javafx/21.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.betrayd.webspeaktest.ui.PlayerAvatarController">
 	<children>
 		<Circle id="Body" fx:id="fillCircle" centerX="16.0" centerY="16.0" opacity="1" radius="15.219" strokeWidth="0.5">
 			<fill>

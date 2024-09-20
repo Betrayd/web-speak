@@ -66,9 +66,7 @@ public class WebSpeakTestApp extends Application {
     public boolean addPlayer(Player player) {
         if (players.add(player)) {
             if (isServerRunning()) {
-                TestWebPlayer webPlayer = getServer().getWebSpeakServer()
-                        .addPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session));
-                player.setWebPlayer(webPlayer);
+                addPlayerToServer(getServer(), player);
             }
             mainUIController.onAddPlayer(player);
             return true;
@@ -116,13 +114,12 @@ public class WebSpeakTestApp extends Application {
         }
 
         try {
-            server.set(new WebSpeakTestServer(port));
+            WebSpeakTestServer webServer = new WebSpeakTestServer(port);
+            server.set(webServer);
 
             // Add all players to server
             for (var player : players) {
-                TestWebPlayer webPlayer = getServer().getWebSpeakServer()
-                        .addPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session));
-                player.setWebPlayer(webPlayer);
+                addPlayerToServer(webServer, player);
             }
             
             return true;
@@ -130,6 +127,12 @@ public class WebSpeakTestApp extends Application {
             LOGGER.error("Exception starting server: ", e);
             return false;
         }
+    }
+
+    private void addPlayerToServer(WebSpeakTestServer server, Player player) {
+        CompletableFuture.supplyAsync(() -> server.getWebSpeakServer()
+                .addPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session)), server)
+                .thenAcceptAsync(p -> player.setWebPlayer(p), Platform::runLater);
     }
 
     public CompletableFuture<Void> stopServer() {
