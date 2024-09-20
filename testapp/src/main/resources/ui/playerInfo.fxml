@@ -7,8 +7,7 @@
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
 
-
-<TitledPane animated="false" maxHeight="-Infinity" minHeight="-Infinity" text="Player Name" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+<TitledPane fx:id="titledPane" animated="false" maxHeight="-Infinity" minHeight="-Infinity" text="Player Name" xmlns="http://javafx.com/javafx/21.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.betrayd.webspeaktest.ui.PlayerInfoController">
    <content>
       <GridPane hgap="10.0">
         <columnConstraints>
@@ -22,11 +21,11 @@
         </rowConstraints>
          <children>
             <Label text="Name" />
-            <TextField promptText="Player Name" GridPane.columnIndex="1" />
-            <Label text="Connection ID" GridPane.rowIndex="1" />
-            <TextField editable="false" promptText="Connection ID" text="123456" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <TextField fx:id="nameField" onAction="#onNameFieldCommit" promptText="Player Name" GridPane.columnIndex="1" />
+            <Label text="Session ID" GridPane.rowIndex="1" />
+            <TextField fx:id="sessionIdField" editable="false" promptText="Connection ID" text="123456" GridPane.columnIndex="1" GridPane.rowIndex="1" />
             <Label text="Player ID" GridPane.rowIndex="2" />
-            <TextField editable="false" text="123456" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+            <TextField fx:id="playerIdField" editable="false" text="123456" GridPane.columnIndex="1" GridPane.rowIndex="2" />
          </children>
       </GridPane>
    </content>

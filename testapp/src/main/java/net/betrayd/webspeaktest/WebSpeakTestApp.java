@@ -6,14 +6,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import net.betrayd.webspeaktest.ui.MainUIController;
 
 public class WebSpeakTestApp extends Application {
 
@@ -27,7 +30,15 @@ public class WebSpeakTestApp extends Application {
 
     private final ObjectProperty<WebSpeakTestServer> server = new SimpleObjectProperty<>(null);
 
-    private final DoubleProperty graphScaleProperty = new SimpleDoubleProperty(20);
+    public WebSpeakTestServer getServer() {
+        return server.get();
+    }
+
+    public ReadOnlyObjectProperty<WebSpeakTestServer> serverProperty() {
+        return server;
+    }
+
+    private final DoubleProperty graphScaleProperty = new SimpleDoubleProperty(32);
 
     public double getGraphScale() {
         return graphScaleProperty.get();
@@ -41,12 +52,17 @@ public class WebSpeakTestApp extends Application {
         return graphScaleProperty;
     }
 
+    private MainUIController mainUIController;
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         instance = this;
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/ui/mainUI.fxml"));
         Parent root = loader.load();
+        mainUIController = loader.getController();
+
+        mainUIController.initApp(this);
 
         Scene scene = new Scene(root);
 
@@ -76,9 +92,9 @@ public class WebSpeakTestApp extends Application {
             return CompletableFuture.completedFuture(null);
         }
 
-        return server.get().shutdownAsync().thenRun(() -> {
+        return server.get().shutdownAsync().thenRunAsync(() -> {
             server.set(null);
-        });
+        }, Platform::runLater);
     }
 
     public boolean isServerRunning() {
@@ -95,12 +111,14 @@ public class WebSpeakTestApp extends Application {
 
     @Override
     public void stop() throws Exception {
-        if (server.get() != null)
-            server.get().shutdown();
-        super.stop();
-    }
+        if (server.get() != null) {
+            try {
+                server.get().shutdownAndWait();
+            } catch (Exception e) {
+                LOGGER.error("Error stopping server", e);
+            }
+        }
 
-    public WebSpeakTestServer getServer() {
-        return server.get();
+        super.stop();
     }
 }

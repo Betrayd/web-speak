@@ -5,9 +5,12 @@ import net.betrayd.webspeak.WebSpeakServer;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
 public class TestWebPlayer extends WebSpeakPlayer {
+
+    private final Player player;
     
-    public TestWebPlayer(WebSpeakServer server, String playerId, String sessionId) {
+    public TestWebPlayer(WebSpeakServer server, Player player, String playerId, String sessionId) {
         super(server, playerId, sessionId);
+        this.player = player;
     }
 
     @Override
@@ -24,4 +27,11 @@ public class TestWebPlayer extends WebSpeakPlayer {
         return true;
     }
     
+    public Player getPlayer() {
+        return player;
+    }
+
+    public String getUsername() {
+        return player.getName();
+    };
 }
