@@ -15,7 +15,7 @@
 <?import javafx.scene.text.Font?>
 <?import net.betrayd.webspeaktest.ui.util.ZoomableGraph?>
 
-<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="720.0" prefWidth="1280.0" stylesheets="@mainUI.css" xmlns="http://javafx.com/javafx/21.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.betrayd.webspeaktest.ui.MainUIController">
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="720.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/21.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.betrayd.webspeaktest.ui.MainUIController">
    <children>
       <MenuBar VBox.vgrow="NEVER">
         <menus>
@@ -43,9 +43,9 @@
          <right>
             <VBox alignment="TOP_RIGHT" BorderPane.alignment="CENTER">
                <children>
-                  <ScrollPane minWidth="-Infinity" VBox.vgrow="ALWAYS">
+                  <ScrollPane hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
                      <content>
-                        <VBox fx:id="playerBox" prefWidth="200.0">
+                        <VBox fx:id="playerBox" prefWidth="325.0">
                            <children>
                               <fx:include source="playerInfo.fxml" />
                               <fx:include source="playerInfo.fxml" />

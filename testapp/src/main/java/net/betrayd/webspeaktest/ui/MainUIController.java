@@ -2,7 +2,9 @@ package net.betrayd.webspeaktest.ui;
 
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.CompletableFuture;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -75,6 +77,8 @@ public final class MainUIController {
         startStopButton.setText("Stop Server");
         startStopButton.setDisable(false);
 
+        CompletableFuture.supplyAsync(() -> server.getLocalConnectionUrl(), server)
+                .thenAcceptAsync(serverAddressText::setText, Platform::runLater);
     }
 
     protected void onStopServer() {
