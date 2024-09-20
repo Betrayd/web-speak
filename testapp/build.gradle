@@ -21,6 +21,12 @@ application {
     mainClass = "net.betrayd.webspeaktest.Entrypoint"
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
 javafx {
     version = "21.0.4"
     modules = [ 'javafx.controls', 'javafx.fxml' ]

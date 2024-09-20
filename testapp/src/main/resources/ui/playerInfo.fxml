@@ -8,7 +8,7 @@
 <?import javafx.scene.layout.RowConstraints?>
 
 
-<TitledPane animated="false" maxHeight="-Infinity" minHeight="-Infinity" text="Player Name" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1">
+<TitledPane animated="false" maxHeight="-Infinity" minHeight="-Infinity" text="Player Name" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
    <content>
       <GridPane hgap="10.0">
         <columnConstraints>
