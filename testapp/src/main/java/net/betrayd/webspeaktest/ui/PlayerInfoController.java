@@ -2,11 +2,27 @@ package net.betrayd.webspeaktest.ui;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import net.betrayd.webspeaktest.Player;
 
 public class PlayerInfoController {
+
+    public static PlayerInfoController loadInstance() {
+        try {
+            FXMLLoader loader = new FXMLLoader(PlayerInfoController.class.getResource("/ui/playerInfo.fxml"));
+            loader.load();
+            return loader.getController();
+        } catch (Exception e) {
+            if (e instanceof RuntimeException re) {
+                throw re;
+            } else {
+                throw new RuntimeException(e);
+            }
+        }
+
+    }
 
     private Player player;
 
@@ -58,5 +74,9 @@ public class PlayerInfoController {
 
     public Player getPlayer() {
         return player;
+    }
+
+    public TitledPane getTitledPane() {
+        return titledPane;
     }
 }

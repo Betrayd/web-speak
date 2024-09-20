@@ -1,9 +1,9 @@
 package net.betrayd.webspeak;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 import com.google.common.collect.BiMap;
@@ -32,7 +32,7 @@ public class WebSpeakServer {
     /**
      * All the players that are relevent to the game
      */
-    private final Set<WebSpeakPlayer> players = new HashSet<>();
+    private final Set<WebSpeakPlayer> players = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     // private final RelationGraph<WebSpeakPlayer> rtcConnections = new RelationGraph<>();
     private final RTCManager rtcManager = new RTCManager(this);
@@ -61,7 +61,7 @@ public class WebSpeakServer {
      * 
      * @param port The port to start on.
      */
-    public void start(int port) {
+    public synchronized void start(int port) {
         app = Javalin.create()
                 .get("/", ctx -> ctx.result("Hello World: " + ctx))
                 .ws("/connect", this::setupWebsocket);
@@ -69,7 +69,7 @@ public class WebSpeakServer {
         app.start(port);
     }
 
-    public void stop() {
+    public synchronized void stop() {
         app.stop();
     }
 
@@ -161,7 +161,7 @@ public class WebSpeakServer {
         return addPlayer(player, false);
     }
 
-    protected boolean addPlayer(WebSpeakPlayer player, boolean noCheck) {
+    protected synchronized boolean addPlayer(WebSpeakPlayer player, boolean noCheck) {
         if (player == null) {
             throw new NullPointerException("player");
         }
@@ -187,7 +187,7 @@ public class WebSpeakServer {
      * @param player Player to remove.
      * @return If the player was in the webspeak server.
      */
-    public boolean removePlayer(Object player) {
+    public synchronized boolean removePlayer(Object player) {
         if (player == null || !(player instanceof WebSpeakPlayer webPlayer))
             return false;
 

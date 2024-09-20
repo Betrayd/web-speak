@@ -41,16 +41,25 @@
             <ZoomableGraph fx:id="zoomGraph" BorderPane.alignment="CENTER" />
          </center>
          <right>
-            <ScrollPane minWidth="-Infinity" BorderPane.alignment="CENTER">
-               <content>
-                  <VBox fx:id="playerBox" prefWidth="200.0">
-                     <children>
-                        <fx:include source="playerInfo.fxml" />
-                        <fx:include source="playerInfo.fxml" />
-                     </children>
-                  </VBox>
-               </content>
-            </ScrollPane>
+            <VBox alignment="TOP_RIGHT" BorderPane.alignment="CENTER">
+               <children>
+                  <ScrollPane minWidth="-Infinity" VBox.vgrow="ALWAYS">
+                     <content>
+                        <VBox fx:id="playerBox" prefWidth="200.0">
+                           <children>
+                              <fx:include source="playerInfo.fxml" />
+                              <fx:include source="playerInfo.fxml" />
+                           </children>
+                        </VBox>
+                     </content>
+                  </ScrollPane>
+                  <Button mnemonicParsing="false" onAction="#addPlayer" text="Add Player">
+                     <VBox.margin>
+                        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                     </VBox.margin>
+                  </Button>
+               </children>
+            </VBox>
          </right>
          <bottom>
             <HBox alignment="CENTER_LEFT" spacing="10.0" BorderPane.alignment="CENTER">

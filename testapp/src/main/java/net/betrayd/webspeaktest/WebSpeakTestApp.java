@@ -1,5 +1,8 @@
 package net.betrayd.webspeaktest;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
@@ -54,6 +57,41 @@ public class WebSpeakTestApp extends Application {
 
     private MainUIController mainUIController;
 
+    private final Set<Player> players = new HashSet<>();
+
+    public Set<Player> getPlayers() {
+        return Collections.unmodifiableSet(players);
+    }
+
+    public boolean addPlayer(Player player) {
+        if (players.add(player)) {
+            if (isServerRunning()) {
+                TestWebPlayer webPlayer = getServer().getWebSpeakServer()
+                        .addPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session));
+                player.setWebPlayer(webPlayer);
+            }
+            mainUIController.onAddPlayer(player);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public boolean removePlayer(Object player) {
+        if (players.remove(player)) {
+            if (player instanceof Player castPlayer && isServerRunning()) {
+                TestWebPlayer webPlayer = castPlayer.getWebPlayer();
+                if (webPlayer != null) {
+                    getServer().getWebSpeakServer().removePlayer(webPlayer);
+                }
+                mainUIController.onRemovePlayer(castPlayer);
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         instance = this;
@@ -79,6 +117,14 @@ public class WebSpeakTestApp extends Application {
 
         try {
             server.set(new WebSpeakTestServer(port));
+
+            // Add all players to server
+            for (var player : players) {
+                TestWebPlayer webPlayer = getServer().getWebSpeakServer()
+                        .addPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session));
+                player.setWebPlayer(webPlayer);
+            }
+            
             return true;
         } catch (Exception e) {
             LOGGER.error("Exception starting server: ", e);
@@ -91,7 +137,7 @@ public class WebSpeakTestApp extends Application {
             LOGGER.error("Server is not running!");
             return CompletableFuture.completedFuture(null);
         }
-
+        
         return server.get().shutdownAsync().thenRunAsync(() -> {
             server.set(null);
         }, Platform::runLater);
@@ -104,7 +150,7 @@ public class WebSpeakTestApp extends Application {
     public int getServerPort() {
         WebSpeakTestServer server = this.server.get();
         if (server == null) {
-            throw new IllegalStateException("Server is not running!");
+            return 0;
         }
         return server.getWebSpeakServer().getPort();
     }

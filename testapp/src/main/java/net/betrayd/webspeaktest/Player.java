@@ -49,8 +49,8 @@ public class Player {
                 (int) (color.getOpacity() * 255));
     }
 
-    public static final Avatar create(Color color) {
-        return new Avatar(loadAvatar(color), color);
+    public static final Player create(Color color) {
+        return new Player(loadAvatar(color), color);
     }
 
     private final Node node;

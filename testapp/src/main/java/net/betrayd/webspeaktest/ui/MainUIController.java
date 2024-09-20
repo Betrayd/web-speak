@@ -1,11 +1,15 @@
 package net.betrayd.webspeaktest.ui;
 
+import java.util.Map;
+import java.util.WeakHashMap;
+
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Shape;
+import net.betrayd.webspeaktest.Player;
 import net.betrayd.webspeaktest.WebSpeakTestApp;
 import net.betrayd.webspeaktest.WebSpeakTestServer;
 import net.betrayd.webspeaktest.ui.util.ZoomableGraph;
@@ -37,6 +41,8 @@ public final class MainUIController {
 
     @FXML
     private Button startStopButton;
+
+    private final Map<Player, PlayerInfoController> playerInfoControllers = new WeakHashMap<>();
 
     @FXML
     private void initialize() {
@@ -87,6 +93,28 @@ public final class MainUIController {
             app.stopServer();
         } else {
             app.startServer(8080);
+        }
+    }
+
+    @FXML
+    private void addPlayer() {
+        app.addPlayer(Player.create(Color.RED));
+    }
+
+    public void onAddPlayer(Player player) {
+        zoomGraph.getGraphChildren().add(player.getNode());
+
+        var infoPanel = PlayerInfoController.loadInstance();
+        infoPanel.initPlayer(player);
+        playerBox.getChildren().add(infoPanel.getTitledPane());
+        playerInfoControllers.put(player, infoPanel);
+    }
+
+    public void onRemovePlayer(Player player) {
+        zoomGraph.getGraphChildren().remove(player.getNode());
+        PlayerInfoController infoPanel = playerInfoControllers.remove(player);
+        if (infoPanel != null) {
+            playerBox.getChildren().remove(infoPanel.getTitledPane());
         }
     }
 }
