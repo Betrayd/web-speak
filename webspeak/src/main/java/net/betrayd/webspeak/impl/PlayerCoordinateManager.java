@@ -10,6 +10,8 @@ import java.util.WeakHashMap;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
+import net.betrayd.webspeak.net.UpdateTransformPacket;
+import net.betrayd.webspeak.net.WebSpeakNet;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
 public class PlayerCoordinateManager {
@@ -76,13 +78,10 @@ public class PlayerCoordinateManager {
 
     private void sendPlayerTransform(WebSpeakPlayer player, WebSpeakTransform transform,
             Iterable<? extends WebSpeakPlayer> targets) {
-        // TODO: Better packet sending system
-        String packet = String.format(
-                "{\"type\":\"updateTransform\",\"player\":\"%s\",\"pos\":[%f,%f,%f],\"rot\":[%f,%f,%f]}",
-                player.getPlayerId(),
-                transform.pos.x(), transform.pos.y(), transform.pos.z(),
-                transform.rot.x(), transform.rot.y(), transform.rot.z());
-        
+
+        String packet = WebSpeakNet.writePacket(UpdateTransformPacket.TYPE,
+                new UpdateTransformPacket(player.getPlayerId(), player.getLocation(), player.getRotation()));
+
         for (var target : targets) {
             WsContext ws = target.getWsContext();
             if (ws == null || !target.isInScope(player))
