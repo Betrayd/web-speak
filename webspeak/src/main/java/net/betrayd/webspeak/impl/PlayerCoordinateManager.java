@@ -1,5 +1,7 @@
 package net.betrayd.webspeak.impl;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -41,26 +43,59 @@ public class PlayerCoordinateManager {
         }
         prevTransforms.putAll(newTransforms); // Update prev transforms with new transforms
         
-        // Actually send transform updates
-        for (WebSpeakPlayer player : players) {
-            // TODO: Better packet sending system
-            WsContext ws = player.getWsContext();
-            if (ws == null)
+        for (var entry : newTransforms.entrySet()) {
+            sendPlayerTransform(entry.getKey(), entry.getValue(), players);
+        }
+
+        // // Actually send transform updates
+        // for (WebSpeakPlayer player : players) {
+        //     // TODO: Better packet sending system
+        //     WsContext ws = player.getWsContext();
+        //     if (ws == null)
+        //         continue;
+
+        //     for (var entry : newTransforms.entrySet()) {
+        //         WebSpeakPlayer otherPlayer = entry.getKey();
+        //         if (!player.isInScope(otherPlayer))
+        //             continue;
+
+        //         WebSpeakTransform transform = entry.getValue();
+
+        //         ws.send(String.format(
+        //                 "{\"type\":\"updateTransform\",\"player\":\"%s\",\"pos\":[%f,%f,%f],\"rot\":[%f,%f,%f]}",
+        //                 otherPlayer.getPlayerId(),
+        //                 transform.pos.x(), transform.pos.y(), transform.pos.z(),
+        //                 transform.rot.x(), transform.rot.y(), transform.rot.z()));
+        //     }
+        // }
+    }
+
+    public void sendPlayerTransform(WebSpeakPlayer player, Iterable<? extends WebSpeakPlayer> targets) {
+        sendPlayerTransform(player, new WebSpeakTransform(player.getLocation(), player.getRotation()),  targets);
+    }
+
+    private void sendPlayerTransform(WebSpeakPlayer player, WebSpeakTransform transform,
+            Iterable<? extends WebSpeakPlayer> targets) {
+        // TODO: Better packet sending system
+        String packet = String.format(
+                "{\"type\":\"updateTransform\",\"player\":\"%s\",\"pos\":[%f,%f,%f],\"rot\":[%f,%f,%f]}",
+                player.getPlayerId(),
+                transform.pos.x(), transform.pos.y(), transform.pos.z(),
+                transform.rot.x(), transform.rot.y(), transform.rot.z());
+        
+        for (var target : targets) {
+            WsContext ws = target.getWsContext();
+            if (ws == null || !target.isInScope(player))
                 continue;
+            
+            ws.send(packet);
+        }
+    }
 
-            for (var entry : newTransforms.entrySet()) {
-                WebSpeakPlayer otherPlayer = entry.getKey();
-                if (!player.isInScope(otherPlayer))
-                    continue;
-
-                WebSpeakTransform transform = entry.getValue();
-
-                ws.send(String.format(
-                        "{\"type\":\"updateTransform\",\"player\":\"%s\",\"pos\":[%f,%f,%f],\"rot\":[%f,%f,%f]}",
-                        otherPlayer.getPlayerId(),
-                        transform.pos.x(), transform.pos.y(), transform.pos.z(),
-                        transform.rot.x(), transform.rot.y(), transform.rot.z()));
-            }
+    public void onPlayerConnected(WebSpeakPlayer player) {
+        Collection<WebSpeakPlayer> collectionWrapper = Collections.singleton(player);
+        for (WebSpeakPlayer otherPlayer : getServer().getPlayers()) {
+            sendPlayerTransform(otherPlayer, collectionWrapper);
         }
     }
 }

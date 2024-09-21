@@ -11,6 +11,7 @@ import javafx.beans.property.StringProperty;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
+import net.betrayd.webspeak.util.WebSpeakVector;
 import net.betrayd.webspeaktest.ui.PlayerAvatarController;
 
 public class Player {
@@ -28,23 +29,6 @@ public class Player {
         return fxmlLoader.getController();
         
     }
-
-    // public static ImageView loadAvatar(double hue) {
-    //     if (avatarImage == null) {
-    //         avatarImage = new Image(AVATAR_URL.toString(), 32, 32, true, true);
-    //     }
-
-    //     ImageView image = new ImageView(avatarImage);
-    //     image.setFitWidth(32);
-    //     image.setFitHeight(32);
-
-    //     ColorAdjust colorAdjust = new ColorAdjust();
-    //     colorAdjust.setHue(hue);
-
-    //     image.setEffect(colorAdjust);
-
-    //     return image;
-    // }
 
     public static final Player create(Color color) {
         PlayerAvatarController controller = loadAvatar();
@@ -111,5 +95,18 @@ public class Player {
 
     public ReadOnlyObjectProperty<TestWebPlayer> webPlayerProperty() {
         return webPlayerProperty;
+    }
+
+    public WebSpeakVector getLocation() {
+        double x = node.getLayoutX();
+        double y = node.getLayoutY();
+
+        double graphScale = WebSpeakTestApp.getInstance().getGraphScale();
+        x /= graphScale;
+        y /= graphScale;
+
+        // By default WebSpeak uses a Y-Up coordinate space. Therefore, a top-down view needs to be converted.
+        // (this is why Z-up makes more sense IMO)
+        return new WebSpeakVector(-x, 0, y);
     }
 }

@@ -15,7 +15,7 @@ public class TestWebPlayer extends WebSpeakPlayer {
 
     @Override
     public WebSpeakVector getLocation() {
-        return WebSpeakVector.ZERO;
+        return player.getLocation();
     }
     
     public WebSpeakVector getRotation() {

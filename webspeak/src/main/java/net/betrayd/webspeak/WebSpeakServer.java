@@ -111,6 +111,7 @@ public class WebSpeakServer {
                 
                 player.wsContext = ctx;
                 wsSessions.put(player, ctx);
+                playerCoordinateManager.onPlayerConnected(player);
                 ON_SESSION_CONNECTED.invoker().accept(player);
             }
         });
@@ -137,7 +138,7 @@ public class WebSpeakServer {
     }
 
     /**
-     * Get an immutable list of all the players in the server.
+     * Get an unmodifiable list of all the players in the server.
      * 
      * @return All webspeak players
      */
