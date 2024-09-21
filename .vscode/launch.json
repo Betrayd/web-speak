@@ -6,10 +6,11 @@
     "configurations": [
         {
             "type": "java",
-            "name": "WebSpeakTest",
+            "name": "Test Server App",
             "request": "launch",
-            "mainClass": "net.betrayd.webspeaktest.WebSpeakTest",
-            "projectName": "testapp"
+            "mainClass": "net.betrayd.webspeaktest.Entrypoint",
+            "projectName": "testapp",
+            "console": "internalConsole"
         }
     ]
 }

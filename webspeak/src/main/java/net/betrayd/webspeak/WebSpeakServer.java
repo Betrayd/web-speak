@@ -1,9 +1,11 @@
 package net.betrayd.webspeak;
 
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import com.google.common.collect.BiMap;
@@ -15,6 +17,8 @@ import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
+import net.betrayd.webspeak.util.WebSpeakEvents;
+import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 
 /**
  * The primary WebSpeak server
@@ -32,7 +36,7 @@ public class WebSpeakServer {
     /**
      * All the players that are relevent to the game
      */
-    private final Set<WebSpeakPlayer> players = new HashSet<>();
+    private final Set<WebSpeakPlayer> players = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     // private final RelationGraph<WebSpeakPlayer> rtcConnections = new RelationGraph<>();
     private final RTCManager rtcManager = new RTCManager(this);
@@ -45,6 +49,11 @@ public class WebSpeakServer {
      */
     private final BiMap<WebSpeakPlayer, WsContext> wsSessions = HashBiMap.create();
 
+    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_CONNECTED = WebSpeakEvents.createSimple();
+    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_DISCONNECTED = WebSpeakEvents.createSimple();
+    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_ADDED = WebSpeakEvents.createSimple();
+    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_REMOVED = WebSpeakEvents.createSimple();
+
     /**
      * Get the base Javalin app
      */
@@ -52,12 +61,16 @@ public class WebSpeakServer {
         return app;
     }
 
+    public int getPort() {
+        return app.port();
+    }
+
     /**
      * Start the server.
      * 
      * @param port The port to start on.
      */
-    public void start(int port) {
+    public synchronized void start(int port) {
         app = Javalin.create()
                 .get("/", ctx -> ctx.result("Hello World: " + ctx))
                 .ws("/connect", this::setupWebsocket);
@@ -65,37 +78,50 @@ public class WebSpeakServer {
         app.start(port);
     }
 
+    public synchronized void stop() {
+        for (var player : List.copyOf(players)) {
+            removePlayer(player);
+        }
+        app.stop();
+    }
+
     /**
      * ticks the werver, updates connections on distance ETC.
      */
-    public void tick() {
+    public synchronized void tick() {
         rtcManager.tickRTC();
         playerCoordinateManager.tick();
     }
 
     private void setupWebsocket(WsConfig ws) {
         ws.onConnect(ctx -> {
-            System.out.print(Thread.currentThread().getName());
-            String sessionId = ctx.queryParam("id");
-            WebSpeakPlayer player = playerFromSessionId(sessionId);
-            if (player == null) {
-                ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "No session found with ID " + sessionId);
-                return;
+            synchronized(this) {
+                System.out.print(Thread.currentThread().getName());
+                String sessionId = ctx.queryParam("id");
+                WebSpeakPlayer player = playerFromSessionId(sessionId);
+                if (player == null) {
+                    ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "No session found with ID " + sessionId);
+                    return;
+                }
+    
+                // Will be non-null if something was already there.
+                if (wsSessions.putIfAbsent(player, ctx) != null) {
+                    ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "Session " + sessionId + " already has a client connected.");
+                }
+                
+                player.wsContext = ctx;
+                wsSessions.put(player, ctx);
+                ON_SESSION_CONNECTED.invoker().accept(player);
             }
-
-            // Will be non-null if something was already there.
-            if (wsSessions.putIfAbsent(player, ctx) != null) {
-                ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "Session " + sessionId + " already has a client connected.");
-            }
-            
-            player.wsContext = ctx;
-            wsSessions.put(player, ctx);
         });
 
         ws.onClose(ctx -> {
-            WebSpeakPlayer player = wsSessions.inverse().remove(ctx);
-            if (player != null) {
-                player.wsContext = null;
+            synchronized(this) {
+                WebSpeakPlayer player = wsSessions.inverse().remove(ctx);
+                if (player != null) {
+                    player.wsContext = null;
+                    ON_SESSION_DISCONNECTED.invoker().accept(player);
+                }
             }
         });
     }
@@ -149,7 +175,7 @@ public class WebSpeakServer {
         return addPlayer(player, false);
     }
 
-    protected boolean addPlayer(WebSpeakPlayer player, boolean noCheck) {
+    protected synchronized boolean addPlayer(WebSpeakPlayer player, boolean noCheck) {
         if (player == null) {
             throw new NullPointerException("player");
         }
@@ -166,6 +192,7 @@ public class WebSpeakServer {
                 }
             }
         }
+        ON_PLAYER_ADDED.invoker().accept(player);
         return players.add(player);
     }
 
@@ -175,7 +202,7 @@ public class WebSpeakServer {
      * @param player Player to remove.
      * @return If the player was in the webspeak server.
      */
-    public boolean removePlayer(Object player) {
+    public synchronized boolean removePlayer(Object player) {
         if (player == null || !(player instanceof WebSpeakPlayer webPlayer))
             return false;
 
@@ -190,8 +217,10 @@ public class WebSpeakServer {
         WsContext ws = wsSessions.remove(player);
         if (ws != null) {
             ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
+            ON_SESSION_DISCONNECTED.invoker().accept(player);
         }
         player.wsContext = null;
+        ON_PLAYER_REMOVED.invoker().accept(player);
     }
     
     private WebSpeakPlayer playerFromSessionId(String sessionId) {
@@ -200,5 +229,21 @@ public class WebSpeakServer {
                 return player;
         }
         return null;
+    }
+
+    public final void onSessionConnected(Consumer<WebSpeakPlayer> listener) {
+        ON_SESSION_CONNECTED.addListener(listener);
+    }
+
+    public final void onSessionDisconnected(Consumer<WebSpeakPlayer> listener) {
+        ON_SESSION_DISCONNECTED.addListener(listener);
+    }
+
+    public final void onPlayerAdded(Consumer<WebSpeakPlayer> listener) {
+        ON_PLAYER_ADDED.addListener(listener);
+    }
+
+    public final void onPlayerRemoved(Consumer<WebSpeakPlayer> listener) {
+        ON_PLAYER_REMOVED.addListener(listener);
     }
 }
