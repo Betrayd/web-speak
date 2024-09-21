@@ -119,6 +119,7 @@ public final class MainUIController {
         PlayerInfoController infoPanel = playerInfoControllers.remove(player);
         if (infoPanel != null) {
             playerBox.getChildren().remove(infoPanel.getTitledPane());
+            infoPanel.onPlayerRemoved();
         }
     }
 }

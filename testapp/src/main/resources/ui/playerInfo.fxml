@@ -21,6 +21,7 @@
           <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
           <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
         </rowConstraints>
          <children>
             <Label text="Name" GridPane.rowIndex="1" />
@@ -35,6 +36,8 @@
                   <Color red="1.0" />
                </value>
             </ColorPicker>
+            <Label text="Connection" GridPane.rowIndex="4" />
+            <Label fx:id="connectionText" text="Not Connected" textFill="RED" GridPane.columnIndex="1" GridPane.rowIndex="4" />
          </children>
       </GridPane>
    </content>

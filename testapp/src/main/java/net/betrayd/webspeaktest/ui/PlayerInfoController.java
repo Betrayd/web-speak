@@ -1,14 +1,20 @@
 package net.betrayd.webspeaktest.ui;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.collections.MapChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
 import net.betrayd.webspeaktest.Player;
+import net.betrayd.webspeaktest.WebSpeakTestApp;
 
 public class PlayerInfoController {
 
@@ -45,13 +51,36 @@ public class PlayerInfoController {
     private TextField playerIdField;
 
     @FXML
+    private Label connectionText;
+
+
+    @FXML
     protected void initialize() {
         nameField.focusedProperty().addListener((prop, oldVal, newVal) -> {
             if (!newVal) {
                 commitNameChange();
             }
         });
+
+        connectionProperty.addListener((prop, oldVal, newVal) -> {
+            if (newVal == null) {
+                connectionText.setText("Not Connected");
+                connectionText.setTextFill(Color.RED);
+            } else {
+                connectionText.setText(newVal);
+                connectionText.setTextFill(Color.GREEN);
+            }
+        });
     }
+
+    private StringProperty connectionProperty = new SimpleStringProperty();
+
+    // Store as a variable so it can be unregistered
+    private MapChangeListener<Player, String> mapChangeListener = (change) -> {
+        if (change.getKey().equals(player))
+            connectionProperty.set(change.getValueAdded());
+        
+    };
 
     public void initPlayer(Player player) {
         this.player = player;
@@ -76,6 +105,8 @@ public class PlayerInfoController {
                 e.consume();
             }
         });
+
+        WebSpeakTestApp.getInstance().getConnectionIps().addListener(mapChangeListener);
     }
 
     @FXML
@@ -94,4 +125,9 @@ public class PlayerInfoController {
     public TitledPane getTitledPane() {
         return titledPane;
     }
+
+    public void onPlayerRemoved() {
+        WebSpeakTestApp.getInstance().getConnectionIps().removeListener(mapChangeListener);
+    }
+
 }

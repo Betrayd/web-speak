@@ -15,6 +15,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableMap;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -53,6 +55,12 @@ public class WebSpeakTestApp extends Application {
 
     public DoubleProperty graphScaleProperty() {
         return graphScaleProperty;
+    }
+
+    private final ObservableMap<Player, String> connectionIps = FXCollections.observableHashMap();
+
+    public ObservableMap<Player, String> getConnectionIps() {
+        return connectionIps;
     }
 
     private MainUIController mainUIController;
@@ -112,7 +120,7 @@ public class WebSpeakTestApp extends Application {
             LOGGER.error("Server is already running!");
             return false;
         }
-
+        connectionIps.clear();
         try {
             WebSpeakTestServer webServer = new WebSpeakTestServer(port);
             server.set(webServer);
@@ -122,6 +130,21 @@ public class WebSpeakTestApp extends Application {
                 addPlayerToServer(webServer, player);
             }
             
+            webServer.awaitStart().thenAccept(server -> {
+                server.onSessionConnected(player -> {
+                    if (player instanceof TestWebPlayer testPlayer) {
+                        String connectionIp = testPlayer.getWsContext().session.getRemoteAddress().toString();
+                        Platform.runLater(() -> connectionIps.put(testPlayer.getPlayer(), connectionIp));
+                    }
+                });
+                server.onSessionDisconnected(player -> Platform.runLater(() -> {
+                    if (player instanceof TestWebPlayer testPlayer) {
+                        connectionIps.remove(testPlayer.getPlayer());
+                    }
+                }));
+            });
+
+
             return true;
         } catch (Exception e) {
             LOGGER.error("Exception starting server: ", e);
@@ -142,6 +165,7 @@ public class WebSpeakTestApp extends Application {
         }
         
         return server.get().shutdownAsync().thenRunAsync(() -> {
+            connectionIps.clear();
             server.set(null);
         }, Platform::runLater);
     }

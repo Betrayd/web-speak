@@ -1,9 +1,11 @@
 package net.betrayd.webspeak;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import com.google.common.collect.BiMap;
@@ -15,6 +17,8 @@ import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
+import net.betrayd.webspeak.util.WebSpeakEvents;
+import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 
 /**
  * The primary WebSpeak server
@@ -45,6 +49,11 @@ public class WebSpeakServer {
      */
     private final BiMap<WebSpeakPlayer, WsContext> wsSessions = HashBiMap.create();
 
+    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_CONNECTED = WebSpeakEvents.createSimple();
+    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_DISCONNECTED = WebSpeakEvents.createSimple();
+    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_ADDED = WebSpeakEvents.createSimple();
+    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_REMOVED = WebSpeakEvents.createSimple();
+
     /**
      * Get the base Javalin app
      */
@@ -70,6 +79,9 @@ public class WebSpeakServer {
     }
 
     public synchronized void stop() {
+        for (var player : List.copyOf(players)) {
+            removePlayer(player);
+        }
         app.stop();
     }
 
@@ -99,6 +111,7 @@ public class WebSpeakServer {
                 
                 player.wsContext = ctx;
                 wsSessions.put(player, ctx);
+                ON_SESSION_CONNECTED.invoker().accept(player);
             }
         });
 
@@ -107,6 +120,7 @@ public class WebSpeakServer {
                 WebSpeakPlayer player = wsSessions.inverse().remove(ctx);
                 if (player != null) {
                     player.wsContext = null;
+                    ON_SESSION_DISCONNECTED.invoker().accept(player);
                 }
             }
         });
@@ -178,6 +192,7 @@ public class WebSpeakServer {
                 }
             }
         }
+        ON_PLAYER_ADDED.invoker().accept(player);
         return players.add(player);
     }
 
@@ -202,8 +217,10 @@ public class WebSpeakServer {
         WsContext ws = wsSessions.remove(player);
         if (ws != null) {
             ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
+            ON_SESSION_DISCONNECTED.invoker().accept(player);
         }
         player.wsContext = null;
+        ON_PLAYER_REMOVED.invoker().accept(player);
     }
     
     private WebSpeakPlayer playerFromSessionId(String sessionId) {
@@ -212,5 +229,21 @@ public class WebSpeakServer {
                 return player;
         }
         return null;
+    }
+
+    public final void onSessionConnected(Consumer<WebSpeakPlayer> listener) {
+        ON_SESSION_CONNECTED.addListener(listener);
+    }
+
+    public final void onSessionDisconnected(Consumer<WebSpeakPlayer> listener) {
+        ON_SESSION_DISCONNECTED.addListener(listener);
+    }
+
+    public final void onPlayerAdded(Consumer<WebSpeakPlayer> listener) {
+        ON_PLAYER_ADDED.addListener(listener);
+    }
+
+    public final void onPlayerRemoved(Consumer<WebSpeakPlayer> listener) {
+        ON_PLAYER_REMOVED.addListener(listener);
     }
 }

@@ -19,6 +19,7 @@ public class WebSpeakTestServer implements Executor {
 
     private boolean shutdownQueued;
     private final CompletableFuture<Void> shutdownFuture = new CompletableFuture<>();
+    private final CompletableFuture<WebSpeakServer> startFuture = new CompletableFuture<>();
     private Queue<Runnable> queue = new ConcurrentLinkedDeque<>();
 
     public WebSpeakTestServer(int port) {
@@ -26,6 +27,10 @@ public class WebSpeakTestServer implements Executor {
         thread = new Thread(this::runThread, "WebSpeak Server");
         thread.setDaemon(false);
         thread.start();
+    }
+    
+    public CompletableFuture<WebSpeakServer> awaitStart() {
+        return startFuture;
     }
 
     @Override
@@ -49,6 +54,7 @@ public class WebSpeakTestServer implements Executor {
     protected void runThread() {
         webSpeakServer = new WebSpeakServer();
         webSpeakServer.start(port);
+        startFuture.complete(webSpeakServer);
         while (!shutdownQueued) {
             Runnable task;
             while ((task = queue.poll()) != null) {
