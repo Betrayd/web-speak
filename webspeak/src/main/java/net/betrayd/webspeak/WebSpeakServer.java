@@ -8,6 +8,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
@@ -17,6 +20,7 @@ import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
+import net.betrayd.webspeak.net.WebSpeakNet;
 import net.betrayd.webspeak.util.WebSpeakEvents;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 
@@ -26,6 +30,8 @@ import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
  * @param <T> The player implementation to use
  */
 public class WebSpeakServer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(WebSpeakServer.class);
 
     public static interface WebSpeakPlayerFactory<T extends WebSpeakPlayer> {
         public T create(WebSpeakServer server, String playerId, String sessionId);
@@ -124,6 +130,19 @@ public class WebSpeakServer {
                     ON_SESSION_DISCONNECTED.invoker().accept(player);
                 }
             }
+        });
+
+        ws.onMessage(ctx -> {
+            WebSpeakPlayer player;
+            synchronized(this) {
+                player = wsSessions.inverse().get(ctx);
+            }
+            if (player == null) {
+                LOGGER.warn("Recieved WS message from unknown player: " + ctx.message());
+                return;
+            }
+
+            WebSpeakNet.onRecievePacket(player, ctx.message());
         });
     }
 
