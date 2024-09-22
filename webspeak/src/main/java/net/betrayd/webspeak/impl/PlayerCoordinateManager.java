@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.WeakHashMap;
 
 import io.javalin.websocket.WsContext;
@@ -30,7 +29,7 @@ public class PlayerCoordinateManager {
     }
 
     public void tick() {
-        Set<WebSpeakPlayer> players = server.getPlayers();
+        Collection<WebSpeakPlayer> players = server.getPlayers();
         Map<WebSpeakPlayer, WebSpeakTransform> newTransforms = new HashMap<>();
         // List<WebSpeakPlayer> dirtyTransforms = new ArrayList<>(players.size());
 

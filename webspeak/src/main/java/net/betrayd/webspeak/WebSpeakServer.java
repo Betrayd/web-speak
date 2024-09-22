@@ -1,12 +1,12 @@
 package net.betrayd.webspeak;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +21,7 @@ import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
+import net.betrayd.webspeak.impl.net.WebSpeakNet.UnknownPacketException;
 import net.betrayd.webspeak.impl.net.packets.LocalPlayerInfoS2CPacket;
 import net.betrayd.webspeak.util.WebSpeakEvents;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
@@ -43,7 +44,8 @@ public class WebSpeakServer {
     /**
      * All the players that are relevent to the game
      */
-    private final Set<WebSpeakPlayer> players = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    // private final Set<WebSpeakPlayer> players = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Map<String, WebSpeakPlayer> players = new ConcurrentHashMap<>();
 
     // private final RelationGraph<WebSpeakPlayer> rtcConnections = new RelationGraph<>();
     private final RTCManager rtcManager = new RTCManager(this);
@@ -86,7 +88,7 @@ public class WebSpeakServer {
     }
 
     public synchronized void stop() {
-        for (var player : List.copyOf(players)) {
+        for (var player : List.copyOf(players.values())) {
             removePlayer(player);
         }
         app.stop();
@@ -119,8 +121,7 @@ public class WebSpeakServer {
                 
                 player.wsContext = ctx;
                 wsSessions.put(player, ctx);
-                WebSpeakNet.sendPacket(ctx, LocalPlayerInfoS2CPacket.PACKET,
-                        new LocalPlayerInfoS2CPacket(player.getPlayerId()));
+                new LocalPlayerInfoS2CPacket(player.getPlayerId()).send(ctx);
 
                 playerCoordinateManager.onPlayerConnected(player);
                 ON_SESSION_CONNECTED.invoker().accept(player);
@@ -152,30 +153,36 @@ public class WebSpeakServer {
             
             try {
                 WebSpeakNet.applyPacket(player, ctx.message());
-            } catch (Exception e) {
+            } catch (UnknownPacketException e) {
                 ctx.closeSession(WsCloseStatus.UNSUPPORTED_DATA, e.getMessage());
+                LOGGER.warn("{} sent unknown packet '{}'", player.getPlayerId(), e.getPacketId());
+            } catch (Exception e) {
+                ctx.closeSession(WsCloseStatus.PROTOCOL_ERROR, e.getMessage());
                 LOGGER.warn("{} was disconnected because packet failed to apply: {}.", player.getPlayerId(), e.getMessage());
             }
         });
     }
 
     /**
-     * Get all the players in a stream.
-     * 
-     * @return Player stream.
-     */
-    @Deprecated
-    public Stream<WebSpeakPlayer> streamPlayers() {
-        return players.stream();
-    }
-
-    /**
-     * Get an unmodifiable list of all the players in the server.
+     * Get an unmodifiable collection of all the players in the server.
      * 
      * @return All webspeak players
      */
-    public Set<WebSpeakPlayer> getPlayers() {
-        return Collections.unmodifiableSet(players);
+    public Collection<WebSpeakPlayer> getPlayers() {
+        return Collections.unmodifiableCollection(players.values());
+    }
+
+    public int numPlayers() {
+        return players.size();
+    }
+
+    /**
+     * Get an unmodifiable collection of all the players in the server.
+     * 
+     * @return All webspeak players
+     */
+    public Map<String, WebSpeakPlayer> getPlayerMap() {
+        return Collections.unmodifiableMap(players);
     }
 
     /**
@@ -185,11 +192,15 @@ public class WebSpeakServer {
      * @return If the player was there.
      */
     public boolean hasPlayer(Object player) {
-        if (player == null)
+        if (player instanceof WebSpeakPlayer webPlayer) {
+            return hasPlayerId(webPlayer.getPlayerId());
+        } else {
             return false;
+        }
+    }
 
-        return players.contains(player);
-        // return players.stream().anyMatch(p -> p.getPlayer().equals(player));
+    public boolean hasPlayerId(String playerId) {
+        return players.containsKey(playerId);
     }
     
     public <T extends WebSpeakPlayer> T addPlayer(WebSpeakPlayerFactory<T> factory) {
@@ -212,21 +223,34 @@ public class WebSpeakServer {
         if (player == null) {
             throw new NullPointerException("player");
         }
-        if (players.contains(player))
-            return false;
-
         if (!noCheck) {
+            WebSpeakPlayer otherPlayer = players.get(player.getPlayerId());
+            if (otherPlayer != null) {
+                if (!player.equals(otherPlayer)) {
+                    throw new IllegalArgumentException("A player already exists with this ID!");
+                } else {
+                    return false;
+                }
+            }
+            
             if (player.getServer() != this) {
                 throw new IllegalArgumentException("player belongs to the wrong server");
             }
-            for (WebSpeakPlayer p : players) {
-                if (p.getPlayerId().equals(player.getPlayerId()) || p.getSessionId().equals(player.getSessionId())) {
-                    throw new IllegalArgumentException("Player must have a unique player ID and session ID.");
+
+            for (WebSpeakPlayer other : players.values()) {
+                if (player.getSessionId().equals(other.getSessionId())) {
+                    throw new IllegalArgumentException("A player already exists with this session ID!");
                 }
             }
         }
+
+        players.put(player.getPlayerId(), player);
         ON_PLAYER_ADDED.invoker().accept(player);
-        return players.add(player);
+        return true;
+    }
+
+    public WebSpeakPlayer getPlayer(String playerId) {
+        return players.get(playerId);
     }
 
     /**
@@ -236,11 +260,17 @@ public class WebSpeakServer {
      * @return If the player was in the webspeak server.
      */
     public synchronized boolean removePlayer(Object player) {
-        if (player == null || !(player instanceof WebSpeakPlayer webPlayer))
+        if (player instanceof WebSpeakPlayer webPlayer) {
+            return removePlayer(webPlayer.getPlayerId());
+        } else {
             return false;
+        }
+    }
 
-        if (players.remove(webPlayer)) {
-            onRemovePlayer(webPlayer);
+    public synchronized boolean removePlayer(String playerId) {
+        WebSpeakPlayer player = players.remove(playerId);
+        if (player != null) {
+            onRemovePlayer(player);
             return true;
         }
         return false;
@@ -257,7 +287,7 @@ public class WebSpeakServer {
     }
     
     private WebSpeakPlayer playerFromSessionId(String sessionId) {
-        for (WebSpeakPlayer player : players) {
+        for (WebSpeakPlayer player : players.values()) {
             if (player.getSessionId().equals(sessionId))
                 return player;
         }
