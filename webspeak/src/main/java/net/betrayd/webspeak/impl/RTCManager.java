@@ -30,23 +30,25 @@ public class RTCManager {
 
         for (WebSpeakPlayer player1 : server.getPlayers()) {
             untestedPlayers.remove(player1);
+
             for (WebSpeakPlayer player2 : untestedPlayers) {
                 WsContext player1Context = player1.getWsContext();
 
-                if (player1Context == null)
+                if (player1Context == null || player2.getWsContext() == null)
                     continue;
-                
+
+                System.out.println("REEEEEEEEEEEEEEEEEEE");
                 if (connections.containsRelation(player1, player2) && !player1.isInScope(player2)) {
                     player1Context.send("{type:disconnectRequest," + "data:" + player2.getPlayerId() + "}");
                     connections.remove(player1, player2);
                 } else if (!connections.containsRelation(player1, player2) && player1.isInScope(player2)) {
-                    player1Context.send(WebSpeakNet.writePacket(RTCOfferPacket.REQUEST_OFFER_PACKET, player2.getPlayerId()));
+                    player1Context
+                            .send(WebSpeakNet.writePacket(RTCOfferPacket.REQUEST_OFFER_PACKET, player2.getPlayerId()));
                     connections.add(player1, player2);
                 }
-                
-            }
 
+            }
         }
     }
-    
+
 }

@@ -3,18 +3,35 @@ let wsConn: WebSocket;
 
 let playersInScope = new Map<string, WebSpeakPlayer>();
 
-let audioCtx = new AudioContext();
-let listener = audioCtx.listener;
+let audioCtx : AudioContext;
+let listener : AudioListener;
 
 let ourPlayerID: string;
 
 export function helloWorld() {
-    console.log("Hello World from main.ts");
+    start();
     // put your code in here
 }
 
 function packetizeData(type: string, data: string): string {
     return type + ";" + data;
+}
+
+export function start()
+{
+    let urlParams = new URLSearchParams(window.location.search);
+    let serverAdress = urlParams.get('serverAdress');
+    let sessionID = urlParams.get('sessionID');
+
+    audioCtx = new AudioContext();
+    listener = audioCtx.listener;
+
+    console.log("serverAdress: " + serverAdress);
+    console.log("sessionID: " + sessionID);
+    if(serverAdress != null && sessionID != null)
+    {
+        connectToWS(serverAdress+"/connect?id="+sessionID);
+    }
 }
 
 function connectToWS(connectionAdress: string) {
@@ -25,47 +42,51 @@ function connectToWS(connectionAdress: string) {
     };
 
     wsConn.onerror = (v: Event) => {
-        console.error("Connection error occured" + v);
+        console.error("Connection error occured: ");
+        console.log(v);
     };
 
     wsConn.onclose = (v: CloseEvent) => {
-        console.log("ws connection closed with reason: " + v.reason);
+        console.log("ws connection closed with reason: ");
+        console.log(v);
     };
 
     wsConn.onmessage = (msg: MessageEvent) => {
         let strData = msg.data as string;
 
+        console.log("gotMessage: ");
+        console.log(msg);
+
         let data = strData.split(";", 2);
 
         switch (data[0]) {
             case "updateTransform": {
-                interface PostionData { playerID: string, position: number[], rotation: number[] };
+                interface PostionData { playerID: string, pos: number[], rot: number[] };
                 let packetData = JSON.parse(data[1]) as PostionData;
 
                 if (packetData.playerID == ourPlayerID) {
-                    listener.positionX.value = packetData.position[0];
-                    listener.positionY.value = packetData.position[1];
-                    listener.positionZ.value = packetData.position[2];
-                    listener.forwardX.value = packetData.rotation[0];
-                    listener.forwardY.value = packetData.rotation[1];
-                    listener.forwardZ.value = packetData.rotation[2];
+                    listener.positionX.value = packetData.pos[0];
+                    listener.positionY.value = packetData.pos[1];
+                    listener.positionZ.value = packetData.pos[2];
+                    listener.forwardX.value = packetData.rot[0];
+                    listener.forwardY.value = packetData.rot[1];
+                    listener.forwardZ.value = packetData.rot[2];
                 }
                 else {
                     let con = playersInScope.get(packetData.playerID);
                     if (con != undefined && con.getLocalDescription == null && con.setRemoteDescription != null) {
-                        con.setPosition(packetData.position, packetData.rotation);
+                        con.setPosition(packetData.pos, packetData.rot);
                     }
                 }
                 break;
             }
             case "requestOffer": {
-                interface UserID { playerID: string };
-                let packetData = JSON.parse(data[1]) as UserID;
 
-                let playerCreated = new WebSpeakPlayer(packetData.playerID);
+                let playerCreated = new WebSpeakPlayer(data[1]);
                 playerCreated.createOffer()
                     .then((offer) => {
-                        wsConn.send(packetizeData("returnOffer", JSON.stringify(offer)));
+                        console.log(packetizeData("handOffer", JSON.stringify(offer)));
+                        wsConn.send(packetizeData("handOffer", JSON.stringify(offer)));
                     });
                 break;
             }
@@ -76,7 +97,7 @@ function connectToWS(connectionAdress: string) {
                 let playerCreated = new WebSpeakPlayer(packetData.playerID);
                 playerCreated.createAnswer(packetData.offer)
                     .then((awnser) => {
-                        wsConn.send(packetizeData("returnAnswer", JSON.stringify(awnser)));
+                        wsConn.send(packetizeData("handAnswer", JSON.stringify(awnser)));
                     });
                 break;
             }

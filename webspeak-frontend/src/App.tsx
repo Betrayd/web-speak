@@ -21,7 +21,7 @@ function App() {
       <h1>Vite + React</h1>
       <div className="card">
         <button onClick={onClickButton}>
-          Press to trigger Carter's code!
+          Press to trigger bad code!
         </button>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
