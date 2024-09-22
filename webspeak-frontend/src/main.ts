@@ -85,8 +85,7 @@ function connectToWS(connectionAdress: string) {
                 let playerCreated = new WebSpeakPlayer(data[1]);
                 playerCreated.createOffer()
                     .then((offer) => {
-                        console.log(packetizeData("handOffer", JSON.stringify(offer)));
-                        wsConn.send(packetizeData("handOffer", JSON.stringify(offer)));
+                        wsConn.send(packetizeData("returnOffer", JSON.stringify(offer)));
                     });
                 break;
             }
@@ -97,7 +96,7 @@ function connectToWS(connectionAdress: string) {
                 let playerCreated = new WebSpeakPlayer(packetData.playerID);
                 playerCreated.createAnswer(packetData.offer)
                     .then((awnser) => {
-                        wsConn.send(packetizeData("handAnswer", JSON.stringify(awnser)));
+                        wsConn.send(packetizeData("returnAnswer", JSON.stringify(awnser)));
                     });
                 break;
             }
