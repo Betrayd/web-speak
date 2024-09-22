@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.WebSpeakPlayer;
 
+@Deprecated
 public class WebSpeakNet {
 
     /**

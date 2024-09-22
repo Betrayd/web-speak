@@ -20,8 +20,8 @@ import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
-import net.betrayd.webspeak.net.LocalPlayerInfoPacket;
-import net.betrayd.webspeak.net.WebSpeakNet;
+import net.betrayd.webspeak.impl.net.WebSpeakNet;
+import net.betrayd.webspeak.impl.net.packets.LocalPlayerInfoS2CPacket;
 import net.betrayd.webspeak.util.WebSpeakEvents;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 
@@ -119,8 +119,8 @@ public class WebSpeakServer {
                 
                 player.wsContext = ctx;
                 wsSessions.put(player, ctx);
-                ctx.send(WebSpeakNet.writePacket(LocalPlayerInfoPacket.TYPE,
-                        new LocalPlayerInfoPacket(player.getPlayerId())));
+                WebSpeakNet.sendPacket(ctx, LocalPlayerInfoS2CPacket.PACKET,
+                        new LocalPlayerInfoS2CPacket(player.getPlayerId()));
 
                 playerCoordinateManager.onPlayerConnected(player);
                 ON_SESSION_CONNECTED.invoker().accept(player);
@@ -128,13 +128,16 @@ public class WebSpeakServer {
         });
 
         ws.onClose(ctx -> {
+            WebSpeakPlayer player;
             synchronized(this) {
-                WebSpeakPlayer player = wsSessions.inverse().remove(ctx);
+                player = wsSessions.inverse().remove(ctx);
                 if (player != null) {
                     player.wsContext = null;
                     ON_SESSION_DISCONNECTED.invoker().accept(player);
                 }
             }
+            if (player != null)
+                LOGGER.info("Player {} disconnected from voice.", player.getPlayerId());
         });
 
         ws.onMessage(ctx -> {
@@ -146,8 +149,13 @@ public class WebSpeakServer {
                 LOGGER.warn("Recieved WS message from unknown player: " + ctx.message());
                 return;
             }
-
-            WebSpeakNet.onRecievePacket(player, ctx.message());
+            
+            try {
+                WebSpeakNet.applyPacket(player, ctx.message());
+            } catch (Exception e) {
+                ctx.closeSession(WsCloseStatus.UNSUPPORTED_DATA, e.getMessage());
+                LOGGER.warn("{} was disconnected because packet failed to apply: {}.", player.getPlayerId(), e.getMessage());
+            }
         });
     }
 

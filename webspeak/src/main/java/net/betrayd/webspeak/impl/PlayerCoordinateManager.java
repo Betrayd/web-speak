@@ -10,8 +10,8 @@ import java.util.WeakHashMap;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
-import net.betrayd.webspeak.net.UpdateTransformPacket;
-import net.betrayd.webspeak.net.WebSpeakNet;
+import net.betrayd.webspeak.impl.net.WebSpeakNet;
+import net.betrayd.webspeak.impl.net.packets.UpdateTransformS2CPacket;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
 public class PlayerCoordinateManager {
@@ -79,8 +79,8 @@ public class PlayerCoordinateManager {
     private void sendPlayerTransform(WebSpeakPlayer player, WebSpeakTransform transform,
             Iterable<? extends WebSpeakPlayer> targets) {
 
-        String packet = WebSpeakNet.writePacket(UpdateTransformPacket.TYPE,
-                new UpdateTransformPacket(player.getPlayerId(), player.getLocation(), player.getRotation()));
+        String packet = WebSpeakNet.writePacket(UpdateTransformS2CPacket.PACKET,
+                UpdateTransformS2CPacket.fromPlayer(player));
 
         for (var target : targets) {
             WsContext ws = target.getWsContext();
