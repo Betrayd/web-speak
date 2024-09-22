@@ -88,28 +88,37 @@ function connectToWS(connectionAdress: string) {
                 let playerCreated = new WebSpeakPlayer(data[1]);
                 playerCreated.createOffer()
                     .then((offer) => {
-                        interface PositionData { playerID: string, rtcSessionDescription: string };
+                        interface PositionData { playerID: string, rtcSessionDescription: RTCSessionDescriptionInit };
                         let returnData: PositionData = {
                             playerID: data[1],
-                            rtcSessionDescription: JSON.stringify(offer)
+                            rtcSessionDescription: offer
                         };
+                        console.log(offer);
                         wsConn.send(packetizeData("returnOffer", JSON.stringify(returnData)));
                     });
                 break;
             }
             case "handOffer": {
-                interface Offer { playerID: string, offer: RTCSessionDescription };
+                interface Offer { playerID: string, rtcSessionDescription: RTCDescriptionInterface };
                 let packetData = JSON.parse(data[1]) as Offer;
 
                 let playerCreated = new WebSpeakPlayer(packetData.playerID);
-                playerCreated.createAnswer(packetData.offer)
+                let x = new RTCDesc(packetData.rtcSessionDescription);
+                playerCreated.createAnswer(x)
                     .then((awnser) => {
-                        wsConn.send(packetizeData("returnAnswer", JSON.stringify(awnser)));
+                        interface PositionData { playerID: string, rtcSessionDescription: RTCSessionDescriptionInit };
+                        let returnData: PositionData = {
+                            playerID: packetData.playerID,
+                            rtcSessionDescription: awnser
+                        };
+                        wsConn.send(packetizeData("returnAnswer", JSON.stringify(returnData)));
+                        console.log("sent awnser: ");
+                        console.log(awnser);
                     });
                 break;
             }
             case "handAnswer": {
-                interface Answer { playerID: string, answer: RTCSessionDescription };
+                interface Answer { playerID: string, rtcSessionDescription: RTCDescriptionInterface };
                 let packetData = JSON.parse(data[1]) as Answer;
 
                 let con = playersInScope.get(packetData.playerID);
@@ -123,7 +132,7 @@ function connectToWS(connectionAdress: string) {
                 }
 
                 //set the description. We connected!
-                con.setRemoteDescription
+                con.setRemoteDescription(new RTCDesc(packetData.rtcSessionDescription));
 
                 break;
             }
@@ -142,6 +151,19 @@ function getRTCconfig(): RTCConfiguration {
         ]
     };
 }
+
+interface RTCDescriptionInterface { sdp: string, type: RTCSdpType};
+class RTCDesc implements RTCSessionDescriptionInit 
+{
+    public sdp?: string | undefined;
+    public type: RTCSdpType;
+
+    constructor(x: RTCDescriptionInterface)
+    {
+        this.sdp = x.sdp;
+        this.type = x.type;
+    }
+};
 
 class WebSpeakPlayer {
     //private playerID: string;
@@ -179,7 +201,7 @@ class WebSpeakPlayer {
         return offer;
     }
 
-    public async createAnswer(offer: RTCSessionDescription): Promise<RTCSessionDescriptionInit> {
+    public async createAnswer(offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
         this.connection.setRemoteDescription(offer);
 
         let answer = await this.connection.createAnswer();
@@ -192,8 +214,8 @@ class WebSpeakPlayer {
         return this.connection.localDescription;
     }
 
-    public setRemoteDescription(description: RTCSessionDescription) {
-        this.connection.setRemoteDescription(new RTCSessionDescription(description));
+    public setRemoteDescription(description: RTCSessionDescriptionInit) {
+        this.connection.setRemoteDescription(description);
     }
 
     public setPosition(position: number[], rotation: number[]) {

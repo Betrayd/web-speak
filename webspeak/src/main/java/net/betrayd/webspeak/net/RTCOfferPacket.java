@@ -1,5 +1,7 @@
 package net.betrayd.webspeak.net;
 
+import org.slf4j.LoggerFactory;
+
 import com.google.gson.JsonElement;
 
 import net.betrayd.webspeak.net.PacketType.WriteOnlyJsonPacketType;
@@ -15,7 +17,7 @@ public record RTCOfferPacket(String playerID, JsonElement rtcSessionDescription)
 
     public static final PacketType<RTCOfferPacket> RETURN_OFFER_PACKET = new SimpleJsonPacketType<>(
         WebSpeakNet.GSON, RTCOfferPacket.class, (player, packet) -> {
-                System.out.println("packet data: (sendingPlayerID: " + player.getPlayerId() + ", data: " + packet + ")");
+                LoggerFactory.getLogger("owo").info("packet: {}", packet);
                 for(WebSpeakPlayer p : player.getServer().getPlayers())
                 {
                         System.out.println("loopPlayerID: " + p.getPlayerId());
