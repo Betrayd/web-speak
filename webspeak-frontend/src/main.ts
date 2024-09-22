@@ -8,6 +8,11 @@ let listener = audioCtx.listener;
 
 let ourPlayerID: string;
 
+export function helloWorld() {
+    console.log("Hello World from main.ts");
+    // put your code in here
+}
+
 function packetizeData(type: string, data: string): string {
     return type + ";" + data;
 }
