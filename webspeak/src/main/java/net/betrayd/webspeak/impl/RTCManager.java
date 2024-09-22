@@ -22,6 +22,10 @@ public class RTCManager {
         return server;
     }
 
+    public boolean inRTCAttemptOrCall(WebSpeakPlayer a, WebSpeakPlayer b){
+        return connections.containsRelation(a, b);
+    }
+
     public void tickRTC() {
         Set<WebSpeakPlayer> untestedPlayers = new HashSet<>(server.getPlayers());
 
@@ -37,7 +41,6 @@ public class RTCManager {
                 if (player1Context == null || player2.getWsContext() == null)
                     continue;
 
-                System.out.println("REEEEEEEEEEEEEEEEEEE");
                 if (connections.containsRelation(player1, player2) && !player1.isInScope(player2)) {
                     player1Context.send("{type:disconnectRequest," + "data:" + player2.getPlayerId() + "}");
                     connections.remove(player1, player2);

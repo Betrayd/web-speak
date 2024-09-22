@@ -72,6 +72,10 @@ public class WebSpeakServer {
         return app.port();
     }
 
+    public RTCManager getRtcManager() {
+        return rtcManager;
+    }
+
     /**
      * Start the server.
      * 

@@ -11,7 +11,9 @@ public class PacketTypes {
     static {
         REGISTRY.put("updateTransform", UpdateTransformPacket.TYPE);
         REGISTRY.put("requestOffer", RTCOfferPacket.REQUEST_OFFER_PACKET);
+        REGISTRY.put("returnOffer", RTCOfferPacket.RETURN_OFFER_PACKET);
         REGISTRY.put("handOffer", RTCOfferPacket.HAND_OFFER_PACKET);
+        REGISTRY.put("returnAnswer", RTCOfferPacket.RETURN_ANSWER_PACKET);
         REGISTRY.put("handAnswer", RTCOfferPacket.HAND_ANSWER_PACKET);
         REGISTRY.put("localPlayerInfo", LocalPlayerInfoPacket.TYPE);
     }

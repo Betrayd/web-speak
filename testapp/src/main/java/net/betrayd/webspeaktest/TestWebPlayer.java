@@ -24,7 +24,15 @@ public class TestWebPlayer extends WebSpeakPlayer {
 
     @Override
     public boolean isInScope(WebSpeakPlayer player) {
-        return true;
+        double x = this.player.getLocation().x() - player.getLocation().x();
+        double y = this.player.getLocation().y() - player.getLocation().y();
+        double z = this.player.getLocation().z() - player.getLocation().z();
+
+        if(x*x + y*y + z*z <= 900)
+        {
+            return true;
+        }
+        return false;
     }
     
     public Player getPlayer() {
