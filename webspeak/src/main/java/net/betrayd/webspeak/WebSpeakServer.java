@@ -20,6 +20,7 @@ import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
+import net.betrayd.webspeak.net.LocalPlayerInfoPacket;
 import net.betrayd.webspeak.net.WebSpeakNet;
 import net.betrayd.webspeak.util.WebSpeakEvents;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
@@ -113,10 +114,14 @@ public class WebSpeakServer {
                 // Will be non-null if something was already there.
                 if (wsSessions.putIfAbsent(player, ctx) != null) {
                     ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "Session " + sessionId + " already has a client connected.");
+                    return;
                 }
                 
                 player.wsContext = ctx;
                 wsSessions.put(player, ctx);
+                ctx.send(WebSpeakNet.writePacket(LocalPlayerInfoPacket.TYPE,
+                        new LocalPlayerInfoPacket(player.getPlayerId())));
+
                 playerCoordinateManager.onPlayerConnected(player);
                 ON_SESSION_CONNECTED.invoker().accept(player);
             }

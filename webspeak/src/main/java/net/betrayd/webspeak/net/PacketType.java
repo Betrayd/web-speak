@@ -67,6 +67,50 @@ public interface PacketType<T> {
         
     }
 
+    public static class StringPacketType implements PacketType<String> {
+
+        private final BiConsumer<WebSpeakPlayer, String> applicator;
+
+        public StringPacketType(BiConsumer<WebSpeakPlayer, String> applicator) {
+            this.applicator = applicator;
+        }
+
+        @Override
+        public String write(String packet) {
+            return packet;
+        }
+
+        @Override
+        public String read(String serialized) {
+            return serialized;
+        }
+
+        @Override
+        public void apply(WebSpeakPlayer player, String packet) {
+            applicator.accept(player, packet);
+        }
+        
+    }
+
+    public static class WriteOnlyStringPacketType implements PacketType<String> {
+
+        @Override
+        public String write(String packet) {
+            return packet;
+        }
+
+        @Override
+        public String read(String serialized) {
+            return serialized;
+        }
+
+        @Override
+        public void apply(WebSpeakPlayer player, String packet) {
+            throw new UnsupportedOperationException("This packet cannot be applied on the server.");
+        }
+        
+    }
+
     public static abstract class JsonPacketType<T> implements PacketType<T> {
         private final Gson gson;
         private final Class<T> clazz;

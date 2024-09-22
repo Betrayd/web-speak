@@ -6,6 +6,8 @@ import java.util.Set;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
+import net.betrayd.webspeak.net.RTCOfferPacket;
+import net.betrayd.webspeak.net.WebSpeakNet;
 
 public class RTCManager {
     private final WebSpeakServer server;
@@ -38,7 +40,7 @@ public class RTCManager {
                     player1Context.send("{type:disconnectRequest," + "data:" + player2.getPlayerId() + "}");
                     connections.remove(player1, player2);
                 } else if (!connections.containsRelation(player1, player2) && player1.isInScope(player2)) {
-                    player1Context.send("{type:connectRequest," + "data:" + player2.getPlayerId() + "}");
+                    player1Context.send(WebSpeakNet.writePacket(RTCOfferPacket.REQUEST_OFFER_PACKET, player2.getPlayerId()));
                     connections.add(player1, player2);
                 }
                 
