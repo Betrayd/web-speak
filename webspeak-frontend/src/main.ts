@@ -225,6 +225,23 @@ class WebSpeakPlayer {
 
     public static async create(otherPlayerID: string): Promise<WebSpeakPlayer> {
         let createP = new WebSpeakPlayer();
+
+        let source: AudioBufferSourceNode;
+        fetch("panner-node_viper.ogg")
+        .then((response) => response.arrayBuffer())
+        .then((downloadedBuffer) => audioCtx.decodeAudioData(downloadedBuffer))
+        .then((decodedBuffer) => {
+          source = new AudioBufferSourceNode(audioCtx, {
+            buffer: decodedBuffer,
+          });
+          source.connect(createP.panner);
+          createP.panner.connect(audioCtx.destination);
+          source.loop = true;
+          source.start(0);
+    }).catch((e) => {
+        console.error(`Error while preparing the audio data ${e.err}`);
+      });
+
         await navigator.mediaDevices.getUserMedia({
             audio: true,
             video: false,
@@ -232,6 +249,7 @@ class WebSpeakPlayer {
             if (stream.active != false) {
                 console.log("all audio tracks on this device: ");
                 console.log(stream.getAudioTracks());
+                
                 stream.getTracks().forEach((track) => {
                     createP.connection.addTrack(track, stream);
                   });
@@ -241,13 +259,13 @@ class WebSpeakPlayer {
             console.log("new track added!");
             if (ev.track.kind == "audio") {
                 console.log("audio track");
-                console.log(ev);
-                let source = new MediaStreamAudioSourceNode(audioCtx, {
-                    mediaStream: ev.streams[0],
-                });
-                ev.track.getSettings();
-                source.connect(createP.panner);
-                createP.panner.connect(audioCtx.destination);
+                //console.log(ev);
+                //let source = new MediaStreamAudioSourceNode(audioCtx, {
+                //    mediaStream: ev.streams[0],
+                //});
+                //ev.track.getSettings();
+                //source.connect(createP.panner);
+                //createP.panner.connect(audioCtx.destination);
             }
         });
         createP.connection.onicecandidate = function (event) {
