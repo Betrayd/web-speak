@@ -65,7 +65,9 @@ function connectToWS(connectionAdress: string) {
 
         switch (data[0]) {
             case "localPlayerInfo": {
-                ourPlayerID = data[1];
+                interface parseFail { playerID: string };
+                let packetData = JSON.parse(data[1]);
+                ourPlayerID = packetData.playerID;
                 console.log("set our player ID: " + ourPlayerID);
                 break;
             }
@@ -91,6 +93,7 @@ function connectToWS(connectionAdress: string) {
                 interface PostionData { playerID: string, pos: number[], rot: number[] };
                 let packetData = JSON.parse(data[1]) as PostionData;
 
+                console.log("playerID: ");
                 if (ourPlayerID != null && packetData.playerID == ourPlayerID) {
                     listener.positionX.value = packetData.pos[0];
                     listener.positionY.value = packetData.pos[1];
@@ -102,6 +105,8 @@ function connectToWS(connectionAdress: string) {
                 }
                 else {
                     let con = playersInScope.get(packetData.playerID);
+                    console.log("trying updating players: ");
+                    console.log(con);
                     if (con != undefined && con.getLocalDescription != null) {
                         con.setPosition(packetData.pos, packetData.rot);
                     }
