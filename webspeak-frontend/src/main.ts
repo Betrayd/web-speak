@@ -58,8 +58,7 @@ function connectToWS(connectionAdress: string) {
         let splitData = strData.split(";");
         let data = [splitData.shift(), splitData.join(';')];
 
-        if(data[1] == undefined)
-        {
+        if (data[1] == undefined) {
             console.log("I hate typescript. This  is an error.");
             data[1] = "I'm not undefined this sucks";
         }
@@ -99,6 +98,7 @@ function connectToWS(connectionAdress: string) {
                     listener.forwardX.value = packetData.rot[0];
                     listener.forwardY.value = packetData.rot[1];
                     listener.forwardZ.value = packetData.rot[2];
+                    console.log("usPos: " + packetData.pos);
                 }
                 else {
                     let con = playersInScope.get(packetData.playerID);
@@ -200,7 +200,7 @@ class WebSpeakPlayer {
         panningModel: "HRTF",
         distanceModel: "linear",
         positionX: 0,
-        positionY: 69420,
+        positionY: 0,
         positionZ: 0,
         orientationX: 0,
         orientationY: 0,
@@ -218,42 +218,46 @@ class WebSpeakPlayer {
         this.connection = new RTCPeerConnection(getRTCconfig());
     }
 
-    public static async create(otherPlayerID: string) : Promise<WebSpeakPlayer>
-    {
+    public static async create(otherPlayerID: string): Promise<WebSpeakPlayer> {
         let createP = new WebSpeakPlayer();
         await navigator.mediaDevices.getUserMedia({
             audio: true,
             video: false,
-          }).then((stream) => {
-            if(stream.active != false)
-            {
+        }).then((stream) => {
+            if (stream.active != false) {
                 console.log("all audio tracks on this device: ");
                 console.log(stream.getAudioTracks());
-                createP.connection.addTrack(stream.getAudioTracks()[0]);
+                stream.getTracks().forEach((track) => {
+                    createP.connection.addTrack(track, stream);
+                  });
             }
         });
-        createP.connection.ontrack = ((ev) => 
-            {
-                console.log("new track added!");
+        createP.connection.ontrack = ((ev) => {
+            console.log("new track added!");
+            if (ev.track.kind == "audio") {
+                console.log("audio track");
+                console.log(ev);
                 let source = new MediaStreamAudioSourceNode(audioCtx, {
                     mediaStream: ev.streams[0],
-                  });
+                });
+                ev.track.getSettings();
                 source.connect(createP.panner);
                 createP.panner.connect(audioCtx.destination);
-            });
+            }
+        });
         createP.connection.onicecandidate = function (event) {
-            console.log("trying to send an ice canidate"); 
-            if (event.candidate) { 
-                interface IceCanidate {playerID : string, rtcSessionDescription : RTCIceCandidate};
+            console.log("trying to send an ice canidate");
+            if (event.candidate) {
+                interface IceCanidate { playerID: string, rtcSessionDescription: RTCIceCandidate };
                 let output: IceCanidate = {
                     playerID: otherPlayerID,
                     rtcSessionDescription: event.candidate
                 };
                 console.log("NON NULL ICE CANIDATESEND");
                 wsConn.send(packetizeData("returnIce", JSON.stringify(output)));
-            } 
-         }; 
-            
+            }
+        };
+
         console.log("rtcPeer:");
         console.log(createP.connection);
         playersInScope.set(otherPlayerID, createP);
@@ -284,8 +288,7 @@ class WebSpeakPlayer {
     }
 
     public setRemoteDescription(description: RTCSessionDescriptionInit) {
-        if(this.connection == null)
-        {
+        if (this.connection == null) {
             console.error("something really bad happened. Expect everything to be broken. The end is nigh.");
         }
         this.connection.setRemoteDescription(description);
@@ -298,6 +301,7 @@ class WebSpeakPlayer {
         this.panner.orientationX.value = rotation[0];
         this.panner.orientationY.value = rotation[1];
         this.panner.orientationZ.value = rotation[2];
+        console.log("otherPos: " + position);
     }
 
     public remove() {
