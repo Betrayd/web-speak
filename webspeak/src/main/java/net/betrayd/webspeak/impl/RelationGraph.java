@@ -93,4 +93,24 @@ public class RelationGraph<T> {
             return Collections.emptySet();
         }
     }
+
+    /**
+     * Remove all relations connected to a specific object.
+     * @param value Object to remove from the relation graph.
+     * @return A set of all the relations this object had.
+     */
+    public Set<T> clearRelations(Object value) {
+        Set<T> relations = relationMap.remove(value);
+        if (relations == null) {
+            return Collections.emptySet();
+        }
+
+        for (var other : relations) {
+            Set<T> otherSet = relationMap.get(other);
+            if (otherSet != null)
+                otherSet.remove(value);
+        }
+
+        return relations;
+    }
 }

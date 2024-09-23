@@ -134,6 +134,7 @@ public class WebSpeakServer {
                 player = wsSessions.inverse().remove(ctx);
                 if (player != null) {
                     player.wsContext = null;
+                    rtcManager.kickRTC(player);
                     ON_SESSION_DISCONNECTED.invoker().accept(player);
                 }
             }

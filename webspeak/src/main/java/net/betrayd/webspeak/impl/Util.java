@@ -1,4 +1,4 @@
-package net.betrayd.webspeak.util;
+package net.betrayd.webspeak.impl;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -22,6 +22,10 @@ public class Util {
      */
     public static <T> Iterable<Pair<T, T>> compareAll(Collection<? extends T> collection) {
         return () -> new ComparingIterator<>(collection, collection.size());
+    }
+
+    public static <T> Iterable<Pair<T, T>> compareAll(Iterable<? extends T> iterable, int expectedSize) {
+        return () -> new ComparingIterator<>(iterable, expectedSize);
     }
 
     private static class ComparingIterator<T> implements Iterator<Pair<T, T>> {
@@ -60,8 +64,8 @@ public class Util {
         
     }
 
-    private static class FilteredIterator<T> implements Iterator<T> {
-        private final Iterator<T> baseIterator;
+    public static class FilteredIterator<T> implements Iterator<T> {
+        private final Iterator<? extends T> baseIterator;
         private final Predicate<? super T> predicate;
 
         private T next;
@@ -70,7 +74,7 @@ public class Util {
         // so we can't use a null check.
         private boolean isNextSet;
         
-        public FilteredIterator(Iterator<T> baseIterator, Predicate<? super T> predicate) {
+        public FilteredIterator(Iterator<? extends T> baseIterator, Predicate<? super T> predicate) {
             this.baseIterator = baseIterator;
             this.predicate = predicate;
         }

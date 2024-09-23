@@ -5,8 +5,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import net.betrayd.webspeak.util.Util;
-import net.betrayd.webspeak.util.Util.Pair;
+import net.betrayd.webspeak.impl.Util;
+import net.betrayd.webspeak.impl.Util.Pair;
 
 public class CollectionTest {
 
