@@ -203,19 +203,19 @@ class WebSpeakPlayer {
     private connection: RTCPeerConnection;
     private panner = new PannerNode(audioCtx, {
         panningModel: "HRTF",
-        distanceModel: "linear",
+        distanceModel: "inverse",
         positionX: 0,
         positionY: 0,
         positionZ: 0,
         orientationX: 0,
         orientationY: 0,
         orientationZ: 0,
-        refDistance: 6,
+        refDistance: 1,
         maxDistance: 26,
         rolloffFactor: 1,
-        coneInnerAngle: 70,
-        coneOuterAngle: 290,
-        coneOuterGain: 0.4,
+        coneInnerAngle: 360,
+        coneOuterAngle: 0,
+        coneOuterGain: 0,
     });
 
     private constructor() {
@@ -227,7 +227,7 @@ class WebSpeakPlayer {
         let createP = new WebSpeakPlayer();
 
         let source: AudioBufferSourceNode;
-        fetch("panner-node_viper.ogg")
+        /*fetch("panner-node_viper.ogg")
         .then((response) => response.arrayBuffer())
         .then((downloadedBuffer) => audioCtx.decodeAudioData(downloadedBuffer))
         .then((decodedBuffer) => {
@@ -240,7 +240,7 @@ class WebSpeakPlayer {
           source.start(0);
     }).catch((e) => {
         console.error(`Error while preparing the audio data ${e.err}`);
-      });
+      });*/
 
         await navigator.mediaDevices.getUserMedia({
             audio: true,
@@ -253,19 +253,31 @@ class WebSpeakPlayer {
                 stream.getTracks().forEach((track) => {
                     createP.connection.addTrack(track, stream);
                   });
+                let source = audioCtx.createMediaStreamSource(stream);
+                //source.connect(createP.panner);
+                //createP.panner.connect(audioCtx.destination);
+                console.log("local source: ");
+                console.log(source);
             }
         });
         createP.connection.ontrack = ((ev) => {
             console.log("new track added!");
             if (ev.track.kind == "audio") {
                 console.log("audio track");
-                //console.log(ev);
-                //let source = new MediaStreamAudioSourceNode(audioCtx, {
-                //    mediaStream: ev.streams[0],
-                //});
-                //ev.track.getSettings();
-                //source.connect(createP.panner);
-                //createP.panner.connect(audioCtx.destination);
+                console.log(ev);
+                let x = new MediaStream();
+                ev.streams[0].getTracks().forEach((track) => {
+                    x.addTrack(track);
+                });
+                let testAud = new Audio();
+                testAud.srcObject = ev.streams[0];
+                testAud.play();
+                console.log(testAud);
+                let source = audioCtx.createMediaStreamSource(ev.streams[0]);
+                source.connect(createP.panner);
+                createP.panner.connect(audioCtx.destination);
+                console.log("remote source: ");
+                console.log(source);
             }
         });
         createP.connection.onicecandidate = function (event) {
