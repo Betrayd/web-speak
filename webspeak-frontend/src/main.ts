@@ -55,7 +55,14 @@ function connectToWS(connectionAdress: string) {
         console.log("gotMessage: ");
         console.log(msg);
 
-        let data = strData.split(";", 2);
+        let splitData = strData.split(";");
+        let data = [splitData.shift(), splitData.join(';')];
+
+        if(data[1] == undefined)
+        {
+            console.log("I hate typescript. This  is an error.");
+            data[1] = "I'm not undefined this sucks";
+        }
 
         switch (data[0]) {
             case "localPlayerInfo": {
@@ -103,22 +110,26 @@ function connectToWS(connectionAdress: string) {
             }
             case "requestOffer": {
                 //data[1] just contains a playerID in this case
-                let playerCreated = await WebSpeakPlayer.create(data[1]);
+                let strData = data[1];
+                let playerCreated = await WebSpeakPlayer.create(strData);
                 playerCreated.createOffer()
                     .then((offer) => {
                         interface PositionData { playerID: string, rtcSessionDescription: RTCSessionDescriptionInit };
                         let returnData: PositionData = {
-                            playerID: data[1],
+                            playerID: strData,
                             rtcSessionDescription: offer
                         };
-                        console.log(offer);
+                        console.log("Created packet offer:");
+                        console.log(packetizeData("returnOffer", JSON.stringify(returnData)));
                         wsConn.send(packetizeData("returnOffer", JSON.stringify(returnData)));
                     });
                 break;
             }
             case "handOffer": {
-                //interface Offer { playerID: string, rtcSessionDescription: RTCDescriptionInterface };
-                let packetData = JSON.parse(data[1]);
+                console.log("hand offer: ");
+                console.log(data[1]);
+                interface Offer { playerID: string, rtcSessionDescription: RTCDescriptionInterface };
+                let packetData = JSON.parse(data[1]) as Offer;
 
                 let playerCreated = await WebSpeakPlayer.create(packetData.playerID);
                 let x = new RTCDesc(packetData.rtcSessionDescription);
