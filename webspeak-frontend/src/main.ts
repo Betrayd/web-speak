@@ -49,7 +49,7 @@ function connectToWS(connectionAdress: string) {
         console.log(v);
     };
 
-    wsConn.onmessage = (msg: MessageEvent) => {
+    wsConn.onmessage = async (msg: MessageEvent) => {
         let strData = msg.data as string;
 
         console.log("gotMessage: ");
@@ -103,7 +103,7 @@ function connectToWS(connectionAdress: string) {
             }
             case "requestOffer": {
                 //data[1] just contains a playerID in this case
-                let playerCreated = new WebSpeakPlayer(data[1]);
+                let playerCreated = await WebSpeakPlayer.create(data[1]);
                 playerCreated.createOffer()
                     .then((offer) => {
                         interface PositionData { playerID: string, rtcSessionDescription: RTCSessionDescriptionInit };
@@ -117,10 +117,10 @@ function connectToWS(connectionAdress: string) {
                 break;
             }
             case "handOffer": {
-                interface Offer { playerID: string, rtcSessionDescription: RTCDescriptionInterface };
-                let packetData = JSON.parse(data[1]) as Offer;
+                //interface Offer { playerID: string, rtcSessionDescription: RTCDescriptionInterface };
+                let packetData = JSON.parse(data[1]);
 
-                let playerCreated = new WebSpeakPlayer(packetData.playerID);
+                let playerCreated = await WebSpeakPlayer.create(packetData.playerID);
                 let x = new RTCDesc(packetData.rtcSessionDescription);
                 playerCreated.createAnswer(x)
                     .then((awnser) => {
@@ -164,9 +164,10 @@ function getRTCconfig(): RTCConfiguration {
     return {
         iceServers: [
             {
-                urls: 'stun:stun2.1.google.com:19302'
-            }
-        ]
+                urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'],
+            },
+        ],
+        iceCandidatePoolSize: 10,
     };
 }
 
@@ -201,11 +202,15 @@ class WebSpeakPlayer {
         coneOuterGain: 0.4,
     });
 
-    public constructor(otherPlayerID: string) {
+    private constructor() {
         //this.playerID = playerID;
         this.connection = new RTCPeerConnection(getRTCconfig());
+    }
 
-        navigator.mediaDevices.getUserMedia({
+    public static async create(otherPlayerID: string) : Promise<WebSpeakPlayer>
+    {
+        let createP = new WebSpeakPlayer();
+        await navigator.mediaDevices.getUserMedia({
             audio: true,
             video: false,
           }).then((stream) => {
@@ -213,39 +218,35 @@ class WebSpeakPlayer {
             {
                 console.log("all audio tracks on this device: ");
                 console.log(stream.getAudioTracks());
-                this.connection.addTrack(stream.getAudioTracks()[0]);
+                createP.connection.addTrack(stream.getAudioTracks()[0]);
             }
         });
-        this.connection.addEventListener(
-            "track",
-            (e) => {
-                console.log("differentAddtrackworked");
-            },
-            false,
-          );
-        this.connection.ontrack = ((ev) => 
+        createP.connection.ontrack = ((ev) => 
             {
                 console.log("new track added!");
                 let source = new MediaStreamAudioSourceNode(audioCtx, {
                     mediaStream: ev.streams[0],
                   });
-                source.connect(this.panner);
-                this.panner.connect(audioCtx.destination);
+                source.connect(createP.panner);
+                createP.panner.connect(audioCtx.destination);
             });
-        this.connection.onicecandidate = function (event) { 
+        createP.connection.onicecandidate = function (event) {
+            console.log("trying to send an ice canidate"); 
             if (event.candidate) { 
                 interface IceCanidate {playerID : string, rtcSessionDescription : RTCIceCandidate};
                 let output: IceCanidate = {
                     playerID: otherPlayerID,
                     rtcSessionDescription: event.candidate
                 };
+                console.log("NON NULL ICE CANIDATESEND");
                 wsConn.send(packetizeData("returnIce", JSON.stringify(output)));
             } 
          }; 
             
         console.log("rtcPeer:");
-        console.log(this.connection);
-        playersInScope.set(otherPlayerID, this);
+        console.log(createP.connection);
+        playersInScope.set(otherPlayerID, createP);
+        return createP;
     }
 
     public getConnection(): RTCPeerConnection {

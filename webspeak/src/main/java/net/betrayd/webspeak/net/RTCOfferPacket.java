@@ -20,11 +20,6 @@ public record RTCOfferPacket(String playerID, JsonElement rtcSessionDescription)
                 LoggerFactory.getLogger("owo").info("packet: {}", packet);
                 for(WebSpeakPlayer p : player.getServer().getPlayers())
                 {
-                        System.out.println("loopPlayerID: " + p.getPlayerId());
-                        if(p.getPlayerId().equals(packet.playerID))
-                        {
-                                System.out.println("correctID here take relation graph: " + player.getServer().getRtcManager().inRTCAttemptOrCall(player, p));
-                        }
                         if(p.getPlayerId().equals(packet.playerID) && player.getServer().getRtcManager().inRTCAttemptOrCall(player, p))
                         {
                                 System.out.println("testDebug");
