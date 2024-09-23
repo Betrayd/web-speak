@@ -63,6 +63,24 @@ function connectToWS(connectionAdress: string) {
                 console.log("set our player ID: " + ourPlayerID);
                 break;
             }
+            case "handIce": {
+                let packetData = JSON.parse(data[1]);
+
+                let con = playersInScope.get(packetData.playerID);
+                if (con == undefined) {
+                    //something terrible has happened
+                    break;
+                }
+                if (con.getLocalDescription == null) {
+                    //something else horrible has happened
+
+                }
+
+                console.log("got ice canidate!");
+                con.getConnection().addIceCandidate(packetData.rtcSessionDescription);
+
+                break;
+            }
             case "updateTransform": {
                 interface PostionData { playerID: string, pos: number[], rot: number[] };
                 let packetData = JSON.parse(data[1]) as PostionData;
@@ -77,7 +95,7 @@ function connectToWS(connectionAdress: string) {
                 }
                 else {
                     let con = playersInScope.get(packetData.playerID);
-                    if (con != undefined && con.getLocalDescription == null && con.setRemoteDescription != null) {
+                    if (con != undefined && con.getLocalDescription != null) {
                         con.setPosition(packetData.pos, packetData.rot);
                     }
                 }
@@ -152,14 +170,12 @@ function getRTCconfig(): RTCConfiguration {
     };
 }
 
-interface RTCDescriptionInterface { sdp: string, type: RTCSdpType};
-class RTCDesc implements RTCSessionDescriptionInit 
-{
+interface RTCDescriptionInterface { sdp: string, type: RTCSdpType };
+class RTCDesc implements RTCSessionDescriptionInit {
     public sdp?: string | undefined;
     public type: RTCSdpType;
 
-    constructor(x: RTCDescriptionInterface)
-    {
+    constructor(x: RTCDescriptionInterface) {
         this.sdp = x.sdp;
         this.type = x.type;
     }
@@ -185,10 +201,51 @@ class WebSpeakPlayer {
         coneOuterGain: 0.4,
     });
 
-    public constructor(playerID: string) {
+    public constructor(otherPlayerID: string) {
         //this.playerID = playerID;
         this.connection = new RTCPeerConnection(getRTCconfig());
-        playersInScope.set(playerID, this);
+
+        navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: false,
+          }).then((stream) => {
+            if(stream.active != false)
+            {
+                console.log("all audio tracks on this device: ");
+                console.log(stream.getAudioTracks());
+                this.connection.addTrack(stream.getAudioTracks()[0]);
+            }
+        });
+        this.connection.addEventListener(
+            "track",
+            (e) => {
+                console.log("differentAddtrackworked");
+            },
+            false,
+          );
+        this.connection.ontrack = ((ev) => 
+            {
+                console.log("new track added!");
+                let source = new MediaStreamAudioSourceNode(audioCtx, {
+                    mediaStream: ev.streams[0],
+                  });
+                source.connect(this.panner);
+                this.panner.connect(audioCtx.destination);
+            });
+        this.connection.onicecandidate = function (event) { 
+            if (event.candidate) { 
+                interface IceCanidate {playerID : string, rtcSessionDescription : RTCIceCandidate};
+                let output: IceCanidate = {
+                    playerID: otherPlayerID,
+                    rtcSessionDescription: event.candidate
+                };
+                wsConn.send(packetizeData("returnIce", JSON.stringify(output)));
+            } 
+         }; 
+            
+        console.log("rtcPeer:");
+        console.log(this.connection);
+        playersInScope.set(otherPlayerID, this);
     }
 
     public getConnection(): RTCPeerConnection {
@@ -202,7 +259,7 @@ class WebSpeakPlayer {
     }
 
     public async createAnswer(offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
-        this.connection.setRemoteDescription(offer);
+        this.setRemoteDescription(offer);
 
         let answer = await this.connection.createAnswer();
         this.connection.setLocalDescription(answer);
@@ -215,6 +272,10 @@ class WebSpeakPlayer {
     }
 
     public setRemoteDescription(description: RTCSessionDescriptionInit) {
+        if(this.connection == null)
+        {
+            console.error("something really bad happened. Expect everything to be broken. The end is nigh.");
+        }
         this.connection.setRemoteDescription(description);
     }
 

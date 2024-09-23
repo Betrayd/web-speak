@@ -48,4 +48,19 @@ public record RTCOfferPacket(String playerID, JsonElement rtcSessionDescription)
                         }
                 }
         });
+
+        public static final PacketType<RTCOfferPacket> HAND_ICE_PACKET = new WriteOnlyJsonPacketType<>(
+                WebSpeakNet.GSON, RTCOfferPacket.class);
+
+        public static final PacketType<RTCOfferPacket> RETURN_ICE_PACKET = new SimpleJsonPacketType<>(
+                WebSpeakNet.GSON, RTCOfferPacket.class, (player, packet) -> {
+                        System.out.println("packet data: (sendingPlayerID: " + player.getPlayerId() + ", data: " + packet + ")");
+                        for(WebSpeakPlayer p : player.getServer().getPlayers())
+                        {
+                                if(p.getPlayerId().equals(packet.playerID) && player.getServer().getRtcManager().inRTCAttemptOrCall(player, p))
+                                {
+                                        p.getWsContext().send(WebSpeakNet.writePacket(RTCOfferPacket.HAND_ICE_PACKET, new RTCOfferPacket(player.getPlayerId(), packet.rtcSessionDescription)));
+                                }
+                        }
+                });
 }

@@ -15,6 +15,8 @@ public class PacketTypes {
         REGISTRY.put("handOffer", RTCOfferPacket.HAND_OFFER_PACKET);
         REGISTRY.put("returnAnswer", RTCOfferPacket.RETURN_ANSWER_PACKET);
         REGISTRY.put("handAnswer", RTCOfferPacket.HAND_ANSWER_PACKET);
+        REGISTRY.put("handIce", RTCOfferPacket.HAND_ICE_PACKET);
+        REGISTRY.put("returnIce", RTCOfferPacket.RETURN_ICE_PACKET);
         REGISTRY.put("localPlayerInfo", LocalPlayerInfoPacket.TYPE);
     }
 }
