@@ -226,8 +226,8 @@ class WebSpeakPlayer {
     public static async create(otherPlayerID: string): Promise<WebSpeakPlayer> {
         let createP = new WebSpeakPlayer();
 
-        let source: AudioBufferSourceNode;
-        /*fetch("panner-node_viper.ogg")
+        /*let source: AudioBufferSourceNode;
+        fetch("panner-node_viper.ogg")
         .then((response) => response.arrayBuffer())
         .then((downloadedBuffer) => audioCtx.decodeAudioData(downloadedBuffer))
         .then((decodedBuffer) => {
@@ -269,15 +269,17 @@ class WebSpeakPlayer {
                 ev.streams[0].getTracks().forEach((track) => {
                     x.addTrack(track);
                 });
-                let testAud = new Audio();
-                testAud.srcObject = ev.streams[0];
-                testAud.play();
-                console.log(testAud);
+                //let testAud = new Audio();
+                //testAud.srcObject = ev.streams[0];
+                //testAud.play();
+                //console.log(testAud);
+                //let source = audioCtx.createMediaElementSource(testAud);
                 let source = audioCtx.createMediaStreamSource(ev.streams[0]);
                 source.connect(createP.panner);
                 createP.panner.connect(audioCtx.destination);
-                console.log("remote source: ");
-                console.log(source);
+                //console.log("remote source: ");
+                //console.log(source);
+                //testAud.play();
             }
         });
         createP.connection.onicecandidate = function (event) {
