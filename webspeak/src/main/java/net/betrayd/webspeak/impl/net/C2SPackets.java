@@ -14,6 +14,7 @@ public class C2SPackets {
 
         REGISTRY.put("returnOffer", RTCPackets.RETURN_OFFER_C2S);
         REGISTRY.put("returnAnswer", RTCPackets.RETURN_ANSWER_C2S);
+        REGISTRY.put("returnIce", RTCPackets.RETURN_ICE_C2S);
     }
     
     public static C2SPacket<?> get(String id) {

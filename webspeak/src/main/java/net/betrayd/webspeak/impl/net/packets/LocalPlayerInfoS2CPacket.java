@@ -5,7 +5,7 @@ import net.betrayd.webspeak.impl.net.S2CPacket;
 import net.betrayd.webspeak.impl.net.S2CPacket.JsonS2CPacket;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 
-public record LocalPlayerInfoS2CPacket(String playerId) {
+public record LocalPlayerInfoS2CPacket(String playerID) {
     public static final S2CPacket<LocalPlayerInfoS2CPacket> PACKET = new JsonS2CPacket<>("localPlayerInfo");
 
     public void send(WsContext ws) {

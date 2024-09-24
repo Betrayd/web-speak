@@ -7,7 +7,7 @@ import net.betrayd.webspeak.impl.net.S2CPacket.JsonS2CPacket;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
-public record UpdateTransformS2CPacket(String playerId, WebSpeakVector pos, WebSpeakVector rot) {
+public record UpdateTransformS2CPacket(String playerID, WebSpeakVector pos, WebSpeakVector rot) {
     public static final S2CPacket<UpdateTransformS2CPacket> PACKET = new JsonS2CPacket<>("updateTransform");
 
     public static UpdateTransformS2CPacket fromPlayer(WebSpeakPlayer player) {

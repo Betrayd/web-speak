@@ -159,7 +159,8 @@ public class WebSpeakServer {
                 LOGGER.warn("{} sent unknown packet '{}'", player.getPlayerId(), e.getPacketId());
             } catch (Exception e) {
                 ctx.closeSession(WsCloseStatus.PROTOCOL_ERROR, e.getMessage());
-                LOGGER.warn("{} was disconnected because packet failed to apply: {}.", player.getPlayerId(), e.getMessage());
+                LOGGER.warn("{} was disconnected because packet failed to apply.", player.getPlayerId());
+                LOGGER.error("Error applying packet: ", e);
             }
         });
     }
