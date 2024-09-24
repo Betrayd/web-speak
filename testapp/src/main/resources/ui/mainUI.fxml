@@ -8,6 +8,7 @@
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.input.KeyCodeCombination?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -16,26 +17,25 @@
 <?import javafx.scene.text.Font?>
 <?import net.betrayd.webspeaktest.ui.util.ZoomableGraph?>
 
-<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="720.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/21.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.betrayd.webspeaktest.ui.MainUIController">
+<VBox fx:id="root" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="720.0" prefWidth="1280.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/21.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.betrayd.webspeaktest.ui.MainUIController">
    <children>
       <MenuBar VBox.vgrow="NEVER">
-        <menus>
-          <Menu mnemonicParsing="false" text="File">
-            <items>
-              <MenuItem mnemonicParsing="false" text="Close" />
-            </items>
-          </Menu>
-          <Menu mnemonicParsing="false" text="Edit">
-            <items>
-              <MenuItem mnemonicParsing="false" text="Delete" />
-            </items>
-          </Menu>
-          <Menu mnemonicParsing="false" text="Help">
-            <items>
-              <MenuItem mnemonicParsing="false" text="About" />
-            </items>
-          </Menu>
-        </menus>
+         <menus>
+            <Menu mnemonicParsing="false" text="Player">
+              <items>
+                <MenuItem mnemonicParsing="false" onAction="#addPlayer" text="Add">
+                     <accelerator>
+                        <KeyCodeCombination alt="UP" code="A" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator>
+                  </MenuItem>
+                  <MenuItem fx:id="removePlayerMenuItem" disable="true" mnemonicParsing="false" onAction="#removePlayer" text="Remove">
+                     <accelerator>
+                        <KeyCodeCombination alt="UP" code="D" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator>
+                  </MenuItem>
+              </items>
+            </Menu>
+         </menus>
       </MenuBar>
       <BorderPane prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
          <center>
@@ -74,7 +74,8 @@
                   <Label fx:id="serverAddressText" text="localhost:8080" textFill="#006f12" />
                   <Region HBox.hgrow="ALWAYS" />
                   <Label text="Player Connection Address:" />
-                  <TextField fx:id="connectionAddressField" editable="false" prefWidth="700.0" promptText="Please select a player" />
+                  <TextField fx:id="frontendPortField" prefWidth="64.0" promptText="Port" text="5173" />
+                  <TextField fx:id="connectionAddressField" editable="false" prefWidth="650.0" promptText="Please select a player" />
                   <Button fx:id="startStopButton" mnemonicParsing="false" onAction="#pressStartStopButton" text="Start Server" />
                </children>
                <BorderPane.margin>
