@@ -27,9 +27,9 @@
             <Label text="Name" GridPane.rowIndex="1" />
             <TextField fx:id="nameField" onAction="#onNameFieldCommit" promptText="Player Name" GridPane.columnIndex="1" GridPane.rowIndex="1" />
             <Label text="Session ID" GridPane.rowIndex="2" />
-            <TextField fx:id="sessionIdField" editable="false" promptText="Connection ID" text="123456" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+            <TextField fx:id="sessionIdField" editable="false" promptText="Start server to see connection ID" GridPane.columnIndex="1" GridPane.rowIndex="2" />
             <Label text="Player ID" GridPane.rowIndex="3" />
-            <TextField fx:id="playerIdField" editable="false" text="123456" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+            <TextField fx:id="playerIdField" editable="false" promptText="Start server to see player ID" GridPane.columnIndex="1" GridPane.rowIndex="3" />
             <Label text="Color" />
             <ColorPicker fx:id="colorPicker" editable="true" GridPane.columnIndex="1">
                <value>
