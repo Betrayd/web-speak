@@ -83,6 +83,6 @@ public class RTCPackets {
             return;
         }
 
-        WebSpeakNet.sendPacket(targetWs, HAND_ICE_S2C, new RTCOfferData(targetPlayer.getPlayerId(), data.rtcSessionDescription));
+        WebSpeakNet.sendPacket(targetWs, HAND_ICE_S2C, new RTCOfferData(player.getPlayerId(), data.rtcSessionDescription));
     }
 }

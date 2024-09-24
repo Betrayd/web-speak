@@ -74,7 +74,11 @@ function connectToWS(connectionAdress: string) {
             case "handIce": {
                 let packetData = JSON.parse(data[1]);
 
-                let con = playersInScope.get(packetData.playerID);
+                let con = playersInScope.get(packetData.playerID as string);
+                console.log("curCon = ");
+                console.log(packetData.playerID as string);
+                console.log(con);
+                console.log(playersInScope);
                 if (con == undefined) {
                     //something terrible has happened
                     break;
@@ -115,15 +119,19 @@ function connectToWS(connectionAdress: string) {
             }
             case "requestOffer": {
                 //data[1] just contains a playerID in this case
-                let strData = data[1];
-                let playerCreated = await WebSpeakPlayer.create(strData);
+                let strData = JSON.parse(data[1]);
+                let playerCreated = await WebSpeakPlayer.create(strData.playerID as string);
+                console.log("made WSPlayer: ");
+                console.log(strData.playerID);
+                console.log(playerCreated);
                 playerCreated.createOffer()
                     .then((offer) => {
                         interface PositionData { playerID: string, rtcSessionDescription: RTCSessionDescriptionInit };
                         let returnData: PositionData = {
-                            playerID: strData,
+                            playerID: strData.playerID,
                             rtcSessionDescription: offer
                         };
+                        
                         console.log("Created packet offer:");
                         console.log(packetizeData("returnOffer", JSON.stringify(returnData)));
                         wsConn.send(packetizeData("returnOffer", JSON.stringify(returnData)));
