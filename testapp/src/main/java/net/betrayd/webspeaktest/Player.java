@@ -32,23 +32,27 @@ public class Player {
 
     public static final Player create(Color color) {
         PlayerAvatarController controller = loadAvatar();
-        Player player = new Player(controller.getRoot(), color);
+        Player player = new Player(controller, color);
         controller.fillProperty().bind(player.colorProperty());
         return player;
     }
     
 
-    private final Node node;
+    private final PlayerAvatarController avatar;
 
     private final StringProperty nameProperty = new SimpleStringProperty("player");
     
-    public Player(Node node, Color color) {
-        this.node = node;
+    public Player(PlayerAvatarController avatar, Color color) {
+        this.avatar = avatar;
         this.colorProperty.set(color);
+    }
+    
+    public PlayerAvatarController getAvatar() {
+        return avatar;
     }
 
     public Node getNode() {
-        return node;
+        return avatar.getRoot();
     }
 
     private final ObjectProperty<Color> colorProperty = new SimpleObjectProperty<>(Color.RED);
@@ -98,8 +102,8 @@ public class Player {
     }
 
     public WebSpeakVector getLocation() {
-        double x = node.getLayoutX();
-        double y = node.getLayoutY();
+        double x = getNode().getLayoutX();
+        double y = getNode().getLayoutY();
 
         double graphScale = WebSpeakTestApp.getInstance().getGraphScale();
         x /= graphScale;

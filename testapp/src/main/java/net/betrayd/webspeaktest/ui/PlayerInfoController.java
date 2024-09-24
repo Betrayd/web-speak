@@ -1,5 +1,7 @@
 package net.betrayd.webspeaktest.ui;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.MapChangeListener;
@@ -12,6 +14,12 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderStrokeStyle;
+import javafx.scene.layout.BorderWidths;
+import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 import net.betrayd.webspeaktest.Player;
 import net.betrayd.webspeaktest.WebSpeakTestApp;
@@ -39,6 +47,9 @@ public class PlayerInfoController {
     private TitledPane titledPane;
 
     @FXML
+    private GridPane gridPane;
+
+    @FXML
     private ColorPicker colorPicker;
 
     @FXML
@@ -53,6 +64,19 @@ public class PlayerInfoController {
     @FXML
     private Label connectionText;
 
+    private BooleanProperty selectedProperty = new SimpleBooleanProperty(false);
+
+    public boolean isSelected() {
+        return selectedProperty.get();
+    }
+
+    public void setSelected(boolean selected) {
+        selectedProperty.set(selected);
+    }
+
+    public BooleanProperty selectedProperty() {
+        return selectedProperty;
+    }
 
     @FXML
     protected void initialize() {
@@ -69,6 +93,17 @@ public class PlayerInfoController {
             } else {
                 connectionText.setText(newVal);
                 connectionText.setTextFill(Color.GREEN);
+            }
+        });
+
+        selectedProperty.addListener((prop, oldVal, newVal) -> {
+            if (newVal) {
+                // I know I *should* be using CSS but I don't care
+                titledPane.setBorder(new Border(new BorderStroke(Color.LIGHTBLUE, BorderStrokeStyle.SOLID,
+                        CornerRadii.EMPTY, new BorderWidths(2))));
+                titledPane.setExpanded(true);
+            } else {
+                titledPane.setBorder(Border.EMPTY);
             }
         });
     }
@@ -130,4 +165,8 @@ public class PlayerInfoController {
         WebSpeakTestApp.getInstance().getConnectionIps().removeListener(mapChangeListener);
     }
 
+
+    public GridPane getGridPane() {
+        return gridPane;
+    }
 }

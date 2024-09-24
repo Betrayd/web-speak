@@ -9,9 +9,9 @@
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.paint.Color?>
 
-<TitledPane fx:id="titledPane" animated="false" maxHeight="-Infinity" minHeight="-Infinity" text="Player Name" xmlns="http://javafx.com/javafx/21.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.betrayd.webspeaktest.ui.PlayerInfoController">
+<TitledPane fx:id="titledPane" animated="false" maxHeight="-Infinity" minHeight="-Infinity" styleClass="playerInfo" text="Player Name" xmlns="http://javafx.com/javafx/21.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.betrayd.webspeaktest.ui.PlayerInfoController">
    <content>
-      <GridPane hgap="10.0">
+      <GridPane fx:id="gridPane" hgap="10.0">
         <columnConstraints>
           <ColumnConstraints halignment="LEFT" hgrow="NEVER" minWidth="-Infinity" />
           <ColumnConstraints hgrow="ALWAYS" prefWidth="256.0" />

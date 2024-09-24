@@ -77,3 +77,5 @@ gradle-app.setting
 
 testClient/
 dev/
+
+webspeak-frontend/node_modules

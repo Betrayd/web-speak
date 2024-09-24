@@ -43,7 +43,7 @@
          <right>
             <VBox alignment="TOP_RIGHT" BorderPane.alignment="CENTER">
                <children>
-                  <ScrollPane hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
+                  <ScrollPane focusTraversable="false" hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
                      <content>
                         <VBox fx:id="playerBox" prefWidth="325.0">
                            <children>

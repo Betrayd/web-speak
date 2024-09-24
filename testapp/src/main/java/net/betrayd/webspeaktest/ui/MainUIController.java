@@ -5,9 +5,14 @@ import java.util.WeakHashMap;
 import java.util.concurrent.CompletableFuture;
 
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Shape;
@@ -45,6 +50,20 @@ public final class MainUIController {
     private Button startStopButton;
 
     private final Map<Player, PlayerInfoController> playerInfoControllers = new WeakHashMap<>();
+
+    private final ObjectProperty<Player> selectedPlayerProperty = new SimpleObjectProperty<>();
+
+    public Player getSelectedPlayer() {
+        return selectedPlayerProperty.get();
+    }
+
+    public void setSelectedPlayer(Player player) {
+        selectedPlayerProperty.set(player);
+    }
+
+    public ObjectProperty<Player> selectedPlayerProperty() {
+        return selectedPlayerProperty;
+    }
 
     @FXML
     private void initialize() {
@@ -110,7 +129,25 @@ public final class MainUIController {
 
         var infoPanel = PlayerInfoController.loadInstance();
         infoPanel.initPlayer(player);
+        infoPanel.getTitledPane().addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
+            setSelectedPlayer(player);
+        });
+
+        player.getNode().addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+            if (e.getClickCount() == 2) {
+                setSelectedPlayer(player);
+                e.consume();
+            }
+        });
+
         playerBox.getChildren().add(infoPanel.getTitledPane());
+
+        BooleanBinding selectedBinding = Bindings.createBooleanBinding(
+                () -> player.equals(getSelectedPlayer()), selectedPlayerProperty);
+        
+        infoPanel.selectedProperty().bind(selectedBinding);
+        player.getAvatar().selectedProperty().bind(selectedBinding);
+
         playerInfoControllers.put(player, infoPanel);
     }
 

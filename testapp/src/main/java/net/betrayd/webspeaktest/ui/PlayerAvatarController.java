@@ -1,10 +1,13 @@
 package net.betrayd.webspeaktest.ui;
 
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.fxml.FXML;
 import javafx.scene.Group;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 
@@ -16,6 +19,20 @@ public class PlayerAvatarController {
     @FXML
     private Circle fillCircle;
 
+    private final BooleanProperty selectedProperty = new SimpleBooleanProperty();
+
+    public boolean isSelected() {
+        return selectedProperty.get();
+    }
+
+    public void setSelected(boolean selected) {
+        selectedProperty.set(selected);
+    }
+
+    public BooleanProperty selectedProperty() {
+        return selectedProperty;
+    }
+
     public Paint getFill() {
         return fillCircle.getFill();
     }
@@ -26,6 +43,26 @@ public class PlayerAvatarController {
 
     public ObjectProperty<Paint> fillProperty() {
         return fillCircle.fillProperty();
+    }
+
+    private double oldStrokeWidth;
+
+    @FXML
+    public void initialize() {
+        // I really should be using CSS for this, but this is a test app so I don't
+        // care.
+        selectedProperty.addListener((prop, oldVal, newVal) -> {
+            if (oldVal.equals(newVal))
+                return;
+            if (newVal) {
+                fillCircle.setStroke(Color.BLUE);
+                oldStrokeWidth = fillCircle.getStrokeWidth();
+                fillCircle.setStrokeWidth(oldStrokeWidth * 4);
+            } else {
+                fillCircle.setStroke(Color.BLACK);
+                fillCircle.setStrokeWidth(oldStrokeWidth);
+            }
+        });
     }
 
     private double mouseAnchorX;
