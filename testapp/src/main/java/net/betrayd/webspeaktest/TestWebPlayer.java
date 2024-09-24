@@ -42,7 +42,7 @@ public class TestWebPlayer extends WebSpeakPlayer {
      * @return Connection address
      */
     public String getLocalConnectionAddress(int frontendPort) {
-        return "http://localhost:" + frontendPort + "?serverAdress=" +
-                URIComponent.encode("http://localhost:" + getServer().getPort()) + "&sessionID=" + getSessionId();
+        return "http://localhost:" + frontendPort + "?server=" +
+                URIComponent.encode("http://localhost:" + getServer().getPort()) + "&id=" + getSessionId();
     }
 }

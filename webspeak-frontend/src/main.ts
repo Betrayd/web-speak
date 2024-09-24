@@ -19,16 +19,16 @@ function packetizeData(type: string, data: string): string {
 
 export function start() {
     let urlParams = new URLSearchParams(window.location.search);
-    let serverAdress = urlParams.get('serverAdress');
-    let sessionID = urlParams.get('sessionID');
+    let serverAddress = urlParams.get('server');
+    let sessionID = urlParams.get('id');
 
     audioCtx = new AudioContext();
     listener = audioCtx.listener;
 
-    console.log("serverAdress: " + serverAdress);
-    console.log("sessionID: " + sessionID);
-    if (serverAdress != null && sessionID != null) {
-        connectToWS(serverAdress + "/connect?id=" + sessionID);
+    console.log("server: " + serverAddress);
+    console.log("id: " + sessionID);
+    if (serverAddress != null && sessionID != null) {
+        connectToWS(serverAddress + "/connect?id=" + sessionID);
     }
 }
 
@@ -89,7 +89,7 @@ function connectToWS(connectionAdress: string) {
                 }
 
                 console.log("got ice canidate!");
-                con.getConnection().addIceCandidate(packetData.rtcSessionDescription);
+                con.getConnection().addIceCandidate(packetData.payload);
 
                 break;
             }
@@ -126,10 +126,10 @@ function connectToWS(connectionAdress: string) {
                 console.log(playerCreated);
                 playerCreated.createOffer()
                     .then((offer) => {
-                        interface PositionData { playerID: string, rtcSessionDescription: RTCSessionDescriptionInit };
+                        interface PositionData { playerID: string, payload: RTCSessionDescriptionInit };
                         let returnData: PositionData = {
                             playerID: strData.playerID,
-                            rtcSessionDescription: offer
+                            payload: offer
                         };
                         
                         console.log("Created packet offer:");
@@ -141,17 +141,17 @@ function connectToWS(connectionAdress: string) {
             case "handOffer": {
                 console.log("hand offer: ");
                 console.log(data[1]);
-                interface Offer { playerID: string, rtcSessionDescription: RTCDescriptionInterface };
+                interface Offer { playerID: string, payload: RTCDescriptionInterface };
                 let packetData = JSON.parse(data[1]) as Offer;
 
                 let playerCreated = await WebSpeakPlayer.create(packetData.playerID);
-                let x = new RTCDesc(packetData.rtcSessionDescription);
+                let x = new RTCDesc(packetData.payload);
                 playerCreated.createAnswer(x)
                     .then((awnser) => {
-                        interface PositionData { playerID: string, rtcSessionDescription: RTCSessionDescriptionInit };
+                        interface PositionData { playerID: string, payload: RTCSessionDescriptionInit };
                         let returnData: PositionData = {
                             playerID: packetData.playerID,
-                            rtcSessionDescription: awnser
+                            payload: awnser
                         };
                         wsConn.send(packetizeData("returnAnswer", JSON.stringify(returnData)));
                         console.log("sent awnser: ");
@@ -160,7 +160,7 @@ function connectToWS(connectionAdress: string) {
                 break;
             }
             case "handAnswer": {
-                interface Answer { playerID: string, rtcSessionDescription: RTCDescriptionInterface };
+                interface Answer { playerID: string, payload: RTCDescriptionInterface };
                 let packetData = JSON.parse(data[1]) as Answer;
 
                 let con = playersInScope.get(packetData.playerID);
@@ -174,7 +174,7 @@ function connectToWS(connectionAdress: string) {
                 }
 
                 //set the description. We connected!
-                con.setRemoteDescription(new RTCDesc(packetData.rtcSessionDescription));
+                con.setRemoteDescription(new RTCDesc(packetData.payload));
 
                 break;
             }
@@ -306,10 +306,10 @@ class WebSpeakPlayer {
         createP.connection.onicecandidate = function (event) {
             console.log("trying to send an ice canidate");
             if (event.candidate) {
-                interface IceCanidate { playerID: string, rtcSessionDescription: RTCIceCandidate };
+                interface IceCanidate { playerID: string, payload: RTCIceCandidate };
                 let output: IceCanidate = {
                     playerID: otherPlayerID,
-                    rtcSessionDescription: event.candidate
+                    payload: event.candidate
                 };
                 console.log("NON NULL ICE CANIDATESEND");
                 wsConn.send(packetizeData("returnIce", JSON.stringify(output)));
