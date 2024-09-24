@@ -34,7 +34,7 @@ public class JavaFXUtils {
             Canvas canvas = new Canvas(w, h);
             GraphicsContext gc = canvas.getGraphicsContext2D();
     
-            gc.setStroke(Color.BLACK);
+            gc.setStroke(Color.DARKGRAY);
             // gc.fillRect(0, 0, w, h);
             gc.strokeRect(0, 0, w, h);
             return canvas.snapshot(new SnapshotParameters(), null);
@@ -46,7 +46,7 @@ public class JavaFXUtils {
     }
 
     public static ImagePattern createGridPattern(double gridSize, double x, double y) {
-        return createGridPattern(gridSize, x, y, Color.BLACK);
+        return createGridPattern(gridSize, x, y, Color.DARKGRAY);
     }
 
     public static IntegerBinding stringToIntBinding(ObservableValue<? extends String> source) {

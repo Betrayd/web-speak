@@ -8,9 +8,12 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
@@ -24,38 +27,48 @@ public class ZoomableGraph extends Region {
 
     private final Region graph = new Region();
 
+    private final Line xAxis = new Line();
+    private final Line yAxis = new Line();
+
     public ZoomableGraph() {
         pane.getStyleClass().add("grid-background");
         pane.getTransforms().addAll(translation, scale);
         setClip(clipRect);
 
-        getChildren().addAll(graph, pane);
+        getChildren().addAll(graph, xAxis, yAxis, pane);
 
         setOnMousePressed(this::onMousePressed);
         setOnMouseDragged(this::onMouseDragged);
+        setOnScroll(this::onScroll);
 
         translation.xProperty().bindBidirectional(xOffsetProperty);
         translation.yProperty().bindBidirectional(yOffsetProperty);
 
         zoomAmountProperty.addListener((prop, oldVal, newVal) -> {
-            double val = Math.pow(2, newVal.doubleValue());
+            double val = calcScaleMultiplier(newVal.doubleValue());
             scale.setX(val);
             scale.setY(val);
-        });
-
-        setOnScroll(e -> {
-            setZoomAmount(getZoomAmount() + e.getDeltaY() * 0.005);
         });
 
         zoomAmountProperty.addListener((prop, oldVal, newVal) -> updateBackground());
         xOffsetProperty.addListener((prop, oldVal, newVal) -> updateBackground());
         yOffsetProperty.addListener((prop, oldVal, newVal) -> updateBackground());
-        
+
+        xAxis.setStroke(Color.BLACK);
+        yAxis.setStroke(Color.BLACK);
     }
+
+    private boolean hasInitSize;
 
     @Override
     protected void layoutChildren() {
         super.layoutChildren();
+        if (!hasInitSize) {
+            setXCenter(0);
+            setYCenter(0);
+            hasInitSize = true;
+        }
+
         clipRect.setWidth(getWidth());
         clipRect.setHeight(getHeight());
         graph.resizeRelocate(0, 0, getWidth(), getHeight());
@@ -162,9 +175,57 @@ public class ZoomableGraph extends Region {
         e.consume();
     }
 
+    private void onScroll(ScrollEvent e) {
+        double scrollDelta = e.getDeltaY() * 0.005;
+        double oldScale = calcScaleMultiplier(getZoomAmount());
+
+        double globalXOffset = getXCenter() / oldScale;
+        double globalYOffset = getYCenter() / oldScale;
+
+        setZoomAmount(getZoomAmount() + scrollDelta);
+        
+        double newScale = calcScaleMultiplier(getZoomAmount());
+
+        setXCenter(globalXOffset * newScale);
+        setYCenter(globalYOffset * newScale);
+    }
+
+    public double getXCenter() {
+        return getXOffset() - getWidth() / 2;
+    }
+
+    public double getYCenter() {
+        return getYOffset() - getHeight() / 2;
+    }
+
+    private void setXCenter(double xCenter) {
+        setXOffset(xCenter + getWidth() / 2);
+    }
+
+    private void setYCenter(double yCenter) {
+        setYOffset(yCenter + getHeight() / 2);
+    }
+
     private void updateBackground() {
-        double size = getGraphScale() * Math.pow(2, getZoomAmount());
-        graph.setBackground(Background.fill(JavaFXUtils.createGridPattern(size, getXOffset(), getYOffset())));
+        double size = getGraphScale() * calcScaleMultiplier(getZoomAmount());
+        double xOffset = getXOffset();
+        double yOffset = getYOffset();
+
+        graph.setBackground(Background.fill(JavaFXUtils.createGridPattern(size, xOffset, yOffset)));
+
+        xAxis.setStartX(0);
+        xAxis.setEndX(getWidth());
+        xAxis.setStartY(yOffset);
+        xAxis.setEndY(yOffset);
+
+        yAxis.setStartY(0);
+        yAxis.setEndY(getHeight());
+        yAxis.setStartX(xOffset);
+        yAxis.setEndX(xOffset);
+    }
+
+    private static double calcScaleMultiplier(double zoomAmount) {
+        return Math.pow(2, zoomAmount);
     }
 
 }
