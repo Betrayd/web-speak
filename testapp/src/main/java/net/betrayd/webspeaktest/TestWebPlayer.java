@@ -24,7 +24,7 @@ public class TestWebPlayer extends WebSpeakPlayer {
 
     @Override
     public boolean isInScope(WebSpeakPlayer player) {
-            return true;
+        return true;
     }
     
     public Player getPlayer() {

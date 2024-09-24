@@ -7,8 +7,6 @@
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -74,14 +72,6 @@
                   </Label>
                   <Label fx:id="serverAddressText" text="localhost:8080" textFill="#006f12" />
                   <Region HBox.hgrow="ALWAYS" />
-                  <Label text="Connection URL:" />
-                  <TextField fx:id="playerURLText" editable="false" prefWidth="300.0" promptText="Please select a player." />
-                  <Label text="Query-Safe Connection URL:">
-                     <tooltip>
-                        <Tooltip text="The connection URL in a form that can be put into a query param" />
-                     </tooltip>
-                  </Label>
-                  <TextField fx:id="playerQueryURLText" editable="false" prefWidth="300.0" promptText="Please select a player" />
                   <Button fx:id="startStopButton" mnemonicParsing="false" onAction="#pressStartStopButton" text="Start Server" />
                </children>
                <BorderPane.margin>

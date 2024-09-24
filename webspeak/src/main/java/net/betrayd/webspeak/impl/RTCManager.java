@@ -1,13 +1,13 @@
 package net.betrayd.webspeak.impl;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
-import net.betrayd.webspeak.net.RTCOfferPacket;
-import net.betrayd.webspeak.net.WebSpeakNet;
+import net.betrayd.webspeak.impl.net.WebSpeakNet;
+import net.betrayd.webspeak.impl.net.packets.RTCPackets;
+import net.betrayd.webspeak.impl.net.packets.RTCPackets.RequestOfferS2CPacket;
 
 public class RTCManager {
     private final WebSpeakServer server;
@@ -22,36 +22,45 @@ public class RTCManager {
         return server;
     }
 
-    public boolean inRTCAttemptOrCall(WebSpeakPlayer a, WebSpeakPlayer b){
-        return connections.containsRelation(a, b);
-    }
-
     public void tickRTC() {
-        Set<WebSpeakPlayer> untestedPlayers = new HashSet<>(server.getPlayers());
 
-        // WebSpeakPlayer player1;
-        // WebSpeakPlayer player2;
+        List<WebSpeakPlayer> connectedPlayers = server.getPlayers()
+                .stream().filter(p -> p.getWsContext() != null).toList();
+        
+        for (var pair : Util.compareAll(connectedPlayers)) {
+            if (pair.a().equals(pair.b()))
+                continue;
+            
+            boolean isConnected = connections.containsRelation(pair.a(), pair.b());
+            boolean isInScope = pair.a().isInScope(pair.b());
 
-        for (WebSpeakPlayer player1 : server.getPlayers()) {
-            untestedPlayers.remove(player1);
-
-            for (WebSpeakPlayer player2 : untestedPlayers) {
-                WsContext player1Context = player1.getWsContext();
-
-                if (player1Context == null || player2.getWsContext() == null)
-                    continue;
-
-                if (connections.containsRelation(player1, player2) && !player1.isInScope(player2)) {
-                    player1Context.send("{type:disconnectRequest," + "data:" + player2.getPlayerId() + "}");
-                    connections.remove(player1, player2);
-                } else if (!connections.containsRelation(player1, player2) && player1.isInScope(player2)) {
-                    player1Context
-                            .send(WebSpeakNet.writePacket(RTCOfferPacket.REQUEST_OFFER_PACKET, player2.getPlayerId()));
-                    connections.add(player1, player2);
-                }
-
+            if (!isConnected && isInScope) {
+                connectRTC(pair.a(), pair.b());
+                connections.add(pair.a(), pair.b());
+            } else if (isConnected && !isInScope) {
+                disconnectRTC(pair.a(), pair.b());
+                connections.remove(pair.a(), pair.b());
             }
         }
     }
+    
+    private void connectRTC(WebSpeakPlayer a, WebSpeakPlayer b) {
+        WebSpeakNet.sendPacket(a.getWsContext(), RTCPackets.REQUEST_OFFER_S2C, new RequestOfferS2CPacket(b.getPlayerId()));
+        connections.add(a, b);
+    }
 
+    private void disconnectRTC(WebSpeakPlayer a, WebSpeakPlayer b) {
+        WebSpeakNet.sendPacket(a.getWsContext(), RTCPackets.DISCONNECT_RTC_S2C, new RequestOfferS2CPacket(b.getPlayerId()));
+        connections.remove(a, b);
+    }
+
+    public void kickRTC(WebSpeakPlayer player) {
+        for (var other : connections.getRelations(player)) {
+            WsContext otherWs = other.getWsContext();
+            if (otherWs == null)
+                continue;
+            WebSpeakNet.sendPacket(otherWs, RTCPackets.DISCONNECT_RTC_S2C, new RequestOfferS2CPacket(player.getPlayerId()));
+        }
+        connections.removeAll(player);
+    }
 }

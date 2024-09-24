@@ -106,4 +106,12 @@ public class WebSpeakTestServer implements Executor {
 
         return "http://localhost:" + port;
     }
+
+    public String getWsConnectionUrl() {
+        if (webSpeakServer == null) {
+            return "";
+        }
+
+        return "ws://localhost:" + port;
+    }
 }
