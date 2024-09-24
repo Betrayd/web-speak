@@ -113,12 +113,4 @@ public class Player {
         // (this is why Z-up makes more sense IMO)
         return new WebSpeakVector(-x, 0, y);
     }
-
-    public String computeConnectionURL(String serverAddress) {
-        if (getWebPlayer() == null) {
-            return "";
-        } else {
-            return serverAddress + "/connect?id=" + getWebPlayer().getSessionId();
-        }
-    }
 }

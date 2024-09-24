@@ -8,6 +8,7 @@ import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -20,9 +21,9 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Shape;
 import net.betrayd.webspeaktest.Player;
+import net.betrayd.webspeaktest.TestWebPlayer;
 import net.betrayd.webspeaktest.WebSpeakTestApp;
 import net.betrayd.webspeaktest.WebSpeakTestServer;
-import net.betrayd.webspeaktest.ui.util.URIComponent;
 import net.betrayd.webspeaktest.ui.util.ZoomableGraph;
 
 public final class MainUIController {
@@ -51,19 +52,14 @@ public final class MainUIController {
     private Label serverAddressText;
 
     @FXML
+    private TextField connectionAddressField;
+
+    @FXML
     private Button startStopButton;
-
-    @FXML
-    private TextField playerURLText;
-
-    @FXML
-    private TextField playerQueryURLText;
 
     private final Map<Player, PlayerInfoController> playerInfoControllers = new WeakHashMap<>();
 
     private final ObjectProperty<Player> selectedPlayerProperty = new SimpleObjectProperty<>();
-
-    private final StringProperty serverAddressProperty = new SimpleStringProperty();
 
     public Player getSelectedPlayer() {
         return selectedPlayerProperty.get();
@@ -77,9 +73,39 @@ public final class MainUIController {
         return selectedPlayerProperty;
     }
 
+    private final ObjectProperty<TestWebPlayer> selectedWebPlayerProperty = new SimpleObjectProperty<>();
+
+    public TestWebPlayer getSelectedWebPlayer() {
+        return selectedWebPlayerProperty.get();
+    }
+
+    public ReadOnlyObjectProperty<TestWebPlayer> selectedWebPlayerProperty() {
+        return selectedWebPlayerProperty;
+    }
+
+    private final StringProperty serverAddressProperty = new SimpleStringProperty();
+
     @FXML
     private void initialize() {
         playerBox.getChildren().clear();
+        selectedPlayerProperty.addListener((prop, oldVal, newVal) -> {
+            if (newVal != null) {
+                selectedWebPlayerProperty.bind(newVal.webPlayerProperty());
+            } else {
+                selectedWebPlayerProperty.unbind();
+                selectedWebPlayerProperty.set(null);
+            }
+        });
+
+        serverAddressText.textProperty().bind(serverAddressProperty);
+        
+        selectedWebPlayerProperty.addListener((prop, oldVal, newVal) -> {
+            if (newVal != null) {
+                connectionAddressField.setText(newVal.getLocalConnectionAddress(5173));
+            } else {
+                connectionAddressField.setText("");
+            }
+        });
     }
 
     public ZoomableGraph getZoomGraph() {
@@ -95,21 +121,6 @@ public final class MainUIController {
                 onStartServer(newVal);
             else
                 onStopServer();
-        });
-
-        serverAddressText.textProperty().bind(serverAddressProperty);
-
-        serverAddressProperty.addListener((prop, oldVal, newVal) -> {
-            Player selected = getSelectedPlayer();
-            if (selected != null) {
-                setPlayerConnectionAddress(selected, newVal);
-            } else {
-                setPlayerConnectionAddress(null, null);
-            }
-        });
-
-        selectedPlayerProperty().addListener((prop, oldVal, newVal) -> {
-            setPlayerConnectionAddress(newVal, serverAddressProperty.get());
         });
 
         onStopServer();
@@ -184,17 +195,5 @@ public final class MainUIController {
             playerBox.getChildren().remove(infoPanel.getTitledPane());
             infoPanel.onPlayerRemoved();
         }
-    }
-
-    private void setPlayerConnectionAddress(Player player, String serverAddress) {
-        String connectionAddress;
-        if (serverAddress == null || serverAddress.isEmpty()) {
-            connectionAddress = "";
-        } else {
-            connectionAddress = player.computeConnectionURL(serverAddress);
-        }
-
-        playerURLText.setText(connectionAddress);
-        playerQueryURLText.setText(URIComponent.encode(connectionAddress));
     }
 }
