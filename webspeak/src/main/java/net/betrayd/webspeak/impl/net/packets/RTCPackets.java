@@ -14,7 +14,7 @@ import net.betrayd.webspeak.impl.net.WebSpeakNet;
 
 public class RTCPackets {
     public static record RTCOfferData(String playerID, JsonElement rtcSessionDescription) {};
-    public static record RequestOfferS2CPacket(String playerId) {};
+    public static record RequestOfferS2CPacket(String playerID) {};
 
     public static final S2CPacket<RequestOfferS2CPacket> REQUEST_OFFER_S2C = new JsonS2CPacket<>("requestOffer");
     public static final S2CPacket<RequestOfferS2CPacket> DISCONNECT_RTC_S2C = new JsonS2CPacket<>("disconnectRTC");
