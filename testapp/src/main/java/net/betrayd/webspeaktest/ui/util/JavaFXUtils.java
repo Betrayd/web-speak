@@ -2,8 +2,15 @@ package net.betrayd.webspeaktest.ui.util;
 
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.MapMaker;
 
+import javafx.beans.binding.IntegerBinding;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -16,6 +23,8 @@ public class JavaFXUtils {
 
     private static Map<ColorSizeKey, Image> gridImages = new MapMaker().weakValues().makeMap();
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(JavaFXUtils.class);
+
     public static ImagePattern createGridPattern(double gridSize, double x, double y, Color lineColor) {
         double w = gridSize;
         double h = gridSize;
@@ -25,7 +34,7 @@ public class JavaFXUtils {
             Canvas canvas = new Canvas(w, h);
             GraphicsContext gc = canvas.getGraphicsContext2D();
     
-            gc.setStroke(Color.BLACK);
+            gc.setStroke(Color.DARKGRAY);
             // gc.fillRect(0, 0, w, h);
             gc.strokeRect(0, 0, w, h);
             return canvas.snapshot(new SnapshotParameters(), null);
@@ -37,6 +46,37 @@ public class JavaFXUtils {
     }
 
     public static ImagePattern createGridPattern(double gridSize, double x, double y) {
-        return createGridPattern(gridSize, x, y, Color.BLACK);
+        return createGridPattern(gridSize, x, y, Color.DARKGRAY);
+    }
+
+    public static IntegerBinding stringToIntBinding(ObservableValue<? extends String> source) {
+        return new IntegerBinding() {
+
+            {
+                super.bind(source);
+            }
+
+            @Override
+            public ObservableList<?> getDependencies() {
+                return FXCollections.singletonObservableList(source);
+            }
+
+            @Override
+            public void dispose() {
+                super.dispose();
+                super.unbind(source);
+            }
+
+            @Override
+            protected int computeValue() {
+                try {
+                    return Integer.valueOf(source.getValue());
+                } catch (Exception e) {
+                    LOGGER.warn("NumberFormatException: {}", e.getMessage());
+                    return 0;
+                }
+            }
+            
+        };
     }
 }

@@ -7,15 +7,23 @@ import java.util.concurrent.CompletableFuture;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.StringBinding;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -24,6 +32,7 @@ import net.betrayd.webspeaktest.Player;
 import net.betrayd.webspeaktest.TestWebPlayer;
 import net.betrayd.webspeaktest.WebSpeakTestApp;
 import net.betrayd.webspeaktest.WebSpeakTestServer;
+import net.betrayd.webspeaktest.ui.util.JavaFXUtils;
 import net.betrayd.webspeaktest.ui.util.ZoomableGraph;
 
 public final class MainUIController {
@@ -35,6 +44,9 @@ public final class MainUIController {
     private static final String OFF_TEXT = "Server Stopped";
 
     private WebSpeakTestApp app;
+
+    @FXML
+    private VBox root;
 
     @FXML
     private ZoomableGraph zoomGraph;
@@ -56,6 +68,14 @@ public final class MainUIController {
 
     @FXML
     private Button startStopButton;
+
+    @FXML
+    private MenuItem removePlayerMenuItem;
+
+    @FXML
+    private TextField frontendPortField;
+
+    private final IntegerProperty frontendPortNumProperty = new SimpleIntegerProperty(5173);
 
     private final Map<Player, PlayerInfoController> playerInfoControllers = new WeakHashMap<>();
 
@@ -98,14 +118,44 @@ public final class MainUIController {
         });
 
         serverAddressText.textProperty().bind(serverAddressProperty);
-        
-        selectedWebPlayerProperty.addListener((prop, oldVal, newVal) -> {
-            if (newVal != null) {
-                connectionAddressField.setText(newVal.getLocalConnectionAddress(5173));
+
+        frontendPortNumProperty.bind(JavaFXUtils.stringToIntBinding(frontendPortField.textProperty()));
+
+        StringBinding frontendAddressBinding = Bindings.createStringBinding(() -> {
+            TestWebPlayer webPlayer = selectedWebPlayerProperty.get();
+            if (webPlayer != null) {
+                return webPlayer.getLocalConnectionAddress(frontendPortNumProperty.get());
             } else {
-                connectionAddressField.setText("");
+                return "";
+            }
+        }, selectedWebPlayerProperty, frontendPortNumProperty);
+        connectionAddressField.textProperty().bind(frontendAddressBinding);
+        
+        // selectedWebPlayerProperty.addListener((prop, oldVal, newVal) -> {
+        //     if (newVal != null) {
+        //         connectionAddressField.setText(newVal.getLocalConnectionAddress(5173));
+        //     } else {
+        //         connectionAddressField.setText("");
+        //     }
+        // });
+
+        removePlayerMenuItem.disableProperty().bind(Bindings.isNull(selectedPlayerProperty));
+
+        root.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.DELETE || e.getCode() == KeyCode.BACK_SPACE) {
+                removePlayer();
+                e.consume();
             }
         });
+
+        // If the event wasn't consumed, we didn't click on anything.
+        zoomGraph.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
+            if (e.getButton() == MouseButton.PRIMARY) {
+                setSelectedPlayer(null);
+                e.consume();
+            }
+        });
+
     }
 
     public ZoomableGraph getZoomGraph() {
@@ -124,6 +174,7 @@ public final class MainUIController {
         });
 
         onStopServer();
+        
     }
 
     protected void onStartServer(WebSpeakTestServer server) {
@@ -135,6 +186,8 @@ public final class MainUIController {
 
         CompletableFuture.supplyAsync(() -> server.getWsConnectionUrl(), server)
                 .thenAcceptAsync(serverAddressProperty::set, Platform::runLater);
+        
+        connectionAddressField.setPromptText("Please select a player.");
     }
 
     protected void onStopServer() {
@@ -144,6 +197,7 @@ public final class MainUIController {
 
         startStopButton.setText("Start Server");
         startStopButton.setDisable(false);
+        connectionAddressField.setPromptText("Start server to see connection address.");
     }
 
     @FXML
@@ -162,7 +216,6 @@ public final class MainUIController {
     }
 
     public void onAddPlayer(Player player) {
-        zoomGraph.getGraphChildren().add(player.getNode());
 
         var infoPanel = PlayerInfoController.loadInstance();
         infoPanel.initPlayer(player);
@@ -170,12 +223,20 @@ public final class MainUIController {
             setSelectedPlayer(player);
         });
 
-        player.getNode().addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
-            if (e.getClickCount() == 2) {
-                setSelectedPlayer(player);
-                e.consume();
-            }
+        infoPanel.ON_REQUEST_REMOVE.addListener(v -> {
+            removePlayer(player);
         });
+
+        Node node = player.getNode();
+
+        node.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
+            setSelectedPlayer(player);
+            node.requestFocus();
+            e.consume();
+        });
+
+        zoomGraph.getGraphChildren().add(player.getNode());
+
 
         playerBox.getChildren().add(infoPanel.getTitledPane());
 
@@ -186,6 +247,24 @@ public final class MainUIController {
         player.getAvatar().selectedProperty().bind(selectedBinding);
 
         playerInfoControllers.put(player, infoPanel);
+    }
+
+    @FXML
+    private void removePlayer() {
+        Player player = getSelectedPlayer();
+        if (player != null) {
+            app.removePlayer(player);
+            setSelectedPlayer(null);
+        }
+    }
+
+    private void removePlayer(Player player) {
+        if (player != null) {
+            app.removePlayer(player);
+            if (getSelectedPlayer() == player) {
+                setSelectedPlayer(null);
+            }
+        }
     }
 
     public void onRemovePlayer(Player player) {
