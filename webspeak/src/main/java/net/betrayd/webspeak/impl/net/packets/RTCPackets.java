@@ -38,7 +38,7 @@ public class RTCPackets {
         // TODO: Do we want to do something other than disconnect the player as a result of the exception?
 
         if (targetPlayer == null) {
-            throw new IllegalArgumentException("Unknown player: " + targetPlayer);
+            throw new IllegalArgumentException("Unknown player: " + data.playerID);
         }
         
         WsContext targetWs = targetPlayer.getWsContext();
@@ -56,7 +56,7 @@ public class RTCPackets {
         WebSpeakPlayer targetPlayer = player.getServer().getPlayer(data.playerID);
         
         if (targetPlayer == null) {
-            throw new IllegalArgumentException("Unknown player: " + targetPlayer);
+            throw new IllegalArgumentException("Unknown player: " + data.playerID);
         }
         
         WsContext targetWs = targetPlayer.getWsContext();
@@ -73,7 +73,7 @@ public class RTCPackets {
         WebSpeakPlayer targetPlayer = player.getServer().getPlayer(data.playerID);
         
         if (targetPlayer == null) {
-            throw new IllegalArgumentException("Unknown player: " + targetPlayer);
+            throw new IllegalArgumentException("Unknown player: " + data.playerID);
         }
 
         WsContext targetWs = targetPlayer.getWsContext();
