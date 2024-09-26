@@ -1,41 +1,20 @@
-import { useState } from 'react'
-import './App.css'
-import reactLogo from './assets/react.svg'
-import './main.ts'
-import { helloWorld } from './main.ts'
-import viteLogo from '/vite.svg'
+import { Container, Navbar } from "react-bootstrap";
+import './App.css';
+import MainUI from "./pages/MainUI";
 
 function App() {
-  const [count, setCount] = useState(0)
+    return (
+        <>
+            <Navbar className="navbar-expand-lg navbar-dark bg-dark mb-4">
+                <Container>
+                    <Navbar.Brand>WebSpeak</Navbar.Brand>
+                    <Navbar.Text>hello world</Navbar.Text>
+                </Container>
+            </Navbar>
 
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={onClickButton}>
-          Press to trigger bad code!
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+            <MainUI />
+        </>
+    )
 }
 
-function onClickButton() {
-  helloWorld();
-}
-
-export default App
+export default App;
