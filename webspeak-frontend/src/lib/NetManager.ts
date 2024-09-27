@@ -56,12 +56,14 @@ export default class NetManager {
      */
     constructor(connectionAddress: URL) {
         this.connectionAddress = connectionAddress;
+        console.log("initializing net manager")
     }
 
     /**
      * Attempt to connect to the server, using the established connection address.
      */
     public connect() {
+        console.log("Attempting connection to " + this.connectionAddress)
         if (this.wsConnection) {
             throw new Error("Already connected to server.");
         }
@@ -80,7 +82,7 @@ export default class NetManager {
             this._wsConnection = null;
         }
 
-        ws.onmessage = this.onWsMessage;
+        ws.onmessage = msg => this.onWsMessage(msg);
     }
 
     protected onWsMessage(msg: MessageEvent) {

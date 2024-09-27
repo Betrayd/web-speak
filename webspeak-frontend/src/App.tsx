@@ -1,4 +1,4 @@
-import React, { createContext, useState } from "react";
+import React from "react";
 import { Button, Container, Navbar } from "react-bootstrap";
 import './App.css';
 import AppInstance from "./lib/AppInstance";
@@ -23,11 +23,10 @@ export default class App extends React.Component<any, AppState> {
         const urlParams = new URLSearchParams(window.location.search);
         let urlServerAddress = urlParams.get("server");
         let urlSessionID = urlParams.get("id");
-        
-        if (urlServerAddress != null && urlSessionID != null) {
-            this.setState({appInstance: new AppInstance(urlServerAddress, urlSessionID)});
-        }
 
+        if (urlServerAddress != null && urlSessionID != null) {
+            this.setState({ appInstance: this.launchApp(urlServerAddress, urlSessionID) });
+        }
     }
 
     drawContent() {
@@ -49,7 +48,7 @@ export default class App extends React.Component<any, AppState> {
             return (
                 <Container>
                     <ConnectionPrompt onConnect={info => {
-                        this.setState({ appInstance: new AppInstance(info.serverAddress, info.sessionID) });
+                        this.setState({ appInstance: this.launchApp(info.serverAddress, info.sessionID) });
                     }} />
                 </Container>
 
@@ -57,7 +56,7 @@ export default class App extends React.Component<any, AppState> {
         } else {
             return <MainUI appInstance={this.state.appInstance} />
         }
-        
+
     }
 
     async requestMicAccess() {
@@ -69,8 +68,13 @@ export default class App extends React.Component<any, AppState> {
         }
     }
 
+    launchApp(serverAddress: string, sessionID: string): AppInstance {
+        let instance = new AppInstance(serverAddress, sessionID);
+        return instance;
+    }
+
     render(): React.ReactNode {
-        
+
         return (
             <>
                 <Navbar className="navbar-expand-lg navbar-dark bg-dark mb-4">
