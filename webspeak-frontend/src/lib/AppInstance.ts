@@ -1,5 +1,5 @@
 import NetManager from "./NetManager";
-import WebSpeakPlayer, { WebSpeakLocalPlayer, WebSpeakOtherPlayer } from "./WebSpeakPlayer";
+import WebSpeakPlayer, { WebSpeakLocalPlayer, WebSpeakRemotePlayer } from "./WebSpeakPlayer";
 import webspeakPackets from "./webspeakPackets";
 
 export interface LocalPlayerInfo {
@@ -18,7 +18,7 @@ export default class AppInstance {
     /**
      * All the players that this client knows about.
      */
-    readonly players: Map<String, WebSpeakOtherPlayer> = new Map();
+    readonly players: Map<String, WebSpeakRemotePlayer> = new Map();
     readonly localPlayer = new WebSpeakLocalPlayer("");
 
     get localPlayerID() {
@@ -59,6 +59,35 @@ export default class AppInstance {
         } else {
             return this.players.get(playerID);
         }
+    }
+
+    requestRTCOffer(playerID: string) {
+        if (this.players.has(playerID)) {
+            console.warn("Already connected to player " + playerID);
+        }
+
+        let player = new WebSpeakRemotePlayer(playerID, this);
+        this.players.set(playerID, player);
+        return player.createOffer();
+    }
+
+    handleRTCOffer(playerID: string, offer: RTCSessionDescriptionInit) {
+        if (this.players.has(playerID)) {
+            console.warn("Already connected to player " + playerID);
+        }
+
+        let player = new WebSpeakRemotePlayer(playerID, this);
+        this.players.set(playerID, player);
+        return player.createAnswer(offer);
+    }
+
+    handleRTCAnswer(playerID: string, answer: RTCSessionDescriptionInit) {
+        let player = this.players.get(playerID);
+        if (!player) {
+            throw new Error("Unknown player: " + playerID);
+        }
+
+        player.acceptRTCAnswer(answer);
     }
 
     constructor(serverAddress: string, sessionID: string) {

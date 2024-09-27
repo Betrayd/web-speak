@@ -3,8 +3,8 @@ import { Button, Container, Navbar } from "react-bootstrap";
 import './App.css';
 import AppInstance from "./lib/AppInstance";
 import MainUI from "./pages/MainUI";
-import webSpeakClient from "./lib/WebSpeakClient";
 import ConnectionPrompt from "./pages/ConnectionPrompt";
+import webSpeakAudio from "./lib/webSpeakAudio";
 
 interface AppState {
     hasMic: boolean,
@@ -61,7 +61,7 @@ export default class App extends React.Component<any, AppState> {
 
     async requestMicAccess() {
         try {
-            await webSpeakClient.requestMicAccess();
+            await webSpeakAudio.requestMicAccess();
             this.setState({ hasMic: true });
         } catch (e) {
             console.log(e);

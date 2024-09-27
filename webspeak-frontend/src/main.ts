@@ -232,7 +232,7 @@ class WebSpeakPlayer {
     }
 
     public static async create(otherPlayerID: string): Promise<WebSpeakPlayer> {
-        let createP = new WebSpeakPlayer();
+        let newPlayer = new WebSpeakPlayer();
 
         /*let source: AudioBufferSourceNode;
         fetch("panner-node_viper.ogg")
@@ -259,7 +259,7 @@ class WebSpeakPlayer {
                 console.log(stream.getAudioTracks());
                 
                 stream.getTracks().forEach((track) => {
-                    createP.connection.addTrack(track, stream);
+                    newPlayer.connection.addTrack(track, stream);
                   });
                 let source = audioCtx.createMediaStreamSource(stream);
                 //source.connect(createP.panner);
@@ -268,7 +268,7 @@ class WebSpeakPlayer {
                 console.log(source);
             }
         });
-        createP.connection.ontrack = ((ev) => {
+        newPlayer.connection.ontrack = ((ev) => {
             console.log("new track added!");
             if (ev.track.kind == "audio") {
                 console.log("audio track");
@@ -288,8 +288,8 @@ class WebSpeakPlayer {
                 });
                 
                 let audioStream = audioCtx.createMediaStreamSource(stream);
-                audioStream.connect(createP.panner);
-                createP.panner.connect(audioCtx.destination);
+                audioStream.connect(newPlayer.panner);
+                newPlayer.panner.connect(audioCtx.destination);
                 //let testAud = new Audio();
                 //testAud.srcObject = ev.streams[0];
                 //testAud.play();
@@ -303,7 +303,7 @@ class WebSpeakPlayer {
                 //testAud.play();
             }
         });
-        createP.connection.onicecandidate = function (event) {
+        newPlayer.connection.onicecandidate = function (event) {
             console.log("trying to send an ice canidate");
             if (event.candidate) {
                 interface IceCanidate { playerID: string, payload: RTCIceCandidate };
@@ -317,9 +317,9 @@ class WebSpeakPlayer {
         };
 
         console.log("rtcPeer:");
-        console.log(createP.connection);
-        playersInScope.set(otherPlayerID, createP);
-        return createP;
+        console.log(newPlayer.connection);
+        playersInScope.set(otherPlayerID, newPlayer);
+        return newPlayer;
     }
 
     public getConnection(): RTCPeerConnection {

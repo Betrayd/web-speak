@@ -1,3 +1,8 @@
+import AppInstance from "./AppInstance";
+import webSpeakClient from "./WebSpeakClient";
+import webSpeakAudio from "./webSpeakAudio";
+import webspeakPackets from "./webspeakPackets";
+
 /**
  * A base class for webspeak players being synced to the client.
  */
@@ -107,7 +112,7 @@ export default abstract class WebSpeakPlayer {
 
     }
         
-    isRemote(): this is WebSpeakOtherPlayer {
+    isRemote(): this is WebSpeakRemotePlayer {
         return this.type === "remote";
     }
 
@@ -119,9 +124,71 @@ export default abstract class WebSpeakPlayer {
 /**
  * A player that is *not* the client's local player. Contains an RTC connection.
  */
-export class WebSpeakOtherPlayer extends WebSpeakPlayer {
+export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
-    connection?: RTCPeerConnection;
+    readonly app: AppInstance;
+    readonly connection: RTCPeerConnection = new RTCPeerConnection(webSpeakClient.rtcConfig);
+    readonly panner = new PannerNode(webSpeakAudio.audioCtx, webSpeakAudio.defaultPannerOptions);
+
+    mediaStream?: MediaStream;
+
+    constructor(playerID: string, app: AppInstance) {
+        super(playerID);
+        this.app = app;
+        
+        let userMic = webSpeakAudio.userMic;
+        if (userMic != undefined && userMic.active) {
+            for (let track of userMic.getTracks()) {
+                this.connection.addTrack(track, userMic);
+            }
+        } else {
+            console.warn("User mic input was not set.");
+        }
+
+        this.connection.ontrack = event => {
+            if (event.track.kind === "audio") {
+                let mediaStream = event.streams[0];
+
+                // Make chromium jealous of audio source so it can be used in panner
+                let bullshitAudio: HTMLAudioElement | null = new Audio();
+                bullshitAudio.muted = true;
+                bullshitAudio.srcObject = mediaStream;
+                bullshitAudio.addEventListener('canplaythrough', () => {
+                    bullshitAudio = null;
+                })
+
+                let audioStream = webSpeakAudio.audioCtx.createMediaStreamSource(mediaStream);
+                audioStream.connect(this.panner);
+                this.panner.connect(webSpeakAudio.audioCtx.destination);
+            }
+        }
+
+        this.connection.onicecandidate = event => {
+            if (event.candidate) {
+                webspeakPackets.sendReturnIce(app, playerID, event.candidate);
+            }
+        }
+    }
+
+    public addIceCandidate(candidate: RTCIceCandidate) {
+        this.connection.addIceCandidate(candidate);
+    }
+
+    async createOffer() {
+        let offer = await this.connection.createOffer();
+        this.connection.setLocalDescription(offer);
+        return offer;
+    }
+
+    async createAnswer(offer: RTCSessionDescriptionInit) {
+        let answer = await this.connection.createAnswer();
+        this.connection.setRemoteDescription(offer);
+        return answer;
+    }
+
+    acceptRTCAnswer(answer: RTCSessionDescriptionInit) {
+        this.connection.setRemoteDescription(answer);
+    }
 
     public updateTransform(): void {
         
@@ -131,6 +198,7 @@ export class WebSpeakOtherPlayer extends WebSpeakPlayer {
         return "remote";
     }
 }
+
 
 /**
  * The player that is the client's local player.

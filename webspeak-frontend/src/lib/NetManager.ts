@@ -43,7 +43,7 @@ export default class NetManager {
      */
     get connectionStatus(): number {
         let ws = this.wsConnection;
-        if (ws != undefined) {
+        if (ws != null) {
             return ws.readyState;
         } else {
             return WebSocket.CLOSED;
