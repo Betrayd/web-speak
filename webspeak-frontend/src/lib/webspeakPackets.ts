@@ -18,7 +18,7 @@ module webspeakPackets {
         registerHandler('updateTransform', onUpdateTransform);
         
         registerRTCPacketHandler('handIce', onHandIce);
-        registerRTCPacketHandler('requestOffer', onRequestOffer);
+        registerHandler('requestOffer', onRequestOffer);
         registerRTCPacketHandler('handOffer', onHandOffer);
         registerRTCPacketHandler('handAnswer', onHandAnswer);
     }

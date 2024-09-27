@@ -13,19 +13,8 @@ export default abstract class WebSpeakPlayer {
         this.playerID = playerID;
     }
     
-    /**
-     * The player's X coordinate. Make sure to call `onUpdateTransform()` after updating.
-     */
     x = 0;
-
-    /**
-     * The player's Y coordinate. Make sure to call `onUpdateTransform()` after updating.
-     */
     y = 0;
-
-    /**
-     * The player's Z coordinate. Make sure to call `onUpdateTransform()` after updating.
-     */
     z = 0;
 
     /**
@@ -45,20 +34,9 @@ export default abstract class WebSpeakPlayer {
         this.y = pos[1];
         this.y = pos[2];
     }
-    
-    /**
-     * The player's pitch. Make sure to call `onUpdateTransform()` after updating.
-     */
+
     pitch = 0;
-
-    /**
-     * The player's yaw. Make sure to call `onUpdateTransform()` after updating.
-     */
     yaw = 0;
-
-    /**
-     * The player's roll. Make sure to call `onUpdateTransform()` after updating.
-     */
     roll = 0;
 
     /**
@@ -100,9 +78,6 @@ export default abstract class WebSpeakPlayer {
      */
     abstract updateTransform(): void;
     
-    /**
-     * The type of player this player is.
-     */
     abstract get type(): "remote" | "local";
     
     /**
@@ -181,12 +156,14 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     }
 
     async createAnswer(offer: RTCSessionDescriptionInit) {
-        let answer = await this.connection.createAnswer();
+        console.log("Sending RTC answer to " + this.playerID)
         this.connection.setRemoteDescription(offer);
+        let answer = await this.connection.createAnswer();
         return answer;
     }
 
     acceptRTCAnswer(answer: RTCSessionDescriptionInit) {
+        console.log("Recieved RTC answer from " + this.playerID);
         this.connection.setRemoteDescription(answer);
     }
 
