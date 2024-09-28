@@ -32,7 +32,7 @@ export default abstract class WebSpeakPlayer {
     setPos(pos: number[]) {
         this.x = pos[0];
         this.y = pos[1];
-        this.y = pos[2];
+        this.z = pos[2];
     }
 
     pitch = 0;
