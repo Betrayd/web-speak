@@ -18,6 +18,8 @@ export default class App extends React.Component<any, AppState> {
         this.state = { hasMic: false, appInstance: undefined };
     }
 
+    private appInstance?: AppInstance
+
     componentDidMount(): void {
         // Try to get address and session ID from URL params.
         const urlParams = new URLSearchParams(window.location.search);
@@ -69,8 +71,10 @@ export default class App extends React.Component<any, AppState> {
     }
 
     launchApp(serverAddress: string, sessionID: string): AppInstance {
-        let instance = new AppInstance(serverAddress, sessionID);
-        return instance;
+        if (this.appInstance == undefined) {
+            this.appInstance = new AppInstance(serverAddress, sessionID);
+        }
+        return this.appInstance;
     }
 
     render(): React.ReactNode {

@@ -123,7 +123,8 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         this.connection.ontrack = event => {
             if (event.track.kind === "audio") {
                 let mediaStream = event.streams[0];
-
+                console.log("Added RTC track");
+                console.log(event.track);
                 // Make chromium jealous of audio source so it can be used in panner
                 let bullshitAudio: HTMLAudioElement | null = new Audio();
                 bullshitAudio.muted = true;
@@ -133,6 +134,8 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                 })
 
                 let audioStream = webSpeakAudio.audioCtx.createMediaStreamSource(mediaStream);
+                console.log("AudioStream:");
+                console.log(audioStream);
                 audioStream.connect(this.panner);
                 this.panner.connect(webSpeakAudio.audioCtx.destination);
             }
@@ -168,6 +171,9 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     }
 
     public updateTransform(): void {
+        this.panner.positionX.value = this.x;
+        this.panner.positionY.value = this.y;
+        this.panner.positionZ.value = this.z;
         
     }
 
@@ -184,6 +190,10 @@ export class WebSpeakLocalPlayer extends WebSpeakPlayer {
 
     updateTransform(): void {
         console.log(`Local transform is (${this.x}, ${this.y}, ${this.z})`);
+        const listener = webSpeakAudio.audioCtx.listener;
+        listener.positionX.value = this.x;
+        listener.positionY.value = this.y;
+        listener.positionZ.value = this.z;
     }
 
     get type(): "local" | "remote" {
