@@ -88,7 +88,7 @@ public class Player {
     }
 
     public void setWebPlayer(TestWebPlayer webPlayer) {
-        if (webPlayer.getPlayer() != this)
+        if (webPlayer != null && webPlayer.getPlayer() != this)
             throw new IllegalArgumentException("Web player must point to this player.");
         webPlayerProperty.set(webPlayer);
     }

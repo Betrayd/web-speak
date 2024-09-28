@@ -1,5 +1,7 @@
 package net.betrayd.webspeaktest.ui;
 
+import java.util.function.Consumer;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -20,7 +22,10 @@ import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+import net.betrayd.webspeak.util.WebSpeakEvents;
+import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 import net.betrayd.webspeaktest.Player;
 import net.betrayd.webspeaktest.WebSpeakTestApp;
 
@@ -41,10 +46,18 @@ public class PlayerInfoController {
 
     }
 
+    /**
+     * Yeaah, there's gotta be a more "javafx" way to do this, but I can't be bothered to learn right now.
+     */
+    public final WebSpeakEvent<Consumer<Void>> ON_REQUEST_REMOVE = WebSpeakEvents.createSimple();
+
     private Player player;
 
     @FXML
     private TitledPane titledPane;
+
+    @FXML
+    private HBox titleBox;
 
     @FXML
     private GridPane gridPane;
@@ -106,6 +119,8 @@ public class PlayerInfoController {
                 titledPane.setBorder(Border.EMPTY);
             }
         });
+
+        titleBox.prefWidthProperty().bind(titledPane.widthProperty().subtract(60));
     }
 
     private StringProperty connectionProperty = new SimpleStringProperty();
@@ -119,8 +134,8 @@ public class PlayerInfoController {
 
     public void initPlayer(Player player) {
         this.player = player;
-
-        titledPane.textProperty().bind(player.nameProperty());
+        
+        // titledPane.textProperty().bind(player.nameProperty());
 
         colorPicker.valueProperty().bindBidirectional(player.colorProperty());
 
@@ -130,8 +145,13 @@ public class PlayerInfoController {
         });
 
         player.webPlayerProperty().addListener((prop, oldVal, newVal) -> {
-            sessionIdField.setText(newVal.getSessionId());
-            playerIdField.setText(newVal.getPlayerId());
+            if (newVal != null) {
+                sessionIdField.setText(newVal.getSessionId());
+                playerIdField.setText(newVal.getPlayerId());
+            } else {
+                sessionIdField.setText("");
+                playerIdField.setText("");
+            }
         });
 
         player.getNode().addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
@@ -165,8 +185,8 @@ public class PlayerInfoController {
         WebSpeakTestApp.getInstance().getConnectionIps().removeListener(mapChangeListener);
     }
 
-
-    public GridPane getGridPane() {
-        return gridPane;
+    @FXML
+    private void removePlayer() {
+        ON_REQUEST_REMOVE.invoker().accept(null);
     }
 }

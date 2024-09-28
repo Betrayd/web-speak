@@ -85,10 +85,16 @@ public class WebSpeakTestApp extends Application {
 
     public boolean removePlayer(Object player) {
         if (players.remove(player)) {
-            if (player instanceof Player castPlayer && isServerRunning()) {
-                TestWebPlayer webPlayer = castPlayer.getWebPlayer();
-                if (webPlayer != null) {
-                    getServer().getWebSpeakServer().removePlayer(webPlayer);
+            if (player instanceof Player castPlayer) {
+                if (isServerRunning()) {
+                    TestWebPlayer webPlayer = castPlayer.getWebPlayer();
+                    if (webPlayer != null) {
+                        // Technically removePlayer is already thread-safe, but no reason to wait on a
+                        // lock here.
+                        getServer().execute(() -> {
+                            getServer().getWebSpeakServer().removePlayer(webPlayer);
+                        });
+                    }
                 }
                 mainUIController.onRemovePlayer(castPlayer);
             }
@@ -158,6 +164,7 @@ public class WebSpeakTestApp extends Application {
                 .thenAcceptAsync(p -> player.setWebPlayer(p), Platform::runLater);
     }
 
+
     public CompletableFuture<Void> stopServer() {
         if (!isServerRunning()) {
             LOGGER.error("Server is not running!");
@@ -166,6 +173,9 @@ public class WebSpeakTestApp extends Application {
         
         return server.get().shutdownAsync().thenRunAsync(() -> {
             connectionIps.clear();
+            for (var player : players) {
+                player.setWebPlayer(null);
+            }
             server.set(null);
         }, Platform::runLater);
     }
