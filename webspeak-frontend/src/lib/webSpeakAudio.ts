@@ -5,7 +5,12 @@
 module webSpeakAudio {
     export let userMic: MediaStream | undefined = undefined;
 
+    export let audioCtx: AudioContext | undefined
+
     export async function requestMicAccess(): Promise<MediaStream> {
+        if (audioCtx == undefined) {
+            audioCtx = new AudioContext();
+        }
         let mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         if (mic == undefined) {
             throw new Error("getUserMedia returned undefined.");
@@ -14,8 +19,6 @@ module webSpeakAudio {
         userMic = mic;
         return mic;
     }
-
-    export const audioCtx = new AudioContext();
 
     export const defaultPannerOptions: PannerOptions = {
         panningModel: "HRTF",

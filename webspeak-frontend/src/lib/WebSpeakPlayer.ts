@@ -103,7 +103,7 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
     readonly app: AppInstance;
     readonly connection: RTCPeerConnection = new RTCPeerConnection(webSpeakClient.rtcConfig);
-    readonly panner = new PannerNode(webSpeakAudio.audioCtx, webSpeakAudio.defaultPannerOptions);
+    readonly panner = new PannerNode(webSpeakAudio.audioCtx as AudioContext, webSpeakAudio.defaultPannerOptions);
 
     mediaStream?: MediaStream;
 
@@ -121,10 +121,16 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         }
 
         this.connection.ontrack = event => {
+            let audioCtx = webSpeakAudio.audioCtx as AudioContext;
             if (event.track.kind === "audio") {
                 let mediaStream = event.streams[0];
                 console.log("Added RTC track");
                 console.log(event.track);
+
+                let x = new MediaStream();
+                event.streams[0].getTracks().forEach((track) => {
+                    x.addTrack(track);
+                });
                 
                 // Make chromium jealous of audio source so it can be used in panner
                 let bullshitaudio : HTMLAudioElement | null;
@@ -135,9 +141,9 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                     bullshitaudio = null;
                 });
                 
-                let audioStream = webSpeakAudio.audioCtx.createMediaStreamSource(mediaStream);
+                let audioStream = audioCtx.createMediaStreamSource(mediaStream);
                 audioStream.connect(this.panner);
-                this.panner.connect(webSpeakAudio.audioCtx.destination);
+                this.panner.connect(audioCtx.destination);
 
                 console.log("AudioStream:");
                 console.log(audioStream);
@@ -184,7 +190,9 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
     public updateTransform(): void {
         console.log(`Set transform for ${this.playerID}: (${this.x}, ${this.y}, ${this.z})`);
-
+        if (webSpeakAudio.audioCtx == undefined) {
+            return;
+        }
         if (this.panner.positionX) {
             let currentTime = webSpeakAudio.audioCtx.currentTime;
             this.panner.positionX.setValueAtTime(this.x, currentTime);
@@ -210,6 +218,9 @@ export class WebSpeakLocalPlayer extends WebSpeakPlayer {
 
     updateTransform(): void {
         console.log(`Local transform is (${this.x}, ${this.y}, ${this.z})`);
+        if (webSpeakAudio.audioCtx == undefined) {
+            return;
+        }
         const listener = webSpeakAudio.audioCtx.listener;
 
         if (listener.positionX) {
