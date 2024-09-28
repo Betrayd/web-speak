@@ -10,7 +10,7 @@ module webSpeakAudio {
         if (mic == undefined) {
             throw new Error("getUserMedia returned undefined.");
         }
-
+        
         userMic = mic;
         return mic;
     }

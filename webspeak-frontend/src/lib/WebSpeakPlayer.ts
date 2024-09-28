@@ -125,34 +125,45 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                 let mediaStream = event.streams[0];
                 console.log("Added RTC track");
                 console.log(event.track);
+                
                 // Make chromium jealous of audio source so it can be used in panner
-                let bullshitAudio: HTMLAudioElement | null = new Audio();
-                bullshitAudio.muted = true;
-                bullshitAudio.srcObject = mediaStream;
-                bullshitAudio.addEventListener('canplaythrough', () => {
-                    bullshitAudio = null;
-                })
-
+                let bullshitaudio : HTMLAudioElement | null;
+                bullshitaudio = new Audio();
+                bullshitaudio.muted = true;
+                bullshitaudio.srcObject = mediaStream;
+                bullshitaudio.addEventListener('canplaythrough', () => {
+                    bullshitaudio = null;
+                });
+                
                 let audioStream = webSpeakAudio.audioCtx.createMediaStreamSource(mediaStream);
-                console.log("AudioStream:");
-                console.log(audioStream);
                 audioStream.connect(this.panner);
                 this.panner.connect(webSpeakAudio.audioCtx.destination);
+
+                console.log("AudioStream:");
+                console.log(audioStream);
+            } else {
+                console.error("IT WAS THE WRONG TYPE OH NOOOOOOOO");
             }
         }
 
         this.connection.onicecandidate = event => {
             if (event.candidate) {
+                console.log("Sending ICE candidate:");
+                console.log(event.candidate);
                 webspeakPackets.sendReturnIce(app, playerID, event.candidate);
             }
         }
     }
 
     public addIceCandidate(candidate: RTCIceCandidate) {
+        console.log("Adding ICE candidate:")
+        console.log(candidate);
         this.connection.addIceCandidate(candidate);
     }
 
     async createOffer() {
+        console.log("Creating offer from connection:");
+        console.log(this.connection);
         let offer = await this.connection.createOffer();
         this.connection.setLocalDescription(offer);
         return offer;
@@ -162,6 +173,7 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         console.log("Sending RTC answer to " + this.playerID)
         this.connection.setRemoteDescription(offer);
         let answer = await this.connection.createAnswer();
+        this.connection.setLocalDescription(answer);
         return answer;
     }
 
@@ -171,11 +183,19 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     }
 
     public updateTransform(): void {
-        this.panner.positionX.value = this.x;
-        this.panner.positionY.value = this.y;
-        this.panner.positionZ.value = this.z;
-        
+        console.log(`Set transform for ${this.playerID}: (${this.x}, ${this.y}, ${this.z})`);
+
+        if (this.panner.positionX) {
+            let currentTime = webSpeakAudio.audioCtx.currentTime;
+            this.panner.positionX.setValueAtTime(this.x, currentTime);
+            this.panner.positionY.setValueAtTime(this.y, currentTime);
+            this.panner.positionZ.setValueAtTime(this.z, currentTime);
+        }
+        else {
+            this.panner.setPosition(this.x, this.y, this.z);
+        }
     }
+
 
     get type(): "local" | "remote" {
         return "remote";
@@ -191,9 +211,15 @@ export class WebSpeakLocalPlayer extends WebSpeakPlayer {
     updateTransform(): void {
         console.log(`Local transform is (${this.x}, ${this.y}, ${this.z})`);
         const listener = webSpeakAudio.audioCtx.listener;
-        listener.positionX.value = this.x;
-        listener.positionY.value = this.y;
-        listener.positionZ.value = this.z;
+
+        if (listener.positionX) {
+            listener.positionX.value = this.x;
+            listener.positionY.value = this.y;
+            listener.positionZ.value = this.z;
+        } else {
+            listener.setPosition(this.x, this.y, this.z);
+        }
+
     }
 
     get type(): "local" | "remote" {
