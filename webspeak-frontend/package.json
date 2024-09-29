@@ -10,10 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@types/react-bootstrap": "^0.32.37",
-    "bootswatch": "^5.3.3",
+    "@chakra-ui/react": "^2.8.2",
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "framer-motion": "^11.9.0",
     "react": "^18.3.1",
-    "react-bootstrap": "^2.10.4",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {

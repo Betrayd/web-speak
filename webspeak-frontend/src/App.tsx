@@ -1,10 +1,10 @@
 import React from "react";
-import { Button, Container, Navbar } from "react-bootstrap";
 import './App.css';
 import AppInstance from "./lib/AppInstance";
 import MainUI from "./pages/MainUI";
 import ConnectionPrompt from "./pages/ConnectionPrompt";
 import webSpeakAudio from "./lib/webSpeakAudio";
+import { Box, Button, ChakraProvider, Container, Heading, SystemStyleObject, Text } from "@chakra-ui/react";
 
 interface AppState {
     hasMic: boolean,
@@ -35,8 +35,8 @@ export default class App extends React.Component<any, AppState> {
         // TODO: make this cleaner
         if (!this.state.hasMic) {
             return (
-                <Container>
-                    <Button type="button" onClick={e => {
+                <Container paddingY="32px">
+                    <Button onClick={e => {
                         e.preventDefault();
                         this.requestMicAccess();
                     }}>Request mic access</Button>
@@ -79,16 +79,32 @@ export default class App extends React.Component<any, AppState> {
 
     render(): React.ReactNode {
 
+        const boxStyles: SystemStyleObject = {
+            padding: "10px",
+            bg: "purple.400",
+            color: "white",
+            m: "10px",
+            textAlign: "center",
+            filter: "blur(2px)",
+            ':hover': {
+                color: 'black',
+                bg: 'blue.200'
+            }
+        }
+
         return (
-            <>
-                <Navbar className="navbar-expand-lg navbar-dark bg-dark mb-4">
-                    <Container>
-                        <Navbar.Brand>WebSpeak</Navbar.Brand>
-                        <Navbar.Text>hello world</Navbar.Text>
-                    </Container>
-                </Navbar>
+            <ChakraProvider>
                 {this.drawContent()}
-            </>
+            </ChakraProvider>
+            // <>
+            //     <Navbar className="navbar-expand-lg navbar-dark bg-dark mb-4">
+            //         <Container>
+            //             <Navbar.Brand>WebSpeak</Navbar.Brand>
+            //             <Navbar.Text>hello world</Navbar.Text>
+            //         </Container>
+            //     </Navbar>
+            //     {this.drawContent()}
+            // </>
         )
     }
 }

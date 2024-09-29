@@ -1,4 +1,3 @@
-import 'bootswatch/dist/flatly/bootstrap.min.css'
 import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
