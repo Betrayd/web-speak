@@ -18,8 +18,10 @@ import io.javalin.Javalin;
 import io.javalin.websocket.WsCloseStatus;
 import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.WebSpeakFlags.WebSpeakFlag;
 import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
+import net.betrayd.webspeak.impl.WebSpeakFlagHolder;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 import net.betrayd.webspeak.impl.net.WebSpeakNet.UnknownPacketException;
 import net.betrayd.webspeak.impl.net.packets.LocalPlayerInfoS2CPacket;
@@ -62,6 +64,20 @@ public class WebSpeakServer {
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_DISCONNECTED = WebSpeakEvents.createSimple();
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_ADDED = WebSpeakEvents.createSimple();
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_REMOVED = WebSpeakEvents.createSimple();
+
+    private final WebSpeakFlagHolder flagHolder = new WebSpeakFlagHolder();
+    
+    public <T> T setFlag(WebSpeakFlag<T> flag, T value) {
+        return flagHolder.setFlag(flag, value);
+    }
+
+    public <T> T getFlag(WebSpeakFlag<T> flag) {
+        return flagHolder.getFlag(flag);
+    }
+
+    public Map<WebSpeakFlag<?>, Object> getFlags() {
+        return flagHolder.getFlags();
+    }
 
     /**
      * Get the base Javalin app
@@ -284,6 +300,7 @@ public class WebSpeakServer {
             ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
             ON_SESSION_DISCONNECTED.invoker().accept(player);
         }
+        rtcManager.kickRTC(player);
         player.wsContext = null;
         ON_PLAYER_REMOVED.invoker().accept(player);
     }

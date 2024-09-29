@@ -1,10 +1,12 @@
 package net.betrayd.webspeak.impl.net.packets;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonElement;
 
 import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.WebSpeakFlags;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.impl.net.C2SPacket;
 import net.betrayd.webspeak.impl.net.C2SPacket.JsonC2SPacket;
@@ -13,6 +15,9 @@ import net.betrayd.webspeak.impl.net.S2CPacket.JsonS2CPacket;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 
 public class RTCPackets {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("WebSpeak RTCPackets");
+
     public static record RTCPacketData(String playerID, JsonElement payload) {};
     public static record RequestOfferS2CPacket(String playerID) {};
 
@@ -35,7 +40,6 @@ public class RTCPackets {
 
     private static void onReturnOffer(WebSpeakPlayer player, RTCPacketData data) {
         WebSpeakPlayer targetPlayer = player.getServer().getPlayer(data.playerID);
-        // TODO: Do we want to do something other than disconnect the player as a result of the exception?
 
         if (targetPlayer == null) {
             throw new IllegalArgumentException("Unknown player: " + data.playerID);
@@ -43,9 +47,13 @@ public class RTCPackets {
         
         WsContext targetWs = targetPlayer.getWsContext();
         if (targetWs == null) {
-            LoggerFactory.getLogger(RTCPackets.class).warn("Tried to send rtc offer from {} to disconnected player {}",
+            LOGGER.warn("Tried to send rtc offer from {} to disconnected player {}",
                     player.getPlayerId(), targetPlayer.getPlayerId());
             return;
+        }
+
+        if (player.getServer().getFlag(WebSpeakFlags.DEBUG_RTC_OFFERS)) {
+            LOGGER.info("Sending RTC offer from {} to {}", player.getPlayerId(), targetPlayer.getPlayerId());
         }
 
         // Hand offer to other client, giving it the source player's ID.
@@ -61,9 +69,13 @@ public class RTCPackets {
         
         WsContext targetWs = targetPlayer.getWsContext();
         if (targetWs == null) {
-            LoggerFactory.getLogger(RTCPackets.class).warn("Tried to send rtc offer from {} to disconnected player {}",
+            LOGGER.warn("Tried to send rtc offer from {} to disconnected player {}",
                     player.getPlayerId(), targetPlayer.getPlayerId());
             return;
+        }
+
+        if (player.getServer().getFlag(WebSpeakFlags.DEBUG_RTC_OFFERS)) {
+            LOGGER.info("Sending RTC answer from {} to {}", player.getPlayerId(), targetPlayer.getPlayerId());
         }
 
         WebSpeakNet.sendPacket(targetWs, HAND_ANSWER_S2C, new RTCPacketData(player.getPlayerId(), data.payload));
@@ -78,9 +90,13 @@ public class RTCPackets {
 
         WsContext targetWs = targetPlayer.getWsContext();
         if (targetWs == null) {
-            LoggerFactory.getLogger(RTCPackets.class).warn("Tried to send ice response from {} to disconnected player {}",
+            LOGGER.warn("Tried to send ice response from {} to disconnected player {}",
                     player.getPlayerId(), targetPlayer.getPlayerId());
             return;
+        }
+
+        if (player.getServer().getFlag(WebSpeakFlags.DEBUG_RTC_OFFERS)) {
+            LOGGER.info("Sending ICE responce from {} to {}", player.getPlayerId(), targetPlayer.getPlayerId());
         }
 
         WebSpeakNet.sendPacket(targetWs, HAND_ICE_S2C, new RTCPacketData(player.getPlayerId(), data.payload));

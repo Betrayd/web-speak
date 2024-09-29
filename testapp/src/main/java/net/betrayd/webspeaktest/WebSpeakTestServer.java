@@ -8,6 +8,7 @@ import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.betrayd.webspeak.WebSpeakFlags;
 import net.betrayd.webspeak.WebSpeakServer;
 
 public class WebSpeakTestServer implements Executor {
@@ -53,6 +54,7 @@ public class WebSpeakTestServer implements Executor {
 
     protected void runThread() {
         webSpeakServer = new WebSpeakServer();
+        webSpeakServer.setFlag(WebSpeakFlags.DEBUG_RTC_OFFERS, true);
         webSpeakServer.start(port);
         startFuture.complete(webSpeakServer);
         while (!shutdownQueued) {

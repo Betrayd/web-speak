@@ -1,41 +1,114 @@
-import { useState } from 'react'
-import './App.css'
-import reactLogo from './assets/react.svg'
-import './main.ts'
-import { helloWorld } from './main.ts'
-import viteLogo from '/vite.svg'
+import React from "react";
+import { Button, Container, Navbar } from "react-bootstrap";
+import './App.css';
+import AppInstance from "./lib/AppInstance";
+import MainUI from "./pages/MainUI";
+import ConnectionPrompt from "./pages/ConnectionPrompt";
+import webSpeakAudio from "./lib/webSpeakAudio";
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={onClickButton}>
-          Press to trigger bad code!
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+interface AppState {
+    hasMic: boolean,
+    appInstance: AppInstance | undefined
 }
 
-function onClickButton() {
-  helloWorld();
+export default class App extends React.Component<any, AppState> {
+
+    constructor(props: any) {
+        super(props);
+        this.state = { hasMic: false, appInstance: undefined };
+    }
+
+    private appInstance?: AppInstance
+
+    componentDidMount(): void {
+        // Try to get address and session ID from URL params.
+        const urlParams = new URLSearchParams(window.location.search);
+        let urlServerAddress = urlParams.get("server");
+        let urlSessionID = urlParams.get("id");
+
+        if (urlServerAddress != null && urlSessionID != null) {
+            this.setState({ appInstance: this.launchApp(urlServerAddress, urlSessionID) });
+        }
+    }
+
+    drawContent() {
+        // TODO: make this cleaner
+        if (!this.state.hasMic) {
+            return (
+                <Container>
+                    <Button type="button" onClick={e => {
+                        e.preventDefault();
+                        this.requestMicAccess();
+                    }}>Request mic access</Button>
+                </Container>
+            )
+
+        }
+
+        if (this.state.appInstance == undefined) {
+            console.log("drawing connection prompt")
+            return (
+                <Container>
+                    <ConnectionPrompt onConnect={info => {
+                        this.setState({ appInstance: this.launchApp(info.serverAddress, info.sessionID) });
+                    }} />
+                </Container>
+
+            )
+        } else {
+            return <MainUI appInstance={this.state.appInstance} />
+        }
+
+    }
+
+    async requestMicAccess() {
+        try {
+            await webSpeakAudio.requestMicAccess();
+            this.setState({ hasMic: true });
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    launchApp(serverAddress: string, sessionID: string): AppInstance {
+        if (this.appInstance == undefined) {
+            this.appInstance = new AppInstance(serverAddress, sessionID);
+        }
+        return this.appInstance;
+    }
+
+    render(): React.ReactNode {
+
+        return (
+            <>
+                <Navbar className="navbar-expand-lg navbar-dark bg-dark mb-4">
+                    <Container>
+                        <Navbar.Brand>WebSpeak</Navbar.Brand>
+                        <Navbar.Text>hello world</Navbar.Text>
+                    </Container>
+                </Navbar>
+                {this.drawContent()}
+            </>
+        )
+    }
 }
 
-export default App
+// function App() {
+//     const [appInstance, setAppInstance] = useState<AppInstance | undefined>();
+
+
+
+//     return (
+//         <>
+//             <Navbar className="navbar-expand-lg navbar-dark bg-dark mb-4">
+//                 <Container>
+//                     <Navbar.Brand>WebSpeak</Navbar.Brand>
+//                     <Navbar.Text>hello world</Navbar.Text>
+//                 </Container>
+//             </Navbar>
+//             {appInstance != undefined ? <MainUI appInstance={appInstance} /> : null}
+//         </>
+//     )
+// }
+
+// export default App;

@@ -109,8 +109,8 @@ public class Player {
         x /= graphScale;
         y /= graphScale;
 
-        // By default WebSpeak uses a Y-Up coordinate space. Therefore, a top-down view needs to be converted.
+        // By default WebSpeak uses a right-hand Cartesian coordinate space. Therefore, a top-down view needs to be converted.
         // (this is why Z-up makes more sense IMO)
-        return new WebSpeakVector(-x, 0, y);
+        return new WebSpeakVector(x, 0, y);
     }
 }
