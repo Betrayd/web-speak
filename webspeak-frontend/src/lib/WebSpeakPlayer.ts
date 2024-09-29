@@ -124,8 +124,6 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
             let audioCtx = webSpeakAudio.audioCtx as AudioContext;
             if (event.track.kind === "audio") {
                 let mediaStream = event.streams[0];
-                console.log("Added RTC track");
-                console.log(event.track);
 
                 let x = new MediaStream();
                 event.streams[0].getTracks().forEach((track) => {
@@ -144,9 +142,6 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                 let audioStream = audioCtx.createMediaStreamSource(mediaStream);
                 audioStream.connect(this.panner);
                 this.panner.connect(audioCtx.destination);
-
-                console.log("AudioStream:");
-                console.log(audioStream);
             } else {
                 console.error("IT WAS THE WRONG TYPE OH NOOOOOOOO");
             }
@@ -162,21 +157,16 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     }
 
     public addIceCandidate(candidate: RTCIceCandidate) {
-        console.log("Adding ICE candidate:")
-        console.log(candidate);
         this.connection.addIceCandidate(candidate);
     }
 
     async createOffer() {
-        console.log("Creating offer from connection:");
-        console.log(this.connection);
         let offer = await this.connection.createOffer();
         this.connection.setLocalDescription(offer);
         return offer;
     }
 
     async createAnswer(offer: RTCSessionDescriptionInit) {
-        console.log("Sending RTC answer to " + this.playerID)
         this.connection.setRemoteDescription(offer);
         let answer = await this.connection.createAnswer();
         this.connection.setLocalDescription(answer);
@@ -184,12 +174,14 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     }
 
     acceptRTCAnswer(answer: RTCSessionDescriptionInit) {
-        console.log("Recieved RTC answer from " + this.playerID);
         this.connection.setRemoteDescription(answer);
     }
 
+    disconnect() {
+        this.connection.close();
+    }
+
     public updateTransform(): void {
-        console.log(`Set transform for ${this.playerID}: (${this.x}, ${this.y}, ${this.z})`);
         if (webSpeakAudio.audioCtx == undefined) {
             return;
         }
@@ -217,7 +209,6 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 export class WebSpeakLocalPlayer extends WebSpeakPlayer {
 
     updateTransform(): void {
-        console.log(`Local transform is (${this.x}, ${this.y}, ${this.z})`);
         if (webSpeakAudio.audioCtx == undefined) {
             return;
         }

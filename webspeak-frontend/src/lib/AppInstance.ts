@@ -90,6 +90,17 @@ export default class AppInstance {
         player.acceptRTCAnswer(answer);
     }
 
+    disconnectPlayerRTC(playerID: string) {
+        let player = this.players.get(playerID);
+        if (player == undefined) {
+            console.warn("Recieved disconnect RTC packet for unknown player: " + playerID);
+            return;
+        }
+        console.log("Disconnecting player from RTC: " + playerID)
+        player.disconnect();
+        this.players.delete(playerID);
+    }
+
     constructor(serverAddress: string, sessionID: string) {
         this.serverAddress = serverAddress;
         this.sessionID = sessionID;

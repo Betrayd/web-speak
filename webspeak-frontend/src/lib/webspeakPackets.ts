@@ -9,7 +9,10 @@ module webspeakPackets {
 
         function registerRTCPacketHandler(name: string, handler: (app: AppInstance, playerID: string, payload: any) => void) {
             app.netManager.packetHandlers.set(name, payload => {
-                let data: { playerID: string, payload: any } = JSON.parse(payload);
+                let data: { playerID?: string, payload: any } = JSON.parse(payload);
+                if (data.playerID == undefined) {
+                    throw new Error("Player ID was not sent.");
+                }
                 handler(app, data.playerID, data.payload);
             })
         }
@@ -21,6 +24,7 @@ module webspeakPackets {
         registerHandler('requestOffer', onRequestOffer);
         registerRTCPacketHandler('handOffer', onHandOffer);
         registerRTCPacketHandler('handAnswer', onHandAnswer);
+        registerHandler('disconnectRTC', onDisconnectRTC);
     }
 
     function onLocalPlayerInfo(app: AppInstance, payload: string) {
@@ -85,6 +89,14 @@ module webspeakPackets {
         }
     }
 
+    function onDisconnectRTC(app: AppInstance, payload: string) {
+        let data: { playerID?: string } = JSON.parse(payload);
+        if (data.playerID == undefined) {
+            throw new Error("Player ID was not sent.");
+        }
+
+        app.disconnectPlayerRTC(data.playerID);
+    }
 
     export function sendReturnIce(app: AppInstance, playerID: string, candidate: RTCIceCandidate) {
         let packet = {

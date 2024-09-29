@@ -300,6 +300,7 @@ public class WebSpeakServer {
             ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
             ON_SESSION_DISCONNECTED.invoker().accept(player);
         }
+        rtcManager.kickRTC(player);
         player.wsContext = null;
         ON_PLAYER_REMOVED.invoker().accept(player);
     }
