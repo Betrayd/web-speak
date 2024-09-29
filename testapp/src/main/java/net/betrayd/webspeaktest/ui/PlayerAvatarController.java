@@ -68,20 +68,35 @@ public class PlayerAvatarController {
     private double mouseAnchorX;
     private double mouseAnchorY;
 
+
     @FXML
     private void onMousePressed(MouseEvent e) {
-        if (e.getButton() == MouseButton.PRIMARY) {
+        if (e.getButton() == MouseButton.PRIMARY || e.getButton() == MouseButton.SECONDARY) {
             mouseAnchorX = e.getX();
             mouseAnchorY = e.getY();
+            prevX = mouseAnchorX;
+            prevY = mouseAnchorY;
+
             e.consume();
+
         }
     }
+
+    double prevX;
+    double prevY;
 
     @FXML
     private void onMouseDragged(MouseEvent e) {
         if (e.getButton() == MouseButton.PRIMARY) {
             root.setLayoutX(e.getX() - mouseAnchorX + root.getLayoutX());
             root.setLayoutY(e.getY() - mouseAnchorY + root.getLayoutY());
+            e.consume();
+        } else if (e.getButton() == MouseButton.SECONDARY) {
+            double rot = root.getRotate();
+            rot += e.getX() - prevX;
+            rot += e.getY() - prevY;
+            root.setRotate(rot);
+
             e.consume();
         }
     }

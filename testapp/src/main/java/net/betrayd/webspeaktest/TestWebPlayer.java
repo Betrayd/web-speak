@@ -3,7 +3,7 @@ package net.betrayd.webspeaktest;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
 import net.betrayd.webspeak.util.WebSpeakVector;
-import net.betrayd.webspeaktest.ui.util.URIComponent;
+import net.betrayd.webspeaktest.util.URIComponent;
 
 public class TestWebPlayer extends WebSpeakPlayer {
 
