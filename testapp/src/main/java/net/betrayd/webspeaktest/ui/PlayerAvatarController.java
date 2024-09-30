@@ -17,6 +17,9 @@ public class PlayerAvatarController {
     private Group root;
 
     @FXML
+    private Group innerRoot;
+
+    @FXML
     private Circle fillCircle;
 
     private final BooleanProperty selectedProperty = new SimpleBooleanProperty();
@@ -92,10 +95,12 @@ public class PlayerAvatarController {
             root.setLayoutY(e.getY() - mouseAnchorY + root.getLayoutY());
             e.consume();
         } else if (e.getButton() == MouseButton.SECONDARY) {
-            double rot = root.getRotate();
+            double rot = innerRoot.getRotate();
             rot += e.getX() - prevX;
             rot += e.getY() - prevY;
-            root.setRotate(rot);
+            prevX = e.getX();
+            prevY = e.getY();
+            innerRoot.setRotate(rot);
 
             e.consume();
         }
