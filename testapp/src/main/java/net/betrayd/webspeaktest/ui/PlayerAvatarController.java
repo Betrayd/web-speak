@@ -48,6 +48,10 @@ public class PlayerAvatarController {
         return fillCircle.fillProperty();
     }
 
+    public double getRotation() {
+        return innerRoot.getRotate();
+    }
+
     private double oldStrokeWidth;
 
     @FXML

@@ -35,27 +35,25 @@ export default abstract class WebSpeakPlayer {
         this.z = pos[2];
     }
 
-    pitch = 0;
-    yaw = 0;
-    roll = 0;
-
-    /**
-     * Get the player's rotation as an array.
-     * @returns A 3-element array with the player's pitch, yaw, and roll values.
-     */
-    getRot() {
-        return [this.pitch, this.yaw, this.roll];
+    setForward(vec: number[]) {
+        this.forX = vec[0];
+        this.forY = vec[1];
+        this.forZ = vec[2];
     }
 
-    /**
-     * Set the player's rotation using an array. Make sure to call `onUpdateTransform()` afterwards.
-     * @param rot A 3-element array with the player's pitch, yaw, and roll values.
-     */
-    setRot(rot: number[]) {
-        this.pitch = rot[0];
-        this.yaw = rot[1];
-        this.roll = rot[2];
+    forX = 0;
+    forY = 1;
+    forZ = 0;
+
+    setUp(vec: number[]) {
+        this.upX = vec[0];
+        this.upY = vec[1];
+        this.upZ = vec[2];
     }
+
+    upX = 0;
+    upY = 0;
+    upZ = 1;
 
     /**
      * Copy the transform of another player in this. Automatically calls `updateTransform()`.
@@ -66,9 +64,14 @@ export default abstract class WebSpeakPlayer {
         this.y = other.y;
         this.z = other.z;
 
-        this.pitch = other.pitch;
-        this.yaw = other.yaw;
-        this.roll = other.roll;  
+        this.forX = other.forX;
+        this.forY = other.forY;
+        this.forZ = other.forZ;
+
+        this.upX = other.upX;
+        this.upY = other.upY;
+        this.upZ = other.upZ;
+
         this.updateTransform();
     }
 
@@ -93,7 +96,7 @@ export default abstract class WebSpeakPlayer {
 
     isLocal(): this is WebSpeakLocalPlayer {
         return this.type === "local";
-    }
+    } 
 }
 
 /**
@@ -213,6 +216,7 @@ export class WebSpeakLocalPlayer extends WebSpeakPlayer {
             return;
         }
         const listener = webSpeakAudio.audioCtx.listener;
+        console.log({x: this.forX,y: this.forY, z: this.forZ});
 
         if (listener.positionX) {
             listener.positionX.value = this.x;
@@ -222,6 +226,17 @@ export class WebSpeakLocalPlayer extends WebSpeakPlayer {
             listener.setPosition(this.x, this.y, this.z);
         }
 
+        if (listener.forwardX) {
+            listener.forwardX.value = this.forX;
+            listener.forwardY.value = this.forY;
+            listener.forwardZ.value = this.forZ;
+            listener.upX.value = this.upX;
+            listener.upY.value = this.upY;
+            listener.upZ.value = this.upZ;
+        } else {
+            listener.setOrientation(this.forX, this.forY, this.forZ,
+                this.upX, this.upY, this.upZ);
+        }
     }
 
     get type(): "local" | "remote" {

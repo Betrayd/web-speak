@@ -1,8 +1,10 @@
 package net.betrayd.webspeaktest;
 
+import javafx.geometry.Point2D;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
 import net.betrayd.webspeak.util.WebSpeakVector;
+import net.betrayd.webspeaktest.util.MathUtils;
 import net.betrayd.webspeaktest.util.URIComponent;
 
 public class TestWebPlayer extends WebSpeakPlayer {
@@ -19,8 +21,10 @@ public class TestWebPlayer extends WebSpeakPlayer {
         return player.getLocation();
     }
     
-    public WebSpeakVector getRotation() {
-        return WebSpeakVector.ZERO;
+    @Override
+    public WebSpeakVector getForward() {
+        Point2D point = MathUtils.rotatePoint(0, 1, Math.toRadians(player.getRotation()));
+        return new WebSpeakVector(point.getX(), point.getY(), 0);
     };
 
     @Override

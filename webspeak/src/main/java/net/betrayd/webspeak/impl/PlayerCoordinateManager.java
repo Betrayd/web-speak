@@ -14,7 +14,7 @@ import net.betrayd.webspeak.impl.net.packets.UpdateTransformS2CPacket;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
 public class PlayerCoordinateManager {
-    private static record WebSpeakTransform(WebSpeakVector pos, WebSpeakVector rot) {
+    private static record WebSpeakTransform(WebSpeakVector pos, WebSpeakVector forward, WebSpeakVector up) {
     };
 
     private final WebSpeakServer server;
@@ -35,7 +35,7 @@ public class PlayerCoordinateManager {
 
         // Iterate through players and mark transforms dirty as needed
         for (WebSpeakPlayer player : players) {
-            WebSpeakTransform transform = new WebSpeakTransform(player.getLocation(), player.getRotation());
+            WebSpeakTransform transform = new WebSpeakTransform(player.getLocation(), player.getForward(), player.getUp());
             WebSpeakTransform prevTransform = prevTransforms.get(player);
 
             if (prevTransform == null || !transform.equals(prevTransform)) {
@@ -72,7 +72,7 @@ public class PlayerCoordinateManager {
     }
 
     public void sendPlayerTransform(WebSpeakPlayer player, Iterable<? extends WebSpeakPlayer> targets) {
-        sendPlayerTransform(player, new WebSpeakTransform(player.getLocation(), player.getRotation()),  targets);
+        sendPlayerTransform(player, new WebSpeakTransform(player.getLocation(), player.getForward(), player.getUp()),  targets);
     }
 
     private void sendPlayerTransform(WebSpeakPlayer player, WebSpeakTransform transform,

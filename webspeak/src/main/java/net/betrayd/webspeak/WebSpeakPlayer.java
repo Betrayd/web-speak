@@ -39,15 +39,25 @@ public abstract class WebSpeakPlayer {
 
     /**
      * Get the global location of this player.
-     * @return Player location vector.
+     * @return Player location vector, using a Z-up coordinate space.
      */
     public abstract WebSpeakVector getLocation();
 
     /**
-     * Get the rotation of this player.
-     * @return XYZ euler rotation in degrees
+     * Get the forward direction of this player.
+     * @return Player forward vector
      */
-    public abstract WebSpeakVector getRotation();
+    public WebSpeakVector getForward() {
+        return new WebSpeakVector(0, 0, 1);
+    }
+
+    /**
+     * Get the up direction of this player.
+     * @return Player up vector
+     */
+    public WebSpeakVector getUp() {
+        return new WebSpeakVector(0, 1, 0);
+    }
 
     public abstract boolean isInScope(WebSpeakPlayer other);
     
