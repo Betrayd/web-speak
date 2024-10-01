@@ -1,5 +1,6 @@
 package net.betrayd.webspeaktest.ui;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -10,6 +11,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
+import net.betrayd.webspeaktest.Player;
+import net.betrayd.webspeaktest.WebSpeakTestApp;
 
 public class PlayerAvatarController {
 
@@ -21,6 +24,12 @@ public class PlayerAvatarController {
 
     @FXML
     private Circle fillCircle;
+
+    private Circle scopeCircle;
+
+    public Circle getScopeCircle() {
+        return scopeCircle;
+    }
 
     private final BooleanProperty selectedProperty = new SimpleBooleanProperty();
 
@@ -53,9 +62,23 @@ public class PlayerAvatarController {
     }
 
     private double oldStrokeWidth;
+    
 
     @FXML
     public void initialize() {
+        scopeCircle = new Circle();
+        scopeCircle.setFill(Color.rgb(0, 127, 255, .125));
+        scopeCircle.setStroke(Color.rgb(0, 127, 255));
+        scopeCircle.setStrokeWidth(2);
+
+        scopeCircle.setViewOrder(1);
+        scopeCircle.visibleProperty().bind(selectedProperty);
+        // Marking it disabled stops it from interfering with click events.
+        scopeCircle.setDisable(true);
+        root.getChildren().add(scopeCircle);
+
+        root.viewOrderProperty().bind(Bindings.createIntegerBinding(() -> selectedProperty.get() ? -1: 0, selectedProperty));
+
         // I really should be using CSS for this, but this is a test app so I don't
         // care.
         selectedProperty.addListener((prop, oldVal, newVal) -> {
@@ -72,12 +95,20 @@ public class PlayerAvatarController {
         });
     }
 
+    public void initPlayer(Player player) {
+        var gridProp = WebSpeakTestApp.getInstance().graphScaleProperty();
+        var radiusProp = player.scopeRadiusProperty();
+        
+        scopeCircle.radiusProperty().bind(Bindings.multiply(gridProp, radiusProp));
+    }
+
     private double mouseAnchorX;
     private double mouseAnchorY;
 
 
     @FXML
     private void onMousePressed(MouseEvent e) {
+
         if (e.getButton() == MouseButton.PRIMARY || e.getButton() == MouseButton.SECONDARY) {
             mouseAnchorX = e.getX();
             mouseAnchorY = e.getY();
@@ -85,7 +116,6 @@ public class PlayerAvatarController {
             prevY = mouseAnchorY;
 
             e.consume();
-
         }
     }
 
@@ -94,7 +124,9 @@ public class PlayerAvatarController {
 
     @FXML
     private void onMouseDragged(MouseEvent e) {
+
         if (e.getButton() == MouseButton.PRIMARY) {
+
             root.setLayoutX(e.getX() - mouseAnchorX + root.getLayoutX());
             root.setLayoutY(e.getY() - mouseAnchorY + root.getLayoutY());
             e.consume();

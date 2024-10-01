@@ -216,7 +216,6 @@ public final class MainUIController {
     }
 
     public void onAddPlayer(Player player) {
-
         var infoPanel = PlayerInfoController.loadInstance();
         infoPanel.initPlayer(player);
         infoPanel.getTitledPane().addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
