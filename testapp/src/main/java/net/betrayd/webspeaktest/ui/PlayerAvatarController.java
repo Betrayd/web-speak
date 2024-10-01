@@ -66,6 +66,9 @@ public class PlayerAvatarController {
 
     @FXML
     public void initialize() {
+
+
+
         scopeCircle = new Circle();
         scopeCircle.setFill(Color.rgb(0, 127, 255, .125));
         scopeCircle.setStroke(Color.rgb(0, 127, 255));
@@ -75,6 +78,11 @@ public class PlayerAvatarController {
         scopeCircle.visibleProperty().bind(selectedProperty);
         // Marking it disabled stops it from interfering with click events.
         scopeCircle.setDisable(true);
+
+        var graphScaleProp = WebSpeakTestApp.getInstance().graphScaleProperty();
+        var scopeSizeProp = WebSpeakTestApp.getInstance().scopeRadiusProperty();
+        scopeCircle.radiusProperty().bind(Bindings.multiply(graphScaleProp, scopeSizeProp));
+
         root.getChildren().add(scopeCircle);
 
         root.viewOrderProperty().bind(Bindings.createIntegerBinding(() -> selectedProperty.get() ? -1: 0, selectedProperty));
@@ -93,13 +101,11 @@ public class PlayerAvatarController {
                 fillCircle.setStrokeWidth(oldStrokeWidth);
             }
         });
+        
     }
 
     public void initPlayer(Player player) {
-        var gridProp = WebSpeakTestApp.getInstance().graphScaleProperty();
-        var radiusProp = player.scopeRadiusProperty();
-        
-        scopeCircle.radiusProperty().bind(Bindings.multiply(gridProp, radiusProp));
+
     }
 
     private double mouseAnchorX;

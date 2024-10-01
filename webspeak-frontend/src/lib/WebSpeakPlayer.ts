@@ -216,7 +216,6 @@ export class WebSpeakLocalPlayer extends WebSpeakPlayer {
             return;
         }
         const listener = webSpeakAudio.audioCtx.listener;
-        console.log({x: this.forX,y: this.forY, z: this.forZ});
 
         if (listener.positionX) {
             listener.positionX.value = this.x;

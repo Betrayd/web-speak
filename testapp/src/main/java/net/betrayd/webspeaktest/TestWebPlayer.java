@@ -29,7 +29,8 @@ public class TestWebPlayer extends WebSpeakPlayer {
 
     @Override
     public boolean isInScope(WebSpeakPlayer player) {
-        return true;
+        double scopeRadius = WebSpeakTestApp.getInstance().getScopeRadius();
+        return this.getLocation().squaredDistanceTo(player.getLocation()) <= scopeRadius * scopeRadius;
     }
     
     public Player getPlayer() {

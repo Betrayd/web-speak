@@ -2,6 +2,8 @@ package net.betrayd.webspeak.impl.net;
 
 import com.google.gson.Gson;
 
+import io.javalin.websocket.WsContext;
+
 public abstract class S2CPacket<T> {
     private final String id;
 
@@ -13,6 +15,15 @@ public abstract class S2CPacket<T> {
 
     public String getId() {
         return id;
+    }
+
+    /**
+     * A utility function to send this packet to a player.
+     * @param context Websocket context to send to.
+     * @param val Packet value.
+     */
+    public void send(WsContext context, T val) {
+        context.send(WebSpeakNet.writePacket(this, val));
     }
 
     public static class JsonS2CPacket<T> extends S2CPacket<T> {

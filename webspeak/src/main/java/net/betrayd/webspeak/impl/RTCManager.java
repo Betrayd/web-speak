@@ -2,7 +2,11 @@ package net.betrayd.webspeak.impl;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.WebSpeakFlags;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
@@ -10,6 +14,8 @@ import net.betrayd.webspeak.impl.net.packets.RTCPackets;
 import net.betrayd.webspeak.impl.net.packets.RTCPackets.RequestOfferS2CPacket;
 
 public class RTCManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger("WebSpeak RTC Manager");
+
     private final WebSpeakServer server;
 
     private final RelationGraph<WebSpeakPlayer> connections = new RelationGraph<>();
@@ -45,12 +51,19 @@ public class RTCManager {
     }
     
     private void connectRTC(WebSpeakPlayer a, WebSpeakPlayer b) {
+        if (getServer().getFlag(WebSpeakFlags.DEBUG_CONNECTION_REQUESTS)) {
+            LOGGER.info("Requesting player {} to RTC offer to {}", a.getPlayerId(), b.getPlayerId());
+        }
         WebSpeakNet.sendPacket(a.getWsContext(), RTCPackets.REQUEST_OFFER_S2C, new RequestOfferS2CPacket(b.getPlayerId()));
         connections.add(a, b);
     }
 
     private void disconnectRTC(WebSpeakPlayer a, WebSpeakPlayer b) {
-        WebSpeakNet.sendPacket(a.getWsContext(), RTCPackets.DISCONNECT_RTC_S2C, new RequestOfferS2CPacket(b.getPlayerId()));
+        if (getServer().getFlag(WebSpeakFlags.DEBUG_CONNECTION_REQUESTS)) {
+            LOGGER.info("Requesting player {} to disconnect RTC with {}", a.getPlayerId(), b.getPlayerId());
+        }
+        RTCPackets.DISCONNECT_RTC_S2C.send(a.getWsContext(), new RequestOfferS2CPacket(b.getPlayerId()));
+        RTCPackets.DISCONNECT_RTC_S2C.send(b.getWsContext(), new RequestOfferS2CPacket(a.getPlayerId()));
         connections.remove(a, b);
     }
 

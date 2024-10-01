@@ -3,10 +3,8 @@ package net.betrayd.webspeaktest;
 import java.io.IOException;
 import java.net.URL;
 
-import javafx.beans.property.FloatProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -102,20 +100,6 @@ public class Player {
 
     public ReadOnlyObjectProperty<TestWebPlayer> webPlayerProperty() {
         return webPlayerProperty;
-    }
-
-    private final FloatProperty scopeRadiusProperty = new SimpleFloatProperty(26);
-
-    public float getScopeRadius() {
-        return scopeRadiusProperty.get();
-    }
-
-    public void setScopeRadius(float scopeRadius) {
-        scopeRadiusProperty.set(scopeRadius);
-    }
-
-    public FloatProperty scopeRadiusProperty() {
-        return scopeRadiusProperty;
     }
 
     public WebSpeakVector getLocation() {
