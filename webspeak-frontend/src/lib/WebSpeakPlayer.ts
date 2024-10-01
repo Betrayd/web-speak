@@ -106,14 +106,21 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
     readonly app: AppInstance;
     readonly connection: RTCPeerConnection = new RTCPeerConnection(webSpeakClient.rtcConfig);
-    readonly panner = new PannerNode(webSpeakAudio.audioCtx as AudioContext, webSpeakAudio.defaultPannerOptions);
+    // readonly panner = new PannerNode(webSpeakAudio.audioCtx as AudioContext, webSpeakAudio.defaultPannerOptions);
+    readonly panner: PannerNode;
 
     mediaStream?: MediaStream;
 
+    /**
+     * Construct a webspeak player and a panner for it. Panner options will be supplied bu the app.
+     * @param playerID  Player ID to use.
+     * @param app App to base panner options off of and to use for WS communication.
+     */
     constructor(playerID: string, app: AppInstance) {
         super(playerID);
         this.app = app;
-        
+        this.panner = new PannerNode(webSpeakAudio.getAudioCtx(), app.pannerOptions);
+
         let userMic = webSpeakAudio.userMic;
         if (userMic != undefined && userMic.active) {
             for (let track of userMic.getTracks()) {
@@ -157,6 +164,25 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                 webspeakPackets.sendReturnIce(app, playerID, event.candidate);
             }
         }
+    }
+
+    public setPannerOptions(options: Partial<PannerOptions>) {
+        if (options.coneInnerAngle != undefined)
+            this.panner.coneInnerAngle = options.coneInnerAngle;
+        if (options.coneOuterAngle != undefined)
+            this.panner.coneOuterAngle = options.coneOuterAngle;
+        if (options.coneOuterGain != undefined)
+            this.panner.coneOuterGain = options.coneOuterGain;
+        if (options.distanceModel != undefined)
+            this.panner.distanceModel = options.distanceModel;
+        if (options.maxDistance != undefined)
+            this.panner.maxDistance = options.maxDistance;
+        if (options.panningModel != undefined)
+            this.panner.panningModel = options.panningModel;
+        if (options.refDistance != undefined)
+            this.panner.refDistance = options.refDistance;
+        if (options.rolloffFactor != undefined)
+            this.panner.rolloffFactor = options.rolloffFactor;
     }
 
     public addIceCandidate(candidate: RTCIceCandidate) {

@@ -55,6 +55,7 @@ public class WebSpeakTestServer implements Executor {
     protected void runThread() {
         webSpeakServer = new WebSpeakServer();
         webSpeakServer.setFlag(WebSpeakFlags.DEBUG_CONNECTION_REQUESTS, true);
+        webSpeakServer.getPannerOptions().maxDistance = 5;
         webSpeakServer.start(port);
         startFuture.complete(webSpeakServer);
         while (!shutdownQueued) {
@@ -67,7 +68,7 @@ public class WebSpeakTestServer implements Executor {
             try {
                 Thread.sleep(30);
             } catch (InterruptedException e) {
-                LOGGER.info("WebSpeak Server was inturrupted during sleep.");
+                LOGGER.warn("WebSpeak Server was inturrupted during sleep.");
             }
         }
 

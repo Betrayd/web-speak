@@ -19,6 +19,7 @@ module webspeakPackets {
 
         registerHandler('localPlayerInfo', onLocalPlayerInfo);
         registerHandler('updateTransform', onUpdateTransform);
+        registerHandler('setPannerOptions', onSetPannerOptions);
         
         registerRTCPacketHandler('handIce', onHandIce);
         registerHandler('requestOffer', onRequestOffer);
@@ -66,6 +67,12 @@ module webspeakPackets {
             // }
             player.updateTransform();
         }
+    }
+
+    function onSetPannerOptions(app: AppInstance, payload: string) {
+        let options: PannerOptions = JSON.parse(payload);
+        console.log("Updated panner options:", options);
+        app.setPannerOptions(options);
     }
 
     async function onRequestOffer(app: AppInstance, payload: string) {
