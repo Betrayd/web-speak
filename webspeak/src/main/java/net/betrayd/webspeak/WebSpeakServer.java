@@ -25,6 +25,8 @@ import net.betrayd.webspeak.impl.WebSpeakFlagHolder;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 import net.betrayd.webspeak.impl.net.WebSpeakNet.UnknownPacketException;
 import net.betrayd.webspeak.impl.net.packets.LocalPlayerInfoS2CPacket;
+import net.betrayd.webspeak.impl.net.packets.SetPannerOptionsC2SPacket;
+import net.betrayd.webspeak.util.PannerOptions;
 import net.betrayd.webspeak.util.WebSpeakEvents;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 
@@ -64,7 +66,7 @@ public class WebSpeakServer {
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_DISCONNECTED = WebSpeakEvents.createSimple();
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_ADDED = WebSpeakEvents.createSimple();
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_REMOVED = WebSpeakEvents.createSimple();
-
+    
     private final WebSpeakFlagHolder flagHolder = new WebSpeakFlagHolder();
     
     public <T> T setFlag(WebSpeakFlag<T> flag, T value) {
@@ -77,6 +79,23 @@ public class WebSpeakServer {
 
     public Map<WebSpeakFlag<?>, Object> getFlags() {
         return flagHolder.getFlags();
+    }
+
+    private final PannerOptions pannerOptions = new PannerOptions();
+
+    /**
+     * The object used to control the panning config on the client.
+     * Make sure to call {@link #updatePannerOptions} after updating.
+     */
+    public PannerOptions getPannerOptions() {
+        return pannerOptions;
+    }
+
+    /**
+     * Send an updated copy of the panner options to all clients.
+     */
+    public void updatePannerOptions() {
+        WebSpeakNet.sendPacketToPlayers(getPlayers(), SetPannerOptionsC2SPacket.PACKET, pannerOptions);
     }
 
     /**
@@ -142,6 +161,8 @@ public class WebSpeakServer {
                 playerCoordinateManager.onPlayerConnected(player);
                 ON_SESSION_CONNECTED.invoker().accept(player);
             }
+
+            WebSpeakNet.sendPacket(ctx, SetPannerOptionsC2SPacket.PACKET, pannerOptions);
         });
 
         ws.onClose(ctx -> {
