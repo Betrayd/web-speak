@@ -4,8 +4,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -35,7 +38,7 @@ import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
  * 
  * @param <T> The player implementation to use
  */
-public class WebSpeakServer {
+public class WebSpeakServer implements Executor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WebSpeakServer.class);
 
@@ -44,6 +47,8 @@ public class WebSpeakServer {
     }
 
     private Javalin app;
+
+    private final Queue<Runnable> tasks = new ConcurrentLinkedQueue<>();
 
     /**
      * All the players that are relevent to the game
@@ -130,9 +135,14 @@ public class WebSpeakServer {
     }
 
     /**
-     * ticks the werver, updates connections on distance ETC.
+     * ticks the server: updates connections on distance etc.
      */
     public synchronized void tick() {
+        Runnable task;
+        while ((task = tasks.poll()) != null) {
+            task.run();
+        }
+
         rtcManager.tickRTC();
         playerCoordinateManager.tick();
     }
@@ -348,5 +358,14 @@ public class WebSpeakServer {
 
     public final void onPlayerRemoved(Consumer<WebSpeakPlayer> listener) {
         ON_PLAYER_REMOVED.addListener(listener);
+    }
+
+    /**
+     * Queue a task to be run at the beginning of the next tick.
+     * @param command Task to queue.
+     */
+    @Override
+    public void execute(Runnable command) {
+        tasks.add(command);
     }
 }
