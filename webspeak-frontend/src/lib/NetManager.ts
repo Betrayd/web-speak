@@ -58,6 +58,8 @@ export default class NetManager {
         this.connectionAddress = connectionAddress;
         console.log("initializing net manager")
     }
+    
+    private keepAliveID = -1;
 
     /**
      * Attempt to connect to the server, using the established connection address.
@@ -70,11 +72,16 @@ export default class NetManager {
         let ws = new WebSocket(this.connectionAddress);
         this._wsConnection = ws;
 
+        this.keepAliveID = setInterval(() => {
+            this.sendPacket('keepAlive', { timestamp: Date.now() });
+        }, 15000)
+
         ws.onopen = e => this.onWsOpen(e);
         
         ws.onclose = e => {
-            this.onWsError(e);
+            this.onWsClose(e);
             this._wsConnection = null;
+            clearInterval(this.keepAliveID);
         }
 
         ws.onerror = e => {
@@ -122,7 +129,7 @@ export default class NetManager {
      */
     public sendPacket(packetID: string, payload: string | any) {
         let ws = this.wsConnection;
-        if (ws == undefined || this.connectionStatus !== WebSocket.OPEN) {
+        if (ws == null || this.connectionStatus !== WebSocket.OPEN) {
             throw new Error("Websocket connection must be open to send packet.");
         }
 
@@ -135,5 +142,12 @@ export default class NetManager {
         }
         
         ws.send(packetID + ';' + payload);
+    }
+
+    public disconnect() {
+        if (this.wsConnection) {
+            this.wsConnection.close();
+            this._wsConnection = null;
+        }
     }
 }

@@ -40,7 +40,7 @@ import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
  */
 public class WebSpeakServer implements Executor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WebSpeakServer.class);
+    public static final Logger LOGGER = LoggerFactory.getLogger(WebSpeakServer.class);
 
     public static interface WebSpeakPlayerFactory<T extends WebSpeakPlayer> {
         public T create(WebSpeakServer server, String playerId, String sessionId);

@@ -55,6 +55,7 @@ public class WebSpeakTestServer implements Executor {
     protected void runThread() {
         webSpeakServer = new WebSpeakServer();
         webSpeakServer.setFlag(WebSpeakFlags.DEBUG_CONNECTION_REQUESTS, true);
+        webSpeakServer.setFlag(WebSpeakFlags.DEBUG_KEEPALIVE, true);
         webSpeakServer.getPannerOptions().maxDistance = 5;
         webSpeakServer.start(port);
         startFuture.complete(webSpeakServer);

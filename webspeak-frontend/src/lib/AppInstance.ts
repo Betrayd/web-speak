@@ -132,8 +132,12 @@ export default class AppInstance {
         webspeakPackets.setupPacketListeners(this);
     }
 
+
     public connect() {
         this.netManager.connect();
     }
     
+    public shutdown() {
+        this.netManager.disconnect();
+    }
 }
