@@ -1,9 +1,11 @@
 package net.betrayd.webspeak;
 
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,6 +20,8 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
 import io.javalin.Javalin;
+import io.javalin.community.ssl.SslConfig;
+import io.javalin.community.ssl.SslPlugin;
 import io.javalin.websocket.WsCloseStatus;
 import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
@@ -114,14 +118,39 @@ public class WebSpeakServer implements Executor {
         return app.port();
     }
 
+    private Consumer<SslConfig> sslConsumer;
+
+    /**
+     * Configure the server to use SSL, which browsers require to use the mic. If
+     * unset, websockets will need to run through a reverse-proxy to establish SSL.
+     * 
+     * @param consumer SSL configuration function.
+     */
+    public void useSSL(Consumer<SslConfig> consumer) {
+        this.sslConsumer = consumer;
+    }
+
     /**
      * Start the server.
      * 
      * @param port The port to start on.
      */
     public synchronized void start(int port) {
-        app = Javalin.create()
-                .get("/", ctx -> ctx.result("Hello World: " + ctx))
+        SslPlugin ssl;
+        if (sslConsumer != null) {
+            ssl = new SslPlugin(conf -> {
+                conf.insecurePort = port;
+                sslConsumer.accept(conf);
+            });
+        } else {
+            ssl = null;
+        }
+
+        app = Javalin.create(conf -> {
+            if (ssl != null) {
+                conf.registerPlugin(ssl);
+            }
+        }).get("/", ctx -> ctx.result("Hello World: " + ctx))
                 .ws("/connect", this::setupWebsocket);
 
         app.start(port);
