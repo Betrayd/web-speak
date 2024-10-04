@@ -1,6 +1,7 @@
 package net.betrayd.webspeak;
 
 import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.impl.util.URIComponent;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
 public abstract class WebSpeakPlayer {
@@ -71,5 +72,28 @@ public abstract class WebSpeakPlayer {
 
     public final WsContext getWsContext() {
         return wsContext;
+    }
+
+    /**
+     * Get a URL for clients to connect to this webspeak player.
+     * @param frontendAddress Base URL of the frontend.
+     * @param backendAddress Base URL of the backend.
+     * @return Connection URL.
+     */
+    public final String getConnectionURL(String frontendAddress, String backendAddress) {
+        return getConnectionURL(frontendAddress, backendAddress, getSessionId());
+    }
+
+    /**
+     * Get a URL for clients to connect to webspeak with a given session ID.
+     * 
+     * @param frontendAddress Base URL of the frontend.
+     * @param backendAddress  Base URL of the backend.
+     * @param sessionID       Session ID to connect with.
+     * @return Connection URL.
+     */
+    public static String getConnectionURL(String frontendAddress, String backendAddress, String sessionID) {
+        return frontendAddress + "?server=" +
+                URIComponent.encode(backendAddress) + "&id=" + sessionID;
     }
 }

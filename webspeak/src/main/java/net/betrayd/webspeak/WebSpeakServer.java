@@ -111,7 +111,7 @@ public class WebSpeakServer implements Executor {
     }
 
     public int getPort() {
-        return app.port();
+        return app != null ? app.port() : -1;
     }
 
     /**
@@ -120,6 +120,9 @@ public class WebSpeakServer implements Executor {
      * @param port The port to start on.
      */
     public synchronized void start(int port) {
+        if (app != null) {
+            throw new IllegalStateException("Server is already started.");
+        }
         app = Javalin.create()
                 .get("/", ctx -> ctx.result("Hello World: " + ctx))
                 .ws("/connect", this::setupWebsocket);
@@ -127,7 +130,12 @@ public class WebSpeakServer implements Executor {
         app.start(port);
     }
 
+    /**
+     * Synchronously shutdown the server instance. Could block for some time.
+     */
     public synchronized void stop() {
+        if (app == null)
+            return;
         for (var player : List.copyOf(players.values())) {
             removePlayer(player);
         }
@@ -138,6 +146,8 @@ public class WebSpeakServer implements Executor {
      * ticks the server: updates connections on distance etc.
      */
     public synchronized void tick() {
+        if (app == null)
+            return;
         Runnable task;
         while ((task = tasks.poll()) != null) {
             task.run();
@@ -221,13 +231,16 @@ public class WebSpeakServer implements Executor {
         return Collections.unmodifiableCollection(players.values());
     }
 
+    /**
+     * Count the number of players connected to WebSpeak.
+     * @return Number of players.
+     */
     public int numPlayers() {
         return players.size();
     }
 
     /**
      * Get an unmodifiable collection of all the players in the server.
-     * 
      * @return All webspeak players
      */
     public Map<String, WebSpeakPlayer> getPlayerMap() {
@@ -248,10 +261,33 @@ public class WebSpeakServer implements Executor {
         }
     }
 
+    /**
+     * Check if a player exists by its ID.
+     * @param playerId Player ID to check for.
+     * @return If there was a player wsith that ID.
+     */
     public boolean hasPlayerId(String playerId) {
         return players.containsKey(playerId);
     }
-    
+
+    /**
+     * Get a player by its ID.
+     * 
+     * @param playerId Player ID to search for.
+     * @return Found player. <code>null</code> if no player exists with that ID.
+     */
+    public WebSpeakPlayer getPlayer(String playerId) {
+        return players.get(playerId);
+    }
+
+    /**
+     * Create and add a webspeak player, assigning it a random player ID and session
+     * ID.
+     * 
+     * @param <T>     Player type.
+     * @param factory Player factory function.
+     * @return The newly-created factory.
+     */
     public <T extends WebSpeakPlayer> T addPlayer(WebSpeakPlayerFactory<T> factory) {
         T player = factory.create(this, UUID.randomUUID().toString(), UUID.randomUUID().toString());
         addPlayer(player, true);
@@ -259,47 +295,39 @@ public class WebSpeakServer implements Executor {
     }
 
     /**
-     * Add a player to the webspeak server.
+     * Add a player to the webspeak server, replacing any player that already exists
+     * with that ID.
      * 
      * @param player Player to add.
-     * @return If the player was added. False if it was already there.
+     * @return The previous player with that ID, if any.
      */
-    public boolean addPlayer(WebSpeakPlayer player) {
+    public WebSpeakPlayer addPlayer(WebSpeakPlayer player) {
         return addPlayer(player, false);
     }
 
-    protected synchronized boolean addPlayer(WebSpeakPlayer player, boolean noCheck) {
-        if (player == null) {
-            throw new NullPointerException("player");
-        }
+    protected WebSpeakPlayer addPlayer(WebSpeakPlayer player, boolean noCheck) {
+        if (player == null) throw new NullPointerException("player");
+        WebSpeakPlayer old;
         if (!noCheck) {
-            WebSpeakPlayer otherPlayer = players.get(player.getPlayerId());
-            if (otherPlayer != null) {
-                if (!player.equals(otherPlayer)) {
-                    throw new IllegalArgumentException("A player already exists with this ID!");
-                } else {
-                    return false;
-                }
-            }
-            
             if (player.getServer() != this) {
-                throw new IllegalArgumentException("player belongs to the wrong server");
+                throw new IllegalArgumentException("Player belongs to the wrong server!");
             }
 
-            for (WebSpeakPlayer other : players.values()) {
-                if (player.getSessionId().equals(other.getSessionId())) {
+            synchronized(this) {
+                if (players.values().stream().anyMatch(p -> p.getSessionId().equals(player.getSessionId()))) {
                     throw new IllegalArgumentException("A player already exists with this session ID!");
                 }
+                old = players.put(player.getPlayerId(), player);
             }
+        } else {
+            old = players.put(player.getPlayerId(), player);
         }
 
-        players.put(player.getPlayerId(), player);
+        if (old != null) {
+            onRemovePlayer(player);
+        }
         ON_PLAYER_ADDED.invoker().accept(player);
-        return true;
-    }
-
-    public WebSpeakPlayer getPlayer(String playerId) {
-        return players.get(playerId);
+        return old;
     }
 
     /**
@@ -308,21 +336,27 @@ public class WebSpeakServer implements Executor {
      * @param player Player to remove.
      * @return If the player was in the webspeak server.
      */
-    public synchronized boolean removePlayer(Object player) {
+    public boolean removePlayer(Object player) {
         if (player instanceof WebSpeakPlayer webPlayer) {
-            return removePlayer(webPlayer.getPlayerId());
+            return removePlayer(webPlayer.getPlayerId()) != null;
         } else {
             return false;
         }
     }
 
-    public synchronized boolean removePlayer(String playerId) {
+    /**
+     * Remove a player from the webspeak server.
+     * 
+     * @param playerId ID of the player to remove.
+     * @return <code>WebSpeakPlayer</code> instance of the player that was removed.
+     *         <code>null</code> if there was no player with that ID.
+     */
+    public WebSpeakPlayer removePlayer(String playerId) {
         WebSpeakPlayer player = players.remove(playerId);
         if (player != null) {
             onRemovePlayer(player);
-            return true;
         }
-        return false;
+        return player;
     }
 
     protected void onRemovePlayer(WebSpeakPlayer player) {

@@ -73,11 +73,12 @@ public class RTCManager {
     }
 
     public void kickRTC(WebSpeakPlayer player) {
+        var packet = new RequestOfferS2CPacket(player.getPlayerId());
         for (var other : connections.getRelations(player)) {
             WsContext otherWs = other.getWsContext();
             if (otherWs == null)
                 continue;
-            WebSpeakNet.sendPacket(otherWs, RTCPackets.DISCONNECT_RTC_S2C, new RequestOfferS2CPacket(player.getPlayerId()));
+            WebSpeakNet.sendPacket(otherWs, RTCPackets.DISCONNECT_RTC_S2C, packet);
         }
         connections.removeAll(player);
     }

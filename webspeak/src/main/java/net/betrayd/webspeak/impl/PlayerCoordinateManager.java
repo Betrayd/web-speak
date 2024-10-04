@@ -31,7 +31,6 @@ public class PlayerCoordinateManager {
     public void tick() {
         Collection<WebSpeakPlayer> players = server.getPlayers();
         Map<WebSpeakPlayer, WebSpeakTransform> newTransforms = new HashMap<>();
-        // List<WebSpeakPlayer> dirtyTransforms = new ArrayList<>(players.size());
 
         // Iterate through players and mark transforms dirty as needed
         for (WebSpeakPlayer player : players) {
@@ -47,28 +46,6 @@ public class PlayerCoordinateManager {
         for (var entry : newTransforms.entrySet()) {
             sendPlayerTransform(entry.getKey(), entry.getValue(), players);
         }
-
-        // // Actually send transform updates
-        // for (WebSpeakPlayer player : players) {
-        //     // TODO: Better packet sending system
-        //     WsContext ws = player.getWsContext();
-        //     if (ws == null)
-        //         continue;
-
-        //     for (var entry : newTransforms.entrySet()) {
-        //         WebSpeakPlayer otherPlayer = entry.getKey();
-        //         if (!player.isInScope(otherPlayer))
-        //             continue;
-
-        //         WebSpeakTransform transform = entry.getValue();
-
-        //         ws.send(String.format(
-        //                 "{\"type\":\"updateTransform\",\"player\":\"%s\",\"pos\":[%f,%f,%f],\"rot\":[%f,%f,%f]}",
-        //                 otherPlayer.getPlayerId(),
-        //                 transform.pos.x(), transform.pos.y(), transform.pos.z(),
-        //                 transform.rot.x(), transform.rot.y(), transform.rot.z()));
-        //     }
-        // }
     }
 
     public void sendPlayerTransform(WebSpeakPlayer player, Iterable<? extends WebSpeakPlayer> targets) {
