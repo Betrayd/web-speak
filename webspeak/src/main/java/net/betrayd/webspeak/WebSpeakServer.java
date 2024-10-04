@@ -288,7 +288,7 @@ public class WebSpeakServer implements Executor {
      * @param factory Player factory function.
      * @return The newly-created factory.
      */
-    public <T extends WebSpeakPlayer> T addPlayer(WebSpeakPlayerFactory<T> factory) {
+    public <T extends WebSpeakPlayer> T createPlayer(WebSpeakPlayerFactory<T> factory) {
         T player = factory.create(this, UUID.randomUUID().toString(), UUID.randomUUID().toString());
         addPlayer(player, true);
         return player;
@@ -326,8 +326,40 @@ public class WebSpeakServer implements Executor {
         if (old != null) {
             onRemovePlayer(player);
         }
-        ON_PLAYER_ADDED.invoker().accept(player);
+        onAddPlayer(player);
         return old;
+    }
+
+    /**
+     * Create and add a webspeak player if one does not already exist with a given
+     * ID.
+     * 
+     * @param playerID Player ID to use.
+     * @param factory  Player factory.
+     * @return The existing or new player instance.
+     */
+    public WebSpeakPlayer getOrCreatePlayer(String playerID, WebSpeakPlayerFactory<?> factory) {
+        boolean added = false;
+        WebSpeakPlayer player;
+        synchronized(this) {
+            player = players.get(playerID);
+            if (player == null) {
+                player = factory.create(this, playerID, UUID.randomUUID().toString());
+                players.put(playerID, player);
+                onAddPlayer(player);
+                added = true;
+            };
+        }
+
+        // Call this outside the synchronized block to reduce chance of deadlock.
+        if (added) {
+            onAddPlayer(player);
+        }
+        return player;
+    }
+
+    private void onAddPlayer(WebSpeakPlayer player) {
+        ON_PLAYER_ADDED.invoker().accept(player);
     }
 
     /**

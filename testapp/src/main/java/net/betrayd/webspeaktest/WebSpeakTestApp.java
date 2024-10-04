@@ -176,7 +176,7 @@ public class WebSpeakTestApp extends Application {
 
     private void addPlayerToServer(WebSpeakTestServer server, Player player) {
         CompletableFuture.supplyAsync(() -> server.getWebSpeakServer()
-                .addPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session)), server)
+                .createPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session)), server)
                 .thenAcceptAsync(p -> player.setWebPlayer(p), Platform::runLater);
     }
 
