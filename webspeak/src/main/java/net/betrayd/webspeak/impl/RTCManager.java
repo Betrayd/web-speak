@@ -11,7 +11,9 @@ import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 import net.betrayd.webspeak.impl.net.packets.RTCPackets;
+import net.betrayd.webspeak.impl.net.packets.UpdateTransformS2CPacket;
 import net.betrayd.webspeak.impl.net.packets.RTCPackets.RequestOfferS2CPacket;
+import net.betrayd.webspeak.impl.util.WebSpeakUtils;
 
 public class RTCManager {
     private static final Logger LOGGER = LoggerFactory.getLogger("WebSpeak RTC Manager");
@@ -33,7 +35,7 @@ public class RTCManager {
         List<WebSpeakPlayer> connectedPlayers = server.getPlayers()
                 .stream().filter(p -> p.getWsContext() != null).toList();
         
-        for (var pair : Util.compareAll(connectedPlayers)) {
+        for (var pair : WebSpeakUtils.compareAll(connectedPlayers)) {
             if (pair.a().equals(pair.b()))
                 continue;
             
@@ -56,6 +58,9 @@ public class RTCManager {
         }
         WebSpeakNet.sendPacket(a.getWsContext(), RTCPackets.REQUEST_OFFER_S2C, new RequestOfferS2CPacket(b.getPlayerId()));
         connections.add(a, b);
+
+        UpdateTransformS2CPacket.fromPlayer(a).send(b.getWsContext());
+        UpdateTransformS2CPacket.fromPlayer(b).send(a.getWsContext());
     }
 
     private void disconnectRTC(WebSpeakPlayer a, WebSpeakPlayer b) {

@@ -5,8 +5,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import net.betrayd.webspeak.impl.Util;
-import net.betrayd.webspeak.impl.Util.Pair;
+import net.betrayd.webspeak.impl.util.WebSpeakUtils;
+import net.betrayd.webspeak.impl.util.WebSpeakUtils.Pair;
 
 public class CollectionTest {
 
@@ -19,7 +19,7 @@ public class CollectionTest {
 
         List<Pair<Integer, Integer>> comparing = new ArrayList<>();
 
-        for (var pair : Util.compareAll(ints)) {
+        for (var pair : WebSpeakUtils.compareAll(ints)) {
             System.out.println(pair);
             comparing.add(pair);
         }

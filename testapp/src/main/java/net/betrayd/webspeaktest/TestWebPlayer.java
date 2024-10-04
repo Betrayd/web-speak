@@ -47,7 +47,7 @@ public class TestWebPlayer extends WebSpeakPlayer {
      * @return Connection address
      */
     public String getLocalConnectionAddress(int frontendPort) {
-        return "http://localhost:" + frontendPort + "?server=" +
+        return "http://localhost:" + frontendPort + "/web-speak?server=" +
                 URIComponent.encode("http://localhost:" + getServer().getPort()) + "&id=" + getSessionId();
     }
 }
