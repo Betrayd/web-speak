@@ -23,8 +23,8 @@ public class TestWebPlayer extends WebSpeakPlayer {
     
     @Override
     public WebSpeakVector getForward() {
-        Point2D point = MathUtils.rotatePoint(0, 1, Math.toRadians(player.getRotation()));
-        return new WebSpeakVector(point.getX(), point.getY(), 0);
+        Point2D point = MathUtils.rotatePoint(0, 1, Math.toRadians(player.getRotation() + 180d));
+        return new WebSpeakVector(point.getX(), 0, point.getY());
     };
 
     @Override
