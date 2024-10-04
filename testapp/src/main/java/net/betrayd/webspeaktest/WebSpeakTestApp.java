@@ -11,9 +11,11 @@ import org.slf4j.LoggerFactory;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.FloatProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
@@ -55,6 +57,20 @@ public class WebSpeakTestApp extends Application {
 
     public DoubleProperty graphScaleProperty() {
         return graphScaleProperty;
+    }
+
+    private final FloatProperty scopeRadiusProperty = new SimpleFloatProperty(26);
+
+    public float getScopeRadius() {
+        return scopeRadiusProperty.get();
+    }
+
+    public void setScopeRadius(float scopeRadius) {
+        scopeRadiusProperty.set(scopeRadius);
+    }
+
+    public FloatProperty scopeRadiusProperty() {
+        return scopeRadiusProperty;
     }
 
     private final ObservableMap<Player, String> connectionIps = FXCollections.observableHashMap();
@@ -160,7 +176,7 @@ public class WebSpeakTestApp extends Application {
 
     private void addPlayerToServer(WebSpeakTestServer server, Player player) {
         CompletableFuture.supplyAsync(() -> server.getWebSpeakServer()
-                .addPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session)), server)
+                .createPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session)), server)
                 .thenAcceptAsync(p -> player.setWebPlayer(p), Platform::runLater);
     }
 

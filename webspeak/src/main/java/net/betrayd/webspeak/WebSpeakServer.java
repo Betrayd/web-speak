@@ -4,8 +4,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -25,6 +28,8 @@ import net.betrayd.webspeak.impl.WebSpeakFlagHolder;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 import net.betrayd.webspeak.impl.net.WebSpeakNet.UnknownPacketException;
 import net.betrayd.webspeak.impl.net.packets.LocalPlayerInfoS2CPacket;
+import net.betrayd.webspeak.impl.net.packets.SetPannerOptionsC2SPacket;
+import net.betrayd.webspeak.util.PannerOptions;
 import net.betrayd.webspeak.util.WebSpeakEvents;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 
@@ -33,15 +38,17 @@ import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
  * 
  * @param <T> The player implementation to use
  */
-public class WebSpeakServer {
+public class WebSpeakServer implements Executor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WebSpeakServer.class);
+    public static final Logger LOGGER = LoggerFactory.getLogger(WebSpeakServer.class);
 
     public static interface WebSpeakPlayerFactory<T extends WebSpeakPlayer> {
         public T create(WebSpeakServer server, String playerId, String sessionId);
     }
 
     private Javalin app;
+
+    private final Queue<Runnable> tasks = new ConcurrentLinkedQueue<>();
 
     /**
      * All the players that are relevent to the game
@@ -64,7 +71,7 @@ public class WebSpeakServer {
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_DISCONNECTED = WebSpeakEvents.createSimple();
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_ADDED = WebSpeakEvents.createSimple();
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_REMOVED = WebSpeakEvents.createSimple();
-
+    
     private final WebSpeakFlagHolder flagHolder = new WebSpeakFlagHolder();
     
     public <T> T setFlag(WebSpeakFlag<T> flag, T value) {
@@ -79,6 +86,23 @@ public class WebSpeakServer {
         return flagHolder.getFlags();
     }
 
+    private final PannerOptions pannerOptions = new PannerOptions();
+
+    /**
+     * The object used to control the panning config on the client.
+     * Make sure to call {@link #updatePannerOptions} after updating.
+     */
+    public PannerOptions getPannerOptions() {
+        return pannerOptions;
+    }
+
+    /**
+     * Send an updated copy of the panner options to all clients.
+     */
+    public void updatePannerOptions() {
+        WebSpeakNet.sendPacketToPlayers(getPlayers(), SetPannerOptionsC2SPacket.PACKET, pannerOptions);
+    }
+
     /**
      * Get the base Javalin app
      */
@@ -87,7 +111,7 @@ public class WebSpeakServer {
     }
 
     public int getPort() {
-        return app.port();
+        return app != null ? app.port() : -1;
     }
 
     /**
@@ -96,6 +120,9 @@ public class WebSpeakServer {
      * @param port The port to start on.
      */
     public synchronized void start(int port) {
+        if (app != null) {
+            throw new IllegalStateException("Server is already started.");
+        }
         app = Javalin.create()
                 .get("/", ctx -> ctx.result("Hello World: " + ctx))
                 .ws("/connect", this::setupWebsocket);
@@ -103,7 +130,12 @@ public class WebSpeakServer {
         app.start(port);
     }
 
+    /**
+     * Synchronously shutdown the server instance. Could block for some time.
+     */
     public synchronized void stop() {
+        if (app == null)
+            return;
         for (var player : List.copyOf(players.values())) {
             removePlayer(player);
         }
@@ -111,9 +143,16 @@ public class WebSpeakServer {
     }
 
     /**
-     * ticks the werver, updates connections on distance ETC.
+     * ticks the server: updates connections on distance etc.
      */
     public synchronized void tick() {
+        if (app == null)
+            return;
+        Runnable task;
+        while ((task = tasks.poll()) != null) {
+            task.run();
+        }
+
         rtcManager.tickRTC();
         playerCoordinateManager.tick();
     }
@@ -142,6 +181,8 @@ public class WebSpeakServer {
                 playerCoordinateManager.onPlayerConnected(player);
                 ON_SESSION_CONNECTED.invoker().accept(player);
             }
+
+            WebSpeakNet.sendPacket(ctx, SetPannerOptionsC2SPacket.PACKET, pannerOptions);
         });
 
         ws.onClose(ctx -> {
@@ -190,13 +231,16 @@ public class WebSpeakServer {
         return Collections.unmodifiableCollection(players.values());
     }
 
+    /**
+     * Count the number of players connected to WebSpeak.
+     * @return Number of players.
+     */
     public int numPlayers() {
         return players.size();
     }
 
     /**
      * Get an unmodifiable collection of all the players in the server.
-     * 
      * @return All webspeak players
      */
     public Map<String, WebSpeakPlayer> getPlayerMap() {
@@ -217,58 +261,105 @@ public class WebSpeakServer {
         }
     }
 
+    /**
+     * Check if a player exists by its ID.
+     * @param playerId Player ID to check for.
+     * @return If there was a player wsith that ID.
+     */
     public boolean hasPlayerId(String playerId) {
         return players.containsKey(playerId);
     }
-    
-    public <T extends WebSpeakPlayer> T addPlayer(WebSpeakPlayerFactory<T> factory) {
+
+    /**
+     * Get a player by its ID.
+     * 
+     * @param playerId Player ID to search for.
+     * @return Found player. <code>null</code> if no player exists with that ID.
+     */
+    public WebSpeakPlayer getPlayer(String playerId) {
+        return players.get(playerId);
+    }
+
+    /**
+     * Create and add a webspeak player, assigning it a random player ID and session
+     * ID.
+     * 
+     * @param <T>     Player type.
+     * @param factory Player factory function.
+     * @return The newly-created factory.
+     */
+    public <T extends WebSpeakPlayer> T createPlayer(WebSpeakPlayerFactory<T> factory) {
         T player = factory.create(this, UUID.randomUUID().toString(), UUID.randomUUID().toString());
         addPlayer(player, true);
         return player;
     }
 
     /**
-     * Add a player to the webspeak server.
+     * Add a player to the webspeak server, replacing any player that already exists
+     * with that ID.
      * 
      * @param player Player to add.
-     * @return If the player was added. False if it was already there.
+     * @return The previous player with that ID, if any.
      */
-    public boolean addPlayer(WebSpeakPlayer player) {
+    public WebSpeakPlayer addPlayer(WebSpeakPlayer player) {
         return addPlayer(player, false);
     }
 
-    protected synchronized boolean addPlayer(WebSpeakPlayer player, boolean noCheck) {
-        if (player == null) {
-            throw new NullPointerException("player");
-        }
+    protected WebSpeakPlayer addPlayer(WebSpeakPlayer player, boolean noCheck) {
+        if (player == null) throw new NullPointerException("player");
+        WebSpeakPlayer old;
         if (!noCheck) {
-            WebSpeakPlayer otherPlayer = players.get(player.getPlayerId());
-            if (otherPlayer != null) {
-                if (!player.equals(otherPlayer)) {
-                    throw new IllegalArgumentException("A player already exists with this ID!");
-                } else {
-                    return false;
-                }
-            }
-            
             if (player.getServer() != this) {
-                throw new IllegalArgumentException("player belongs to the wrong server");
+                throw new IllegalArgumentException("Player belongs to the wrong server!");
             }
 
-            for (WebSpeakPlayer other : players.values()) {
-                if (player.getSessionId().equals(other.getSessionId())) {
+            synchronized(this) {
+                if (players.values().stream().anyMatch(p -> p.getSessionId().equals(player.getSessionId()))) {
                     throw new IllegalArgumentException("A player already exists with this session ID!");
                 }
+                old = players.put(player.getPlayerId(), player);
             }
+        } else {
+            old = players.put(player.getPlayerId(), player);
         }
 
-        players.put(player.getPlayerId(), player);
-        ON_PLAYER_ADDED.invoker().accept(player);
-        return true;
+        if (old != null) {
+            onRemovePlayer(player);
+        }
+        onAddPlayer(player);
+        return old;
     }
 
-    public WebSpeakPlayer getPlayer(String playerId) {
-        return players.get(playerId);
+    /**
+     * Create and add a webspeak player if one does not already exist with a given
+     * ID.
+     * 
+     * @param playerID Player ID to use.
+     * @param factory  Player factory.
+     * @return The existing or new player instance.
+     */
+    public WebSpeakPlayer getOrCreatePlayer(String playerID, WebSpeakPlayerFactory<?> factory) {
+        boolean added = false;
+        WebSpeakPlayer player;
+        synchronized(this) {
+            player = players.get(playerID);
+            if (player == null) {
+                player = factory.create(this, playerID, UUID.randomUUID().toString());
+                players.put(playerID, player);
+                onAddPlayer(player);
+                added = true;
+            };
+        }
+
+        // Call this outside the synchronized block to reduce chance of deadlock.
+        if (added) {
+            onAddPlayer(player);
+        }
+        return player;
+    }
+
+    private void onAddPlayer(WebSpeakPlayer player) {
+        ON_PLAYER_ADDED.invoker().accept(player);
     }
 
     /**
@@ -277,21 +368,27 @@ public class WebSpeakServer {
      * @param player Player to remove.
      * @return If the player was in the webspeak server.
      */
-    public synchronized boolean removePlayer(Object player) {
+    public boolean removePlayer(Object player) {
         if (player instanceof WebSpeakPlayer webPlayer) {
-            return removePlayer(webPlayer.getPlayerId());
+            return removePlayer(webPlayer.getPlayerId()) != null;
         } else {
             return false;
         }
     }
 
-    public synchronized boolean removePlayer(String playerId) {
+    /**
+     * Remove a player from the webspeak server.
+     * 
+     * @param playerId ID of the player to remove.
+     * @return <code>WebSpeakPlayer</code> instance of the player that was removed.
+     *         <code>null</code> if there was no player with that ID.
+     */
+    public WebSpeakPlayer removePlayer(String playerId) {
         WebSpeakPlayer player = players.remove(playerId);
         if (player != null) {
             onRemovePlayer(player);
-            return true;
         }
-        return false;
+        return player;
     }
 
     protected void onRemovePlayer(WebSpeakPlayer player) {
@@ -327,5 +424,14 @@ public class WebSpeakServer {
 
     public final void onPlayerRemoved(Consumer<WebSpeakPlayer> listener) {
         ON_PLAYER_REMOVED.addListener(listener);
+    }
+
+    /**
+     * Queue a task to be run at the beginning of the next tick.
+     * @param command Task to queue.
+     */
+    @Override
+    public void execute(Runnable command) {
+        tasks.add(command);
     }
 }

@@ -1,5 +1,6 @@
 import NetManager from "./NetManager";
 import WebSpeakPlayer, { WebSpeakLocalPlayer, WebSpeakRemotePlayer } from "./WebSpeakPlayer";
+import webSpeakAudio from "./webSpeakAudio";
 import webspeakPackets from "./webspeakPackets";
 
 export interface LocalPlayerInfo {
@@ -20,6 +21,22 @@ export default class AppInstance {
      */
     readonly players: Map<String, WebSpeakRemotePlayer> = new Map();
     readonly localPlayer = new WebSpeakLocalPlayer("");
+
+    private readonly _pannerOptions: PannerOptions = webSpeakAudio.defaultPannerOptions;
+
+    get pannerOptions(): Readonly<PannerOptions> {
+        return this._pannerOptions;
+    }
+
+    /**
+     * Set the default panner options to use on all panner nodes.
+     * @param pannerOptions New panner options.
+     */
+    setPannerOptions(pannerOptions?: Partial<PannerOptions>) {
+        Object.assign(this._pannerOptions, pannerOptions);
+        this.onUpdatePannerOptions();
+        console.log("Updated panner options: ", pannerOptions)
+    }
 
     get localPlayerID() {
         return this.localPlayer.playerID;
@@ -101,6 +118,12 @@ export default class AppInstance {
         this.players.delete(playerID);
     }
 
+    protected onUpdatePannerOptions() {
+        for (let player of this.players.values()) {
+            player.setPannerOptions(this._pannerOptions);
+        }
+    }
+
     constructor(serverAddress: string, sessionID: string) {
         this.serverAddress = serverAddress;
         this.sessionID = sessionID;
@@ -109,8 +132,12 @@ export default class AppInstance {
         webspeakPackets.setupPacketListeners(this);
     }
 
+
     public connect() {
         this.netManager.connect();
     }
     
+    public shutdown() {
+        this.netManager.disconnect();
+    }
 }

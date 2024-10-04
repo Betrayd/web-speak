@@ -1,9 +1,11 @@
 package net.betrayd.webspeaktest;
 
+import javafx.geometry.Point2D;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
 import net.betrayd.webspeak.util.WebSpeakVector;
-import net.betrayd.webspeaktest.ui.util.URIComponent;
+import net.betrayd.webspeaktest.util.MathUtils;
+import net.betrayd.webspeaktest.util.URIComponent;
 
 public class TestWebPlayer extends WebSpeakPlayer {
 
@@ -19,13 +21,16 @@ public class TestWebPlayer extends WebSpeakPlayer {
         return player.getLocation();
     }
     
-    public WebSpeakVector getRotation() {
-        return WebSpeakVector.ZERO;
+    @Override
+    public WebSpeakVector getForward() {
+        Point2D point = MathUtils.rotatePoint(0, 1, Math.toRadians(player.getRotation() + 180d));
+        return new WebSpeakVector(point.getX(), 0, point.getY());
     };
 
     @Override
     public boolean isInScope(WebSpeakPlayer player) {
-        return true;
+        double scopeRadius = WebSpeakTestApp.getInstance().getScopeRadius();
+        return this.getLocation().squaredDistanceTo(player.getLocation()) <= scopeRadius * scopeRadius;
     }
     
     public Player getPlayer() {
@@ -42,7 +47,7 @@ public class TestWebPlayer extends WebSpeakPlayer {
      * @return Connection address
      */
     public String getLocalConnectionAddress(int frontendPort) {
-        return "http://localhost:" + frontendPort + "?server=" +
+        return "http://localhost:" + frontendPort + "/web-speak?server=" +
                 URIComponent.encode("http://localhost:" + getServer().getPort()) + "&id=" + getSessionId();
     }
 }

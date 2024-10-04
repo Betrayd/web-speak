@@ -1,4 +1,4 @@
-package net.betrayd.webspeak.impl;
+package net.betrayd.webspeak.impl.util;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -7,7 +7,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class Util {
+public class WebSpeakUtils {
     public static record Pair<A, B>(A a, B b) {};
 
     /**

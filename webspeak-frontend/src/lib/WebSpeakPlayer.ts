@@ -35,27 +35,25 @@ export default abstract class WebSpeakPlayer {
         this.z = pos[2];
     }
 
-    pitch = 0;
-    yaw = 0;
-    roll = 0;
-
-    /**
-     * Get the player's rotation as an array.
-     * @returns A 3-element array with the player's pitch, yaw, and roll values.
-     */
-    getRot() {
-        return [this.pitch, this.yaw, this.roll];
+    setForward(vec: number[]) {
+        this.forX = vec[0];
+        this.forY = vec[1];
+        this.forZ = vec[2];
     }
 
-    /**
-     * Set the player's rotation using an array. Make sure to call `onUpdateTransform()` afterwards.
-     * @param rot A 3-element array with the player's pitch, yaw, and roll values.
-     */
-    setRot(rot: number[]) {
-        this.pitch = rot[0];
-        this.yaw = rot[1];
-        this.roll = rot[2];
+    forX = 0;
+    forY = 1;
+    forZ = 0;
+
+    setUp(vec: number[]) {
+        this.upX = vec[0];
+        this.upY = vec[1];
+        this.upZ = vec[2];
     }
+
+    upX = 0;
+    upY = 0;
+    upZ = 1;
 
     /**
      * Copy the transform of another player in this. Automatically calls `updateTransform()`.
@@ -66,9 +64,14 @@ export default abstract class WebSpeakPlayer {
         this.y = other.y;
         this.z = other.z;
 
-        this.pitch = other.pitch;
-        this.yaw = other.yaw;
-        this.roll = other.roll;  
+        this.forX = other.forX;
+        this.forY = other.forY;
+        this.forZ = other.forZ;
+
+        this.upX = other.upX;
+        this.upY = other.upY;
+        this.upZ = other.upZ;
+
         this.updateTransform();
     }
 
@@ -93,7 +96,7 @@ export default abstract class WebSpeakPlayer {
 
     isLocal(): this is WebSpeakLocalPlayer {
         return this.type === "local";
-    }
+    } 
 }
 
 /**
@@ -103,14 +106,21 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
     readonly app: AppInstance;
     readonly connection: RTCPeerConnection = new RTCPeerConnection(webSpeakClient.rtcConfig);
-    readonly panner = new PannerNode(webSpeakAudio.audioCtx as AudioContext, webSpeakAudio.defaultPannerOptions);
+    // readonly panner = new PannerNode(webSpeakAudio.audioCtx as AudioContext, webSpeakAudio.defaultPannerOptions);
+    readonly panner: PannerNode;
 
     mediaStream?: MediaStream;
 
+    /**
+     * Construct a webspeak player and a panner for it. Panner options will be supplied bu the app.
+     * @param playerID  Player ID to use.
+     * @param app App to base panner options off of and to use for WS communication.
+     */
     constructor(playerID: string, app: AppInstance) {
         super(playerID);
         this.app = app;
-        
+        this.panner = new PannerNode(webSpeakAudio.getAudioCtx(), app.pannerOptions);
+
         let userMic = webSpeakAudio.userMic;
         if (userMic != undefined && userMic.active) {
             for (let track of userMic.getTracks()) {
@@ -154,6 +164,25 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                 webspeakPackets.sendReturnIce(app, playerID, event.candidate);
             }
         }
+    }
+
+    public setPannerOptions(options: Partial<PannerOptions>) {
+        if (options.coneInnerAngle != undefined)
+            this.panner.coneInnerAngle = options.coneInnerAngle;
+        if (options.coneOuterAngle != undefined)
+            this.panner.coneOuterAngle = options.coneOuterAngle;
+        if (options.coneOuterGain != undefined)
+            this.panner.coneOuterGain = options.coneOuterGain;
+        if (options.distanceModel != undefined)
+            this.panner.distanceModel = options.distanceModel;
+        if (options.maxDistance != undefined)
+            this.panner.maxDistance = options.maxDistance;
+        if (options.panningModel != undefined)
+            this.panner.panningModel = options.panningModel;
+        if (options.refDistance != undefined)
+            this.panner.refDistance = options.refDistance;
+        if (options.rolloffFactor != undefined)
+            this.panner.rolloffFactor = options.rolloffFactor;
     }
 
     public addIceCandidate(candidate: RTCIceCandidate) {
@@ -222,6 +251,17 @@ export class WebSpeakLocalPlayer extends WebSpeakPlayer {
             listener.setPosition(this.x, this.y, this.z);
         }
 
+        if (listener.forwardX) {
+            listener.forwardX.value = this.forX;
+            listener.forwardY.value = this.forY;
+            listener.forwardZ.value = this.forZ;
+            listener.upX.value = this.upX;
+            listener.upY.value = this.upY;
+            listener.upZ.value = this.upZ;
+        } else {
+            listener.setOrientation(this.forX, this.forY, this.forZ,
+                this.upX, this.upY, this.upZ);
+        }
     }
 
     get type(): "local" | "remote" {

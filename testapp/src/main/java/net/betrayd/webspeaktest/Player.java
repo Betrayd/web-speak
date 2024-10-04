@@ -33,6 +33,7 @@ public class Player {
     public static final Player create(Color color) {
         PlayerAvatarController controller = loadAvatar();
         Player player = new Player(controller, color);
+        controller.initPlayer(player);
         controller.fillProperty().bind(player.colorProperty());
         return player;
     }
@@ -112,5 +113,10 @@ public class Player {
         // By default WebSpeak uses a right-hand Cartesian coordinate space. Therefore, a top-down view needs to be converted.
         // (this is why Z-up makes more sense IMO)
         return new WebSpeakVector(x, 0, y);
+    }
+
+    public double getRotation() {
+        // For some reason, JavaFX decided clockwise is positive, although that's mathematically incorrect.
+        return -avatar.getRotation();
     }
 }

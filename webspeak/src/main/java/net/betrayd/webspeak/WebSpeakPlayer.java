@@ -1,6 +1,7 @@
 package net.betrayd.webspeak;
 
 import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.impl.util.URIComponent;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
 public abstract class WebSpeakPlayer {
@@ -39,15 +40,25 @@ public abstract class WebSpeakPlayer {
 
     /**
      * Get the global location of this player.
-     * @return Player location vector.
+     * @return Player location vector, using a Z-up coordinate space.
      */
     public abstract WebSpeakVector getLocation();
 
     /**
-     * Get the rotation of this player.
-     * @return XYZ euler rotation in degrees
+     * Get the forward direction of this player.
+     * @return Player forward vector
      */
-    public abstract WebSpeakVector getRotation();
+    public WebSpeakVector getForward() {
+        return new WebSpeakVector(0, 0, 1);
+    }
+
+    /**
+     * Get the up direction of this player.
+     * @return Player up vector
+     */
+    public WebSpeakVector getUp() {
+        return new WebSpeakVector(0, 1, 0);
+    }
 
     public abstract boolean isInScope(WebSpeakPlayer other);
     
@@ -61,5 +72,28 @@ public abstract class WebSpeakPlayer {
 
     public final WsContext getWsContext() {
         return wsContext;
+    }
+
+    /**
+     * Get a URL for clients to connect to this webspeak player.
+     * @param frontendAddress Base URL of the frontend.
+     * @param backendAddress Base URL of the backend.
+     * @return Connection URL.
+     */
+    public final String getConnectionURL(String frontendAddress, String backendAddress) {
+        return getConnectionURL(frontendAddress, backendAddress, getSessionId());
+    }
+
+    /**
+     * Get a URL for clients to connect to webspeak with a given session ID.
+     * 
+     * @param frontendAddress Base URL of the frontend.
+     * @param backendAddress  Base URL of the backend.
+     * @param sessionID       Session ID to connect with.
+     * @return Connection URL.
+     */
+    public static String getConnectionURL(String frontendAddress, String backendAddress, String sessionID) {
+        return frontendAddress + "?server=" +
+                URIComponent.encode(backendAddress) + "&id=" + sessionID;
     }
 }

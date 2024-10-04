@@ -19,6 +19,7 @@ module webspeakPackets {
 
         registerHandler('localPlayerInfo', onLocalPlayerInfo);
         registerHandler('updateTransform', onUpdateTransform);
+        registerHandler('setPannerOptions', onSetPannerOptions);
         
         registerRTCPacketHandler('handIce', onHandIce);
         registerHandler('requestOffer', onRequestOffer);
@@ -38,7 +39,8 @@ module webspeakPackets {
         interface PositionData {
             playerID: string,
             pos: number[],
-            rot: number[]
+            forward: number[]
+            up: number[]
         }
 
         const data: Partial<PositionData> = JSON.parse(payload);
@@ -49,14 +51,28 @@ module webspeakPackets {
 
         let player = app.getPlayer(data.playerID);
         if (player) {
-            if (data.pos != null) {
+            if (data.pos) {
                 player.setPos(data.pos);
             }
-            if (data.rot != null) {
-                player.setRot(data.rot);
+            
+            if (data.forward) {
+                player.setForward(data.forward);
             }
+
+            if (data.up) {
+                player.setUp(data.up)
+            }
+            // if (data.rot != null) {
+            //     player.setRot(data.rot);
+            // }
             player.updateTransform();
         }
+    }
+
+    function onSetPannerOptions(app: AppInstance, payload: string) {
+        let options: PannerOptions = JSON.parse(payload);
+        console.log("Updated panner options:", options);
+        app.setPannerOptions(options);
     }
 
     async function onRequestOffer(app: AppInstance, payload: string) {
