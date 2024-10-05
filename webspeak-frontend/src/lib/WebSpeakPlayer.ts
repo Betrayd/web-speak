@@ -56,10 +56,10 @@ export default abstract class WebSpeakPlayer {
     upZ = 1;
 
     /**
-     * Copy the transform of another player in this. Automatically calls `updateTransform()`.
-     * @param other Player to copy the transform of.
+     * Copy the values from another player into this. Automatically calls `updateTransform()`.
+     * @param other Player to copy the values of.
      */
-    copyTransform(other: WebSpeakPlayer) {
+    copyFrom(other: WebSpeakPlayer) {
         this.x = other.x;
         this.y = other.y;
         this.z = other.z;
@@ -73,6 +73,9 @@ export default abstract class WebSpeakPlayer {
         this.upZ = other.upZ;
 
         this.updateTransform();
+
+        this.muted = other.muted;
+        this.spatialized = other.spatialized;
     }
 
     /**
@@ -107,7 +110,7 @@ export default abstract class WebSpeakPlayer {
      */
     abstract updateTransform(): void;
     
-    abstract get type(): "remote" | "local";
+    abstract get type(): "remote" | "local" | "dummy";
     
     /**
      * Called after the player has been removed from the client for any reason.
@@ -122,7 +125,41 @@ export default abstract class WebSpeakPlayer {
 
     isLocal(): this is WebSpeakLocalPlayer {
         return this.type === "local";
-    } 
+    }
+
+    private _muted: boolean = false;
+
+    get muted() {
+        return this._muted;
+    }
+
+    set muted(muted: boolean) {
+        this._muted = muted;
+        this.onSetMuted(muted);
+    }
+
+    /**
+     * Called whenever the `muted` property is updated.
+     * @param _muted Is muted
+     */
+    protected onSetMuted(_muted: boolean) { }
+    
+    private _spatialized: boolean = true;
+
+    get spatialized() {
+        return this._spatialized;
+    }
+
+    set spatialized(spatialized: boolean) {
+        this._spatialized = spatialized;
+        this.onSetSpatialized;
+    }
+
+    /**
+     * Called whenever `spatialized` property is updated.
+     * @param _spatialized Is spatialized
+     */
+    protected onSetSpatialized(_spatialized: boolean) { };
 }
 
 /**
@@ -138,33 +175,15 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
     mediaStream?: MediaStream;
 
-    private _muted: boolean = false;
-
-    public set muted(muted: boolean) {
-        this._muted = muted;
-        this.onSetMuted(muted);
-    }
-
-    private onSetMuted(muted: boolean) {
+    protected onSetMuted(muted: boolean) {
         if (!this.mediaStream) return;
         this.mediaStream.getTracks().forEach(track => {
             track.enabled = !muted;
         });
     }
 
-    public get muted() {
-        return this._muted;
-    }
-
-    private _spatialized = true;
-
-    public set spatialized(spatialized: boolean) {
-        this.spatialized = spatialized;
-        // TODO: actually make this do something.
-    }
-
-    public get spatialized() {
-        return this._spatialized;
+    protected onSetSpatialized(_spatialized: boolean): void {
+        // TODO: actually implement this
     }
     
     /**
@@ -360,5 +379,18 @@ export class WebSpeakLocalPlayer extends WebSpeakPlayer {
     get type(): "local" | "remote" {
         return "local";
     }
+}
 
+/**
+ * A dummy webspeak player for when values that need to be stored
+ * for players that are not connected.
+ */
+export class WebSpeakDummyPlayer extends WebSpeakPlayer {
+    updateTransform(): void {
+
+    }
+    get type(): "local" | "remote" | "dummy" {
+        return "dummy";
+    }
+    
 }

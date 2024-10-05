@@ -1,5 +1,5 @@
 import NetManager from "./NetManager";
-import WebSpeakPlayer, { WebSpeakLocalPlayer, WebSpeakRemotePlayer } from "./WebSpeakPlayer";
+import WebSpeakPlayer, { WebSpeakDummyPlayer, WebSpeakLocalPlayer, WebSpeakRemotePlayer } from "./WebSpeakPlayer";
 import webSpeakAudio from "./webSpeakAudio";
 import webspeakPackets from "./webspeakPackets";
 
@@ -32,10 +32,10 @@ export default class AppInstance {
     readonly localPlayer = new WebSpeakLocalPlayer("");
 
     /**
-     * Sometimes, due to network shit, the client may recieve position updates before the RTC init packet.
+     * Sometimes, due to network shit, the client may recieve player updates before the RTC init packet.
      * In this case, store it so it can be applied to the player later.
      */
-    public readonly transformCache: Map<String, Partial<PlayerTransform>> = new Map();
+    public readonly dummyPlayers: Map<String, WebSpeakDummyPlayer> = new Map();
 
     private readonly _pannerOptions: PannerOptions = webSpeakAudio.defaultPannerOptions;
 
@@ -44,13 +44,7 @@ export default class AppInstance {
     }
 
     updatePlayerTransform(playerID: string, transform: Partial<PlayerTransform>) {
-        let player = this.getPlayer(playerID);
-        if (player) {
-            player.setTransform(transform);
-        } else {
-            console.debug(`Recieved transform update for unregistered player (${playerID}). Adding to cache.`);
-            this.transformCache.set(playerID, transform);
-        }
+        this.getPlayer(playerID)?.setTransform(transform);
     }
 
     /**
@@ -76,14 +70,14 @@ export default class AppInstance {
         if (newID === this.localPlayerID) return;
 
         const existing = this.players.get(newID);
-        const cachedTransform = this.transformCache.get(newID);
+        const dummy = this.dummyPlayers.get(newID);
         if (existing != undefined) {
-            this.localPlayer.copyTransform(existing);
+            this.localPlayer.copyFrom(existing);
             existing.onRemoved();
             this.players.delete(newID);
-        } else if (cachedTransform != undefined) {
-            this.localPlayer.setTransform(cachedTransform);
-            this.transformCache.delete(newID);
+        } else if (dummy != undefined) {
+            this.localPlayer.copyFrom(dummy);
+            this.dummyPlayers.delete(newID);
         }
 
         this.localPlayer.playerID = newID;
@@ -97,22 +91,38 @@ export default class AppInstance {
     /**
      * Attempt to find a player by its ID.
      * @param playerID Player ID to search for.
-     * @returns The player, or `undefined` if the client's not tracking a player with that ID.
+     * @param useDummy Make a dummy player if the real player doesn't exist.
+     * @returns Either the real player, a dummy, or `undefined`
      */
-    getPlayer(playerID: string): WebSpeakPlayer | undefined {
+    getPlayer(playerID: string, useDummy: boolean = true): WebSpeakPlayer | undefined {
         if (playerID === this.localPlayerID) {
             return this.localPlayer;
         } else {
-            return this.players.get(playerID);
+            const player = this.players.get(playerID);
+            if (player == undefined && useDummy) {
+                return this.getOrMakeDummy(playerID);
+            } else {
+                return player;
+            }
         }
+    }
+    
+    private getOrMakeDummy(playerID: string) {
+        let dummy = this.dummyPlayers.get(playerID);
+        if (dummy == undefined) {
+            console.debug("Making dummy player for " + playerID);
+            dummy = new WebSpeakDummyPlayer(playerID);
+            this.dummyPlayers.set(playerID, dummy);
+        }
+        return dummy;
     }
 
     private makePlayer(playerID: string) {
         let player = new WebSpeakRemotePlayer(playerID, this);
-        let transform = this.transformCache.get(playerID);
-        if (transform != undefined) {
-            player.setTransform(transform);
-            this.transformCache.delete(playerID);
+        let dummy = this.dummyPlayers.get(playerID);
+        if (dummy) {
+            player.copyFrom(dummy);
+            this.dummyPlayers.delete(playerID);
         }
         return player;
     }
