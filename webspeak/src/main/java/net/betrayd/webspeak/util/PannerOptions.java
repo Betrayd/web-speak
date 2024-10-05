@@ -37,6 +37,11 @@ public class PannerOptions {
     public float refDistance = 1;
     public float rolloffFactor = 1;
 
+    /**
+     * Copy all parameters from another instance.
+     * 
+     * @param other Other instance.
+     */
     public void copyFrom(PannerOptions other) {
         this.coneInnerAngle = other.coneInnerAngle;
         this.coneOuterAngle = other.coneOuterAngle;
@@ -52,5 +57,80 @@ public class PannerOptions {
         this.positionZ = other.positionZ;
         this.refDistance = other.refDistance;
         this.rolloffFactor = other.rolloffFactor;
+    }
+
+    /**
+     * Copy all enabled parameters from a partial instance.
+     * 
+     * @param partial Partial instance.
+     */
+    public void fromPartial(Partial partial) {
+        if (partial.coneInnerAngle != null)
+            coneInnerAngle = partial.coneInnerAngle;
+        if (partial.coneOuterAngle != null)
+            coneOuterAngle = partial.coneOuterAngle;
+        if (partial.coneOuterGain != null)
+            coneOuterGain = partial.coneOuterGain;
+        if (partial.distanceModel != null)
+            distanceModel = partial.distanceModel;
+        if (partial.maxDistance != null)
+            maxDistance = partial.maxDistance;
+        if (partial.orientationX != null)
+            orientationX = partial.orientationX;
+        if (partial.orientationY != null)
+            orientationY = partial.orientationY;
+        if (partial.orientationZ != null)
+            orientationZ = partial.orientationZ;
+        if (partial.panningModel != null)
+            panningModel = partial.panningModel;
+        if (partial.positionX != null)
+            positionX = partial.positionX;
+        if (partial.positionY != null)
+            positionY = partial.positionY;
+        if (partial.positionZ != null)
+            positionZ = partial.positionZ;
+        if (partial.refDistance != null)
+            refDistance = partial.refDistance;
+        if (partial.rolloffFactor != null)
+            rolloffFactor = partial.rolloffFactor;
+    }
+
+    public Partial toPartial() {
+        Partial partial = new Partial();
+        partial.coneInnerAngle = this.coneInnerAngle;
+        partial.coneOuterAngle = this.coneOuterAngle;
+        partial.coneOuterGain = this.coneOuterGain;
+        partial.distanceModel = this.distanceModel;
+        partial.maxDistance = this.maxDistance;
+        partial.orientationX = this.orientationX;
+        partial.orientationY = this.orientationY;
+        partial.orientationZ = this.orientationZ;
+        partial.panningModel = this.panningModel;
+        partial.positionX = this.positionX;
+        partial.positionY = this.positionY;
+        partial.positionZ = this.positionZ;
+        partial.refDistance = this.refDistance;
+        partial.rolloffFactor = this.rolloffFactor;
+        return partial;
+    }
+
+    /**
+     * A variation of PannerOptions where all fields are optional.
+     */
+    public static class Partial {
+        public Float coneInnerAngle = null;
+        public Float coneOuterAngle = null;
+        public Float coneOuterGain = null;
+        public DistanceModelType distanceModel = null;
+        public Float maxDistance = null;
+        public Float orientationX = null;
+        public Float orientationY = null;
+        public Float orientationZ = null;
+        public PanningModelType panningModel = null;
+        public Float positionX = null;
+        public Float positionY = null;
+        public Float positionZ = null;
+        public Float refDistance = null;
+        public Float rolloffFactor = null;
     }
 }

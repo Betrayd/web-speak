@@ -107,10 +107,40 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     readonly app: AppInstance;
     readonly connection: RTCPeerConnection = new RTCPeerConnection(webSpeakClient.rtcConfig);
     // readonly panner = new PannerNode(webSpeakAudio.audioCtx as AudioContext, webSpeakAudio.defaultPannerOptions);
+    private audioStream?: MediaStreamAudioSourceNode;
     readonly panner: PannerNode;
 
     mediaStream?: MediaStream;
 
+    private _muted: boolean = false;
+
+    public set muted(muted: boolean) {
+        this._muted = muted;
+        this.onSetMuted(muted);
+    }
+
+    private onSetMuted(muted: boolean) {
+        if (!this.mediaStream) return;
+        this.mediaStream.getTracks().forEach(track => {
+            track.enabled = !muted;
+        });
+    }
+
+    public get muted() {
+        return this._muted;
+    }
+
+    private _spatialized = true;
+
+    public set spatialized(spatialized: boolean) {
+        this.spatialized = spatialized;
+        // TODO: actually make this do something.
+    }
+
+    public get spatialized() {
+        return this._spatialized;
+    }
+    
     /**
      * Construct a webspeak player and a panner for it. Panner options will be supplied bu the app.
      * @param playerID  Player ID to use.
@@ -120,7 +150,7 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         super(playerID);
         this.app = app;
         this.panner = new PannerNode(webSpeakAudio.getAudioCtx(), app.pannerOptions);
-
+        
         let userMic = webSpeakAudio.userMic;
         if (userMic != undefined && userMic.active) {
             for (let track of userMic.getTracks()) {
@@ -149,8 +179,11 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                     bullshitaudio = null;
                 });
                 
-                let audioStream = audioCtx.createMediaStreamSource(mediaStream);
-                audioStream.connect(this.panner);
+                this.audioStream = audioCtx.createMediaStreamSource(mediaStream);
+                this.audioStream.connect(this.panner);
+                // Update muted status
+                this.onSetMuted(this.muted);
+  
                 this.panner.connect(audioCtx.destination);
             } else {
                 console.error("IT WAS THE WRONG TYPE OH NOOOOOOOO");
@@ -166,7 +199,42 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         }
     }
 
+    private _pannerOptions: Partial<PannerOptions> = {...webSpeakAudio.defaultPannerOptions};
+
+    public get pannerOptions(): Readonly<Partial<PannerOptions>> {
+        return this._pannerOptions;
+    }
+    
+    private _pannerOptionsOverride?: Partial<PannerOptions>;
+
+    /**
+     * If set, these values will override any panner options set.
+     */
+    public get pannerOptionsOverride(): Readonly<PannerOptions> | undefined {
+        return this._pannerOptionsOverride;
+    }
+    
+    public setPannerOptionsOverride(override?: Partial<PannerOptions>) {
+        if (override) {
+            this._pannerOptionsOverride = {...override};
+        } else {
+            this._pannerOptionsOverride = undefined;
+        }
+        this.setPannerOptionsInternal(this._pannerOptions);
+        if (override) {
+            this.setPannerOptionsInternal(override);
+        }
+    }
+
     public setPannerOptions(options: Partial<PannerOptions>) {
+        this._pannerOptions = {...options};
+        this.setPannerOptionsInternal(options);
+        if (this.pannerOptionsOverride) {
+            this.setPannerOptionsInternal(this.pannerOptionsOverride);
+        }
+    }
+
+    private setPannerOptionsInternal(options: Partial<PannerOptions>) {
         if (options.coneInnerAngle != undefined)
             this.panner.coneInnerAngle = options.coneInnerAngle;
         if (options.coneOuterAngle != undefined)

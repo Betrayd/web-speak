@@ -1,4 +1,5 @@
 import AppInstance from "./AppInstance";
+import setAudioParamsS2CPacket from "./packets/setAudioParamsS2CPacket";
 
 module webspeakPackets {
     export function setupPacketListeners(app: AppInstance) {
@@ -20,6 +21,7 @@ module webspeakPackets {
         registerHandler('localPlayerInfo', onLocalPlayerInfo);
         registerHandler('updateTransform', onUpdateTransform);
         registerHandler('setPannerOptions', onSetPannerOptions);
+        registerHandler('setAudioParams', setAudioParamsS2CPacket.handle);
         
         registerRTCPacketHandler('handIce', onHandIce);
         registerHandler('requestOffer', onRequestOffer);

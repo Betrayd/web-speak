@@ -1,6 +1,11 @@
 package net.betrayd.webspeak;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.impl.net.packets.SetAudioParamsS2CPacket;
+import net.betrayd.webspeak.impl.util.ObservableSet;
 import net.betrayd.webspeak.impl.util.URIComponent;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
@@ -10,12 +15,26 @@ public abstract class WebSpeakPlayer {
     private final String playerId;
     private final String sessionId;
 
+    private final ObservableSet<WebSpeakPlayer> mutedPlayers = new ObservableSet<>(new HashSet<>());
+
     WsContext wsContext;
     
     public WebSpeakPlayer(WebSpeakServer server, String playerId, String sessionId) {
         this.server = server;
         this.playerId = playerId;
         this.sessionId = sessionId;
+
+        mutedPlayers.ON_ADDED.addListener(player -> {
+            if (wsContext != null && isInScope(player)) {
+                generateAudioParams(player).send(wsContext);
+            }
+        });
+
+        mutedPlayers.ON_REMOVED.addListener(player -> {
+            if (wsContext != null && isInScope(player)) {
+                generateAudioParams(player).send(wsContext);
+            }
+        });
     }
 
     /**
@@ -61,6 +80,14 @@ public abstract class WebSpeakPlayer {
     }
 
     public abstract boolean isInScope(WebSpeakPlayer other);
+
+    /**
+     * Get a set of all muted players. Updates to this set will trigger packets to be sent to the client.
+     * @return Muted players set.
+     */
+    public Set<WebSpeakPlayer> getMutedPlayers() {
+        return mutedPlayers;
+    }
     
     /**
      * Get the username of this player. Should be overwritten by game implementations.
@@ -72,6 +99,10 @@ public abstract class WebSpeakPlayer {
 
     public final WsContext getWsContext() {
         return wsContext;
+    }
+
+    private SetAudioParamsS2CPacket generateAudioParams(WebSpeakPlayer other) {
+        return new SetAudioParamsS2CPacket(other.playerId, true, mutedPlayers.contains(other));
     }
 
     /**
