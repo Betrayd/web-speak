@@ -7,6 +7,15 @@ export interface LocalPlayerInfo {
     playerID: string
 }
 
+export type WebSpeakVector = [number, number, number]
+
+export interface PlayerTransform {
+    pos: WebSpeakVector,
+    forward: WebSpeakVector,
+    up: WebSpeakVector
+}
+
+
 /**
  * An instance of the app, keeping all the relevent data for a connection to a WebSpeak server.
  */
@@ -22,10 +31,26 @@ export default class AppInstance {
     readonly players: Map<String, WebSpeakRemotePlayer> = new Map();
     readonly localPlayer = new WebSpeakLocalPlayer("");
 
+    /**
+     * Sometimes, due to network shit, the client may recieve position updates before the RTC init packet.
+     * In this case, store it so it can be applied to the player later.
+     */
+    public readonly transformCache: Map<String, Partial<PlayerTransform>> = new Map();
+
     private readonly _pannerOptions: PannerOptions = webSpeakAudio.defaultPannerOptions;
 
     get pannerOptions(): Readonly<PannerOptions> {
         return this._pannerOptions;
+    }
+
+    updatePlayerTransform(playerID: string, transform: Partial<PlayerTransform>) {
+        let player = this.getPlayer(playerID);
+        if (player) {
+            player.setTransform(transform);
+        } else {
+            console.debug(`Recieved transform update for unregistered player (${playerID}). Adding to cache.`);
+            this.transformCache.set(playerID, transform);
+        }
     }
 
     /**
@@ -51,10 +76,14 @@ export default class AppInstance {
         if (newID === this.localPlayerID) return;
 
         const existing = this.players.get(newID);
+        const cachedTransform = this.transformCache.get(newID);
         if (existing != undefined) {
             this.localPlayer.copyTransform(existing);
             existing.onRemoved();
             this.players.delete(newID);
+        } else if (cachedTransform != undefined) {
+            this.localPlayer.setTransform(cachedTransform);
+            this.transformCache.delete(newID);
         }
 
         this.localPlayer.playerID = newID;
@@ -78,13 +107,22 @@ export default class AppInstance {
         }
     }
 
-    requestRTCOffer(playerID: string) {
-        
+    private makePlayer(playerID: string) {
+        let player = new WebSpeakRemotePlayer(playerID, this);
+        let transform = this.transformCache.get(playerID);
+        if (transform != undefined) {
+            player.setTransform(transform);
+            this.transformCache.delete(playerID);
+        }
+        return player;
+    }
+
+    requestRTCOffer(playerID: string) { 
         if (this.players.has(playerID)) {
             console.warn("Already connected to player " + playerID);
         }
 
-        let player = new WebSpeakRemotePlayer(playerID, this);
+        let player = this.makePlayer(playerID);
         this.players.set(playerID, player);
         return player.createOffer();
     }
@@ -94,7 +132,7 @@ export default class AppInstance {
         if (this.players.has(playerID)) {
             console.warn("Already connected to player " + playerID);
         }
-        let player = new WebSpeakRemotePlayer(playerID, this);
+        let player = this.makePlayer(playerID);
         this.players.set(playerID, player);
         console.log("Connecting to player RTC: " + playerID);
         return player.createAnswer(offer);

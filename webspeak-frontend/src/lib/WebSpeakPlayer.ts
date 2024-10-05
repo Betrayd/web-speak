@@ -1,4 +1,4 @@
-import AppInstance from "./AppInstance";
+import AppInstance, { PlayerTransform, WebSpeakVector } from "./AppInstance";
 import webSpeakClient from "./WebSpeakClient";
 import webSpeakAudio from "./webSpeakAudio";
 import webspeakPackets from "./webspeakPackets";
@@ -21,7 +21,7 @@ export default abstract class WebSpeakPlayer {
      * Get the player's position as an array.
      * @returns A 3-element array with the player's X, Y, and Z values.
      */
-    getPos() {
+    getPos(): WebSpeakVector {
         return [this.x, this.y, this.z];
     }
 
@@ -29,13 +29,13 @@ export default abstract class WebSpeakPlayer {
      * Set the player's position using an array. Make sure to call `onUpdateTransform()` afterwards.
      * @param pos A 3-element array with the player's X, Y, and Z values.
      */
-    setPos(pos: number[]) {
+    setPos(pos: WebSpeakVector) {
         this.x = pos[0];
         this.y = pos[1];
         this.z = pos[2];
     }
 
-    setForward(vec: number[]) {
+    setForward(vec: WebSpeakVector) {
         this.forX = vec[0];
         this.forY = vec[1];
         this.forZ = vec[2];
@@ -45,7 +45,7 @@ export default abstract class WebSpeakPlayer {
     forY = 1;
     forZ = 0;
 
-    setUp(vec: number[]) {
+    setUp(vec: WebSpeakVector) {
         this.upX = vec[0];
         this.upY = vec[1];
         this.upZ = vec[2];
@@ -71,6 +71,32 @@ export default abstract class WebSpeakPlayer {
         this.upX = other.upX;
         this.upY = other.upY;
         this.upZ = other.upZ;
+
+        this.updateTransform();
+    }
+
+    /**
+     * Apply a player transform to this player. Automatically calls `updateTransform()`.
+     * @param transform Transform to apply.
+     */
+    setTransform(transform: Partial<PlayerTransform>) {
+        if (transform.pos) {
+            this.x = transform.pos[0];
+            this.y = transform.pos[1];
+            this.z = transform.pos[2];
+        }
+
+        if (transform.forward) {
+            this.forX = transform.forward[0];
+            this.forY = transform.forward[1];
+            this.forZ = transform.forward[2];
+        }
+
+        if (transform.up) {
+            this.upX = transform.up[0];
+            this.upY = transform.up[1];
+            this.upZ = transform.up[2];
+        }
 
         this.updateTransform();
     }

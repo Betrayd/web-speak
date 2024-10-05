@@ -1,4 +1,4 @@
-import AppInstance from "./AppInstance";
+import AppInstance, { PlayerTransform } from "./AppInstance";
 import rtcPackets from "./packets/rtcPackets";
 import setAudioParamsS2CPacket from "./packets/setAudioParamsS2CPacket";
 
@@ -41,39 +41,39 @@ module webspeakPackets {
     }
 
     function onUpdateTransform(app: AppInstance, payload: string) {
-        interface PositionData {
-            playerID: string,
-            pos: number[],
-            forward: number[]
-            up: number[]
+        interface TransformData extends PlayerTransform {
+            playerID: string
         }
 
-        const data: Partial<PositionData> = JSON.parse(payload);
+        const data: Partial<TransformData> = JSON.parse(payload);
 
         if (data.playerID == undefined) {
             throw new Error("Player ID was not sent.");
         }
-        // console.debug("Recieved update transform from " + data.playerID, data.pos)
-        let player = app.getPlayer(data.playerID);
-        if (player) {
-            if (data.pos) {
-                player.setPos(data.pos);
-            }
-            
-            if (data.forward) {
-                player.setForward(data.forward);
-            }
 
-            if (data.up) {
-                player.setUp(data.up)
-            }
-            // if (data.rot != null) {
-            //     player.setRot(data.rot);
-            // }
-            player.updateTransform();
-        } else {
-            console.warn("Recieved transform for unknown player: ", data.playerID)
-        }
+        app.updatePlayerTransform(data.playerID, data);
+
+        // console.debug("Recieved update transform from " + data.playerID, data.pos)
+        // let player = app.getPlayer(data.playerID);
+        // if (player) {
+        //     if (data.pos) {
+        //         player.setPos(data.pos);
+        //     }
+            
+        //     if (data.forward) {
+        //         player.setForward(data.forward);
+        //     }
+
+        //     if (data.up) {
+        //         player.setUp(data.up)
+        //     }
+        //     // if (data.rot != null) {
+        //     //     player.setRot(data.rot);
+        //     // }
+        //     player.updateTransform();
+        // } else {
+        //     console.warn("Recieved transform for unknown player: ", data.playerID)
+        // }
     }
 
     function onSetPannerOptions(app: AppInstance, payload: string) {
