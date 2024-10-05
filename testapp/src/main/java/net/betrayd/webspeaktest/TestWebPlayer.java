@@ -1,5 +1,8 @@
 package net.betrayd.webspeaktest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javafx.geometry.Point2D;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
@@ -10,10 +13,13 @@ import net.betrayd.webspeaktest.util.URIComponent;
 public class TestWebPlayer extends WebSpeakPlayer {
 
     private final Player player;
+
+    private final Logger LOGGER;
     
     public TestWebPlayer(WebSpeakServer server, Player player, String playerId, String sessionId) {
         super(server, playerId, sessionId);
         this.player = player;
+        this.LOGGER = LoggerFactory.getLogger("Player " + playerId);
     }
 
     @Override
@@ -39,6 +45,16 @@ public class TestWebPlayer extends WebSpeakPlayer {
 
     public String getUsername() {
         return player.getName();
+    };
+
+    protected void onJoinedScope(WebSpeakPlayer other) {
+        super.onJoinedScope(other);
+        LOGGER.info("I joined scope with {}", other);
+    };
+
+    protected void onLeftScope(WebSpeakPlayer other) {
+        super.onLeftScope(other);
+        LOGGER.info("I left scope with {}", other);
     };
 
     /**

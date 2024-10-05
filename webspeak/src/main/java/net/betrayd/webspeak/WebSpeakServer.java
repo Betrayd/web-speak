@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -18,17 +19,20 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
 import io.javalin.Javalin;
+import io.javalin.config.JavalinConfig;
 import io.javalin.websocket.WsCloseStatus;
 import io.javalin.websocket.WsConfig;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.WebSpeakFlags.WebSpeakFlag;
 import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
+import net.betrayd.webspeak.impl.RelationGraph;
 import net.betrayd.webspeak.impl.WebSpeakFlagHolder;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 import net.betrayd.webspeak.impl.net.WebSpeakNet.UnknownPacketException;
 import net.betrayd.webspeak.impl.net.packets.LocalPlayerInfoS2CPacket;
 import net.betrayd.webspeak.impl.net.packets.SetPannerOptionsC2SPacket;
+import net.betrayd.webspeak.impl.util.WebSpeakUtils;
 import net.betrayd.webspeak.util.PannerOptions;
 import net.betrayd.webspeak.util.WebSpeakEvents;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
@@ -61,16 +65,28 @@ public class WebSpeakServer implements Executor {
     private final PlayerCoordinateManager playerCoordinateManager = new PlayerCoordinateManager(this);
 
     /**
+     * Keep track of all players in scope with each other.
+     * @apiNote Only players that have a client connected are considered for scope.
+     */
+    private final RelationGraph<WebSpeakPlayer> scopes = new RelationGraph<>();
+
+    /**
      * All the websocket connections, orginized by their "session ID"
      * The session ID is a unique value stored with each player, defined in
      * WebSpeakPlayerData
      */
     private final BiMap<WebSpeakPlayer, WsContext> wsSessions = HashBiMap.create();
 
+    protected final WebSpeakEvent<Consumer<JavalinConfig>> CONFIGURE_JAVALIN = WebSpeakEvents.createSimple();
+    protected final WebSpeakEvent<Consumer<Javalin>> CONFIGURE_ENDPOINTS = WebSpeakEvents.createSimple();
+
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_CONNECTED = WebSpeakEvents.createSimple();
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_DISCONNECTED = WebSpeakEvents.createSimple();
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_ADDED = WebSpeakEvents.createSimple();
     protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_REMOVED = WebSpeakEvents.createSimple();
+
+    protected final WebSpeakEvent<BiConsumer<WebSpeakPlayer, WebSpeakPlayer>> ON_JOIN_SCOPE = WebSpeakEvents.createBiConsumer();
+    protected final WebSpeakEvent<BiConsumer<WebSpeakPlayer, WebSpeakPlayer>> ON_LEAVE_SCOPE = WebSpeakEvents.createBiConsumer();
     
     private final WebSpeakFlagHolder flagHolder = new WebSpeakFlagHolder();
     
@@ -123,10 +139,14 @@ public class WebSpeakServer implements Executor {
         if (app != null) {
             throw new IllegalStateException("Server is already started.");
         }
-        app = Javalin.create()
+        app = Javalin.create(config -> {
+            config.showJavalinBanner = false;
+            CONFIGURE_JAVALIN.invoker().accept(config);
+        })
                 .get("/", ctx -> ctx.result("Hello World: " + ctx))
                 .ws("/connect", this::setupWebsocket);
 
+        CONFIGURE_ENDPOINTS.invoker().accept(app);
         app.start(port);
     }
 
@@ -143,6 +163,22 @@ public class WebSpeakServer implements Executor {
     }
 
     /**
+     * Add a callback to add additional config options to Javalin.
+     * @param callback Config callback.
+     */
+    public void configureJavalin(Consumer<JavalinConfig> callback) {
+        CONFIGURE_JAVALIN.addListener(callback);
+    }
+
+    /**
+     * Add a callback to add additional endpoints to the web server.
+     * @param callback Callback to add endpoints.
+     */
+    public void configureEndpoints(Consumer<Javalin> callback) {
+        CONFIGURE_ENDPOINTS.addListener(callback);
+    }
+
+    /**
      * ticks the server: updates connections on distance etc.
      */
     public synchronized void tick() {
@@ -153,8 +189,72 @@ public class WebSpeakServer implements Executor {
             task.run();
         }
 
-        rtcManager.tickRTC();
+        // rtcManager.tickRTC();
+        tickScopes();
         playerCoordinateManager.tick();
+    }
+
+    private void tickScopes() {
+        List<WebSpeakPlayer> connectedPlayers = getPlayers().stream().filter(p -> p.isConnected()).toList();
+
+        for (var pair : WebSpeakUtils.compareAll(connectedPlayers)) {
+            if (pair.a().equals(pair.b())) {
+                continue;
+            }
+
+            boolean wasInScope = scopes.containsRelation(pair.a(), pair.b());
+            boolean isInScope = pair.a().isInScope(pair.b());
+
+            if (!wasInScope && isInScope) {
+                scopes.add(pair.a(), pair.b());
+                joinScope(pair.a(), pair.b());
+            } else if (wasInScope && !isInScope) {
+                leaveScope(pair.a(), pair.b());
+                scopes.remove(pair.a(), pair.b());
+            }
+        }
+    }
+
+    /**
+     * Remove the player from the scope of all other players. Useful if player was
+     * removed or disconnected.
+     * 
+     * @param player Player to kick.
+     */
+    protected synchronized void kickScopes(WebSpeakPlayer player) {
+        for (var other : scopes.getRelations(player)) {
+            leaveScope(player, other);
+        }
+        scopes.removeAll(player);
+    }
+
+    private void joinScope(WebSpeakPlayer a, WebSpeakPlayer b) {
+        rtcManager.connectRTC(a, b);
+        a.onJoinedScope(b);
+        b.onJoinedScope(a);
+        ON_JOIN_SCOPE.invoker().accept(a, b);
+    }
+
+    private void leaveScope(WebSpeakPlayer a, WebSpeakPlayer b) {
+        rtcManager.disconnectRTC(a, b);
+        a.onLeftScope(b);
+        b.onLeftScope(a);
+        ON_LEAVE_SCOPE.invoker().accept(a, b);
+    }
+
+    /**
+     * Check if two players are in scope with each other.
+     * 
+     * @param a Player A.
+     * @param b Player B.
+     * @return If the players are in scope.
+     * @apiNote Players can only be considered for scope when they have a web client
+     *          connected.
+     * @implNote This doesn't actually re-query the players; it simply checks if the
+     *           scope manager thinks they're in scope.
+     */
+    public final boolean areInScope(WebSpeakPlayer a, WebSpeakPlayer b) {
+        return scopes.containsRelation(a, b);
     }
 
     private void setupWebsocket(WsConfig ws) {
@@ -190,8 +290,9 @@ public class WebSpeakServer implements Executor {
             synchronized(this) {
                 player = wsSessions.inverse().remove(ctx);
                 if (player != null) {
+                    kickScopes(player);
                     player.wsContext = null;
-                    rtcManager.kickRTC(player);
+                    // rtcManager.kickRTC(player);
                     ON_SESSION_DISCONNECTED.invoker().accept(player);
                 }
             }
@@ -393,11 +494,12 @@ public class WebSpeakServer implements Executor {
 
     protected void onRemovePlayer(WebSpeakPlayer player) {
         WsContext ws = wsSessions.remove(player);
+        kickScopes(player);
         if (ws != null) {
             ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
             ON_SESSION_DISCONNECTED.invoker().accept(player);
         }
-        rtcManager.kickRTC(player);
+        // rtcManager.kickRTC(player);
         player.wsContext = null;
         ON_PLAYER_REMOVED.invoker().accept(player);
     }
@@ -410,20 +512,52 @@ public class WebSpeakServer implements Executor {
         return null;
     }
 
+    /**
+     * Called when a web client connects.
+     * @param listener Event listener
+     */
     public final void onSessionConnected(Consumer<WebSpeakPlayer> listener) {
         ON_SESSION_CONNECTED.addListener(listener);
     }
 
+    /**
+     * Called when a web client disconnects.
+     * @param listener Event listener
+     */
     public final void onSessionDisconnected(Consumer<WebSpeakPlayer> listener) {
         ON_SESSION_DISCONNECTED.addListener(listener);
     }
 
+    /**
+     * Called when a player is added to WebSpeak
+     * @param listener Event listener
+     */
     public final void onPlayerAdded(Consumer<WebSpeakPlayer> listener) {
         ON_PLAYER_ADDED.addListener(listener);
     }
 
+    /**
+     * Called when a player is removed from WebSpeak.
+     * @param listener Event listener
+     */
     public final void onPlayerRemoved(Consumer<WebSpeakPlayer> listener) {
         ON_PLAYER_REMOVED.addListener(listener);
+    }
+
+    /**
+     * Called when two players join each other's scope.
+     * @param listener Event listener
+     */
+    public final void onJoinScope(BiConsumer<WebSpeakPlayer, WebSpeakPlayer> listener) {
+        ON_JOIN_SCOPE.addListener(listener);
+    }
+
+    /**
+     * Called when two players leave each other's scope.
+     * @param listener Event listener
+     */
+    public final void onLeaveScope(BiConsumer<WebSpeakPlayer, WebSpeakPlayer> listener) {
+        ON_LEAVE_SCOPE.addListener(listener);
     }
 
     /**

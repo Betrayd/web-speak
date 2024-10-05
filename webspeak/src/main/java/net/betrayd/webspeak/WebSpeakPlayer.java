@@ -5,6 +5,7 @@ import java.util.Set;
 
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.net.packets.SetAudioParamsS2CPacket;
+import net.betrayd.webspeak.impl.net.packets.UpdateTransformS2CPacket;
 import net.betrayd.webspeak.impl.util.ObservableSet;
 import net.betrayd.webspeak.impl.util.URIComponent;
 import net.betrayd.webspeak.util.WebSpeakVector;
@@ -100,6 +101,27 @@ public abstract class WebSpeakPlayer {
     public final WsContext getWsContext() {
         return wsContext;
     }
+    
+    public final boolean isConnected() {
+        return wsContext != null;
+    }
+
+    /**
+     * Called when this player has joined the scope of another player.
+     * @param other The other player.
+     */
+    protected void onJoinedScope(WebSpeakPlayer other) {
+        if (wsContext != null) {
+            UpdateTransformS2CPacket.fromPlayer(other).send(wsContext);
+        }
+    }
+
+    /**
+     * Called when this player has left the scope of another player.
+     * @param other The other player.
+     */
+    protected void onLeftScope(WebSpeakPlayer other) {
+    }
 
     private SetAudioParamsS2CPacket generateAudioParams(WebSpeakPlayer other) {
         return new SetAudioParamsS2CPacket(other.playerId, true, mutedPlayers.contains(other));
@@ -107,8 +129,9 @@ public abstract class WebSpeakPlayer {
 
     /**
      * Get a URL for clients to connect to this webspeak player.
+     * 
      * @param frontendAddress Base URL of the frontend.
-     * @param backendAddress Base URL of the backend.
+     * @param backendAddress  Base URL of the backend.
      * @return Connection URL.
      */
     public final String getConnectionURL(String frontendAddress, String backendAddress) {
@@ -126,5 +149,10 @@ public abstract class WebSpeakPlayer {
     public static String getConnectionURL(String frontendAddress, String backendAddress, String sessionID) {
         return frontendAddress + "?server=" +
                 URIComponent.encode(backendAddress) + "&id=" + sessionID;
+    }
+
+    @Override
+    public String toString() {
+        return "WebSpeakPlayer[" + playerId + "]";
     }
 }
