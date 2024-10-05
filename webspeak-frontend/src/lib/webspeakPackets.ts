@@ -1,4 +1,5 @@
 import AppInstance from "./AppInstance";
+import rtcPackets from "./packets/rtcPackets";
 import setAudioParamsS2CPacket from "./packets/setAudioParamsS2CPacket";
 
 module webspeakPackets {
@@ -8,26 +9,28 @@ module webspeakPackets {
             app.netManager.packetHandlers.set(name, payload => handler(app, payload));
         }
 
-        function registerRTCPacketHandler(name: string, handler: (app: AppInstance, playerID: string, payload: any) => void) {
-            app.netManager.packetHandlers.set(name, payload => {
-                let data: { playerID?: string, payload: any } = JSON.parse(payload);
-                if (data.playerID == undefined) {
-                    throw new Error("Player ID was not sent.");
-                }
-                handler(app, data.playerID, data.payload);
-            })
-        }
+        // function registerRTCPacketHandler(name: string, handler: (app: AppInstance, playerID: string, payload: any) => void) {
+        //     app.netManager.packetHandlers.set(name, payload => {
+        //         let data: { playerID?: string, payload: any } = JSON.parse(payload);
+        //         if (data.playerID == undefined) {
+        //             throw new Error("Player ID was not sent.");
+        //         }
+        //         handler(app, data.playerID, data.payload);
+        //     })
+        // }
 
         registerHandler('localPlayerInfo', onLocalPlayerInfo);
         registerHandler('updateTransform', onUpdateTransform);
         registerHandler('setPannerOptions', onSetPannerOptions);
         registerHandler('setAudioParams', setAudioParamsS2CPacket.handle);
+
+        rtcPackets.registerHandlers(app);
         
-        registerRTCPacketHandler('handIce', onHandIce);
-        registerHandler('requestOffer', onRequestOffer);
-        registerRTCPacketHandler('handOffer', onHandOffer);
-        registerRTCPacketHandler('handAnswer', onHandAnswer);
-        registerHandler('disconnectRTC', onDisconnectRTC);
+        // registerRTCPacketHandler('handIce', onHandIce);
+        // registerHandler('requestOffer', onRequestOffer);
+        // registerRTCPacketHandler('handOffer', onHandOffer);
+        // registerRTCPacketHandler('handAnswer', onHandAnswer);
+        // registerHandler('disconnectRTC', onDisconnectRTC);
     }
 
     function onLocalPlayerInfo(app: AppInstance, payload: string) {
@@ -50,7 +53,7 @@ module webspeakPackets {
         if (data.playerID == undefined) {
             throw new Error("Player ID was not sent.");
         }
-
+        // console.debug("Recieved update transform from " + data.playerID, data.pos)
         let player = app.getPlayer(data.playerID);
         if (player) {
             if (data.pos) {
@@ -68,52 +71,14 @@ module webspeakPackets {
             //     player.setRot(data.rot);
             // }
             player.updateTransform();
+        } else {
+            console.warn("Recieved transform for unknown player: ", data.playerID)
         }
     }
 
     function onSetPannerOptions(app: AppInstance, payload: string) {
         let options: PannerOptions = JSON.parse(payload);
-        console.log("Updated panner options:", options);
         app.setPannerOptions(options);
-    }
-
-    async function onRequestOffer(app: AppInstance, payload: string) {
-        const data: { playerID?: string } = JSON.parse(payload);
-        if (data.playerID == undefined) {
-            throw new Error("Player ID was not sent.");
-        }
-
-        let offer = await app.requestRTCOffer(data.playerID);
-        sendReturnOffer(app, data.playerID, offer);
-    }
-
-    async function onHandOffer(app: AppInstance, playerID: string, payload: any) {
-        let answer = await app.handleRTCOffer(playerID, payload);
-        sendReturnAnswer(app, playerID, answer);
-    }
-
-    function onHandAnswer(app: AppInstance, playerID: string, payload: any) {
-        app.handleRTCAnswer(playerID, payload);
-    }
-
-    function onHandIce(app: AppInstance, playerID: string, payload: any) {
-        let player = app.getPlayer(playerID);
-        if (!player) {
-            throw new Error("Unknown player ID: " + playerID);
-        }
-
-        if (player.isRemote()) {
-            player.addIceCandidate(payload);
-        }
-    }
-
-    function onDisconnectRTC(app: AppInstance, payload: string) {
-        let data: { playerID?: string } = JSON.parse(payload);
-        if (data.playerID == undefined) {
-            throw new Error("Player ID was not sent.");
-        }
-
-        app.disconnectPlayerRTC(data.playerID);
     }
 
     export function sendReturnIce(app: AppInstance, playerID: string, candidate: RTCIceCandidate) {

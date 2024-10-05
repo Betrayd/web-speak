@@ -192,8 +192,7 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
         this.connection.onicecandidate = event => {
             if (event.candidate) {
-                console.log("Sending ICE candidate:");
-                console.log(event.candidate);
+                console.debug("Sending ICE candidate: ", event.candidate);
                 webspeakPackets.sendReturnIce(app, playerID, event.candidate);
             }
         }

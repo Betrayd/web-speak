@@ -60,7 +60,7 @@ public class PlayerCoordinateManager {
 
         for (var target : targets) {
             WsContext ws = target.getWsContext();
-            if (ws == null || !target.isInScope(player))
+            if (ws == null || !server.areInScope(target, player))
                 continue;
             
             ws.send(packet);

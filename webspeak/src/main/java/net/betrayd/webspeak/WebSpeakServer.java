@@ -43,6 +43,7 @@ import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
  * @param <T> The player implementation to use
  */
 public class WebSpeakServer implements Executor {
+    // This is a bit of a monoclass lol, but I think it's okay.
 
     public static final Logger LOGGER = LoggerFactory.getLogger(WebSpeakServer.class);
 
@@ -254,7 +255,7 @@ public class WebSpeakServer implements Executor {
      *           scope manager thinks they're in scope.
      */
     public final boolean areInScope(WebSpeakPlayer a, WebSpeakPlayer b) {
-        return scopes.containsRelation(a, b);
+        return (a == b) || scopes.containsRelation(a, b);
     }
 
     private void setupWebsocket(WsConfig ws) {

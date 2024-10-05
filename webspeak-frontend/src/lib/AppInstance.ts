@@ -79,6 +79,7 @@ export default class AppInstance {
     }
 
     requestRTCOffer(playerID: string) {
+        
         if (this.players.has(playerID)) {
             console.warn("Already connected to player " + playerID);
         }
@@ -89,21 +90,23 @@ export default class AppInstance {
     }
 
     handleRTCOffer(playerID: string, offer: RTCSessionDescriptionInit) {
+        console.debug(`Recieved RTC offer from ${playerID}: `, offer);
         if (this.players.has(playerID)) {
             console.warn("Already connected to player " + playerID);
         }
-
         let player = new WebSpeakRemotePlayer(playerID, this);
         this.players.set(playerID, player);
+        console.log("Connecting to player RTC: " + playerID);
         return player.createAnswer(offer);
     }
 
     handleRTCAnswer(playerID: string, answer: RTCSessionDescriptionInit) {
+        console.debug(`Recieved RTC answer from ${playerID}: `, answer);
         let player = this.players.get(playerID);
         if (!player) {
             throw new Error("Unknown player: " + playerID);
         }
-
+        console.log("Connected to player RTC: " + playerID);
         player.acceptRTCAnswer(answer);
     }
 
