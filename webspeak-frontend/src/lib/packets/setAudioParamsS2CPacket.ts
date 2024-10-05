@@ -3,9 +3,9 @@ import AppInstance from "../AppInstance";
 module setAudioParamsS2CPacket {
     export interface SetAudioParamsS2CPayload {
         playerID: string,
-        spatialize: boolean,
-        mute: boolean,
-        overridePanner: boolean,
+        spatialize?: boolean,
+        mute?: boolean,
+        overridePanner?: boolean,
         pannerOptions?: Partial<PannerOptions>
     }
 
@@ -18,14 +18,20 @@ module setAudioParamsS2CPacket {
         }
 
         if (player.isRemote()) {
-            player.muted = parsed.mute;
-            player.spatialized = parsed.spatialize;
+            if (parsed.mute !== undefined)
+                player.muted = parsed.mute;
+
+            if (parsed.spatialize !== undefined)
+                player.spatialized = parsed.spatialize;
             
-            if (parsed.overridePanner && parsed.pannerOptions) {
-                player.setPannerOptionsOverride(parsed.pannerOptions);
-            } else if (!parsed.overridePanner) {
-                player.setPannerOptionsOverride(undefined);
+            if (parsed.overridePanner !== undefined) {
+                if (parsed.overridePanner && parsed.pannerOptions) {
+                    player.setPannerOptionsOverride(parsed.pannerOptions);
+                } else if (!parsed.overridePanner) {
+                    player.setPannerOptionsOverride(undefined);
+                }
             }
+
         }
     }
 }

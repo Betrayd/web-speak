@@ -40,7 +40,5 @@ public class RTCManager {
         if (getServer().getFlag(WebSpeakFlags.DEBUG_CONNECTION_REQUESTS)) {
             LOGGER.info("Requesting player {} to disconnect RTC with {}", a.getPlayerId(), b.getPlayerId());
         }
-        RTCPackets.DISCONNECT_RTC_S2C.send(a.getWsContext(), new RequestOfferS2CPacket(b.getPlayerId()));
-        RTCPackets.DISCONNECT_RTC_S2C.send(b.getWsContext(), new RequestOfferS2CPacket(a.getPlayerId()));
     }
 }

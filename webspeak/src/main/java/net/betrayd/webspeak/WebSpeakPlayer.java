@@ -17,6 +17,7 @@ public abstract class WebSpeakPlayer {
     private final String sessionId;
 
     private final ObservableSet<WebSpeakPlayer> mutedPlayers = new ObservableSet<>(new HashSet<>());
+    private final ObservableSet<WebSpeakPlayer> unspatializedPlayers = new ObservableSet<>(new HashSet<>());
 
     WsContext wsContext;
     
@@ -26,14 +27,26 @@ public abstract class WebSpeakPlayer {
         this.sessionId = sessionId;
 
         mutedPlayers.ON_ADDED.addListener(player -> {
-            if (wsContext != null && isInScope(player)) {
-                generateAudioParams(player).send(wsContext);
+            if (wsContext != null && server.areInScope(this, player)) {
+                new SetAudioParamsS2CPacket(playerId, null, true).send(wsContext);
             }
         });
 
         mutedPlayers.ON_REMOVED.addListener(player -> {
-            if (wsContext != null && isInScope(player)) {
-                generateAudioParams(player).send(wsContext);
+            if (wsContext != null && server.areInScope(this, player)) {
+                new SetAudioParamsS2CPacket(playerId, null, true).send(wsContext);
+            }
+        });
+
+        unspatializedPlayers.ON_ADDED.addListener(player -> {
+            if (wsContext != null && server.areInScope(this, player)) {
+                new SetAudioParamsS2CPacket(playerId, false, null).send(wsContext);
+            }
+        });
+
+        unspatializedPlayers.ON_REMOVED.addListener(player -> {
+            if (wsContext != null && server.areInScope(this, player)) {
+                new SetAudioParamsS2CPacket(playerId, true, null).send(wsContext);
             }
         });
     }
@@ -57,6 +70,26 @@ public abstract class WebSpeakPlayer {
     public final WebSpeakServer getServer() {
         return server;
     }
+
+    
+    /**
+     * Called when this player has joined the scope of another player.
+     * @param other The other player.
+     */
+    protected void onJoinedScope(WebSpeakPlayer other) {
+        if (wsContext != null) {
+            UpdateTransformS2CPacket.fromPlayer(other).send(wsContext);
+            new SetAudioParamsS2CPacket(other.playerId, isPlayerSpatialized(other), isPlayerMuted(other)).send(wsContext);
+        }
+    }
+
+    /**
+     * Called when this player has left the scope of another player.
+     * @param other The other player.
+     */
+    protected void onLeftScope(WebSpeakPlayer other) {
+    }
+
 
     /**
      * Get the global location of this player.
@@ -83,11 +116,49 @@ public abstract class WebSpeakPlayer {
     public abstract boolean isInScope(WebSpeakPlayer other);
 
     /**
+     * Perform any additional ticking this webspeak player desires.
+     */
+    public void tick() {
+    }
+
+    /**
      * Get a set of all muted players. Updates to this set will trigger packets to be sent to the client.
      * @return Muted players set.
      */
-    public Set<WebSpeakPlayer> getMutedPlayers() {
+    public final Set<WebSpeakPlayer> getMutedPlayers() {
         return mutedPlayers;
+    }
+
+    public final void setPlayerMuted(WebSpeakPlayer other, boolean muted) {
+        if (muted) {
+            mutedPlayers.add(other);
+        } else {
+            mutedPlayers.remove(other);
+        }
+    }
+
+    public final boolean isPlayerMuted(WebSpeakPlayer other) {
+        return mutedPlayers.contains(other);
+    }
+    
+    /**
+     * Get a set of all non-spatialized. Updates to this set will trigger packets to be sent to the client.
+     * @return Muted players set.
+     */
+    public final ObservableSet<WebSpeakPlayer> getUnspatializedPlayers() {
+        return unspatializedPlayers;
+    }
+    
+    public final void setPlayerSpatialized(WebSpeakPlayer other, boolean spatialized) {
+        if (spatialized) {
+            unspatializedPlayers.remove(other);
+        } else {
+            unspatializedPlayers.add(other);
+        }
+    }
+
+    public final boolean isPlayerSpatialized(WebSpeakPlayer other) {
+        return !unspatializedPlayers.contains(other);
     }
     
     /**
@@ -104,27 +175,6 @@ public abstract class WebSpeakPlayer {
     
     public final boolean isConnected() {
         return wsContext != null;
-    }
-
-    /**
-     * Called when this player has joined the scope of another player.
-     * @param other The other player.
-     */
-    protected void onJoinedScope(WebSpeakPlayer other) {
-        if (wsContext != null) {
-            UpdateTransformS2CPacket.fromPlayer(other).send(wsContext);
-        }
-    }
-
-    /**
-     * Called when this player has left the scope of another player.
-     * @param other The other player.
-     */
-    protected void onLeftScope(WebSpeakPlayer other) {
-    }
-
-    private SetAudioParamsS2CPacket generateAudioParams(WebSpeakPlayer other) {
-        return new SetAudioParamsS2CPacket(other.playerId, true, mutedPlayers.contains(other));
     }
 
     /**
