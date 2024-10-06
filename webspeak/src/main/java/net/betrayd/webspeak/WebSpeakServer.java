@@ -64,6 +64,11 @@ public class WebSpeakServer implements Executor {
     // private final RelationGraph<WebSpeakPlayer> rtcConnections = new RelationGraph<>();
     private final RTCManager rtcManager = new RTCManager(this);
     private final PlayerCoordinateManager playerCoordinateManager = new PlayerCoordinateManager(this);
+    private final ChannelManager channelManager = new ChannelManager(this);
+
+    public ChannelManager getChannelManager() {
+        return channelManager;
+    }
 
     /**
      * Keep track of all players in scope with each other.

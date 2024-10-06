@@ -1,12 +1,7 @@
 package net.betrayd.webspeak;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import io.javalin.websocket.WsContext;
-import net.betrayd.webspeak.impl.net.packets.SetAudioParamsS2CPacket;
 import net.betrayd.webspeak.impl.net.packets.UpdateTransformS2CPacket;
-import net.betrayd.webspeak.impl.util.ObservableSet;
 import net.betrayd.webspeak.impl.util.URIComponent;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
@@ -16,39 +11,12 @@ public abstract class WebSpeakPlayer {
     private final String playerId;
     private final String sessionId;
 
-    private final ObservableSet<WebSpeakPlayer> mutedPlayers = new ObservableSet<>(new HashSet<>());
-    private final ObservableSet<WebSpeakPlayer> unspatializedPlayers = new ObservableSet<>(new HashSet<>());
-
     WsContext wsContext;
     
     public WebSpeakPlayer(WebSpeakServer server, String playerId, String sessionId) {
         this.server = server;
         this.playerId = playerId;
         this.sessionId = sessionId;
-
-        mutedPlayers.ON_ADDED.addListener(player -> {
-            if (wsContext != null && server.areInScope(this, player)) {
-                new SetAudioParamsS2CPacket(playerId, null, true).send(wsContext);
-            }
-        });
-
-        mutedPlayers.ON_REMOVED.addListener(player -> {
-            if (wsContext != null && server.areInScope(this, player)) {
-                new SetAudioParamsS2CPacket(playerId, null, true).send(wsContext);
-            }
-        });
-
-        unspatializedPlayers.ON_ADDED.addListener(player -> {
-            if (wsContext != null && server.areInScope(this, player)) {
-                new SetAudioParamsS2CPacket(playerId, false, null).send(wsContext);
-            }
-        });
-
-        unspatializedPlayers.ON_REMOVED.addListener(player -> {
-            if (wsContext != null && server.areInScope(this, player)) {
-                new SetAudioParamsS2CPacket(playerId, true, null).send(wsContext);
-            }
-        });
     }
 
     /**
@@ -71,6 +39,21 @@ public abstract class WebSpeakPlayer {
         return server;
     }
 
+    /**
+     * Called after this player has joined a channel.
+     * @param channel Channel that was joined.
+     */
+    protected void onJoinedChannel(WebSpeakChannel channel) {
+        
+    }
+
+    /**
+     * Called after this player has left a channel.
+     * @param channel Channel that was left.
+     */
+    protected void onLeftChannel(WebSpeakChannel channel) {
+
+    }
     
     /**
      * Called when this player has joined the scope of another player.
@@ -79,7 +62,6 @@ public abstract class WebSpeakPlayer {
     protected void onJoinedScope(WebSpeakPlayer other) {
         if (wsContext != null) {
             UpdateTransformS2CPacket.fromPlayer(other).send(wsContext);
-            new SetAudioParamsS2CPacket(other.playerId, isPlayerSpatialized(other), isPlayerMuted(other)).send(wsContext);
         }
     }
 
@@ -119,46 +101,6 @@ public abstract class WebSpeakPlayer {
      * Perform any additional ticking this webspeak player desires.
      */
     public void tick() {
-    }
-
-    /**
-     * Get a set of all muted players. Updates to this set will trigger packets to be sent to the client.
-     * @return Muted players set.
-     */
-    public final Set<WebSpeakPlayer> getMutedPlayers() {
-        return mutedPlayers;
-    }
-
-    public final void setPlayerMuted(WebSpeakPlayer other, boolean muted) {
-        if (muted) {
-            mutedPlayers.add(other);
-        } else {
-            mutedPlayers.remove(other);
-        }
-    }
-
-    public final boolean isPlayerMuted(WebSpeakPlayer other) {
-        return mutedPlayers.contains(other);
-    }
-    
-    /**
-     * Get a set of all non-spatialized. Updates to this set will trigger packets to be sent to the client.
-     * @return Muted players set.
-     */
-    public final ObservableSet<WebSpeakPlayer> getUnspatializedPlayers() {
-        return unspatializedPlayers;
-    }
-    
-    public final void setPlayerSpatialized(WebSpeakPlayer other, boolean spatialized) {
-        if (spatialized) {
-            unspatializedPlayers.remove(other);
-        } else {
-            unspatializedPlayers.add(other);
-        }
-    }
-
-    public final boolean isPlayerSpatialized(WebSpeakPlayer other) {
-        return !unspatializedPlayers.contains(other);
     }
     
     /**

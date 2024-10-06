@@ -9,10 +9,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import net.betrayd.webspeak.impl.util.ClosableLock;
+
 import java.util.Objects;
 import java.util.Set;
 
 public class RelationGraph<T> implements Iterable<Map.Entry<T, T>> {
+
     /**
      * A pair in which the order of the values doesn't matter for the purposes of
      * equality checks.
@@ -46,6 +52,15 @@ public class RelationGraph<T> implements Iterable<Map.Entry<T, T>> {
     }
 
     private final Set<UnorderedPair<T>> relations = new HashSet<>();
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    private ClosableLock lockRead() {
+        return ClosableLock.lock(lock.readLock());
+    }
+
+    private ClosableLock lockWrite() {
+        return ClosableLock.lock(lock.writeLock());
+    }
 
     /**
      * Add a relation
@@ -54,7 +69,9 @@ public class RelationGraph<T> implements Iterable<Map.Entry<T, T>> {
      * @return If the relation did not already exist
      */
     public boolean add(T a, T b) {
-        return relations.add(new UnorderedPair<>(a, b));
+        try (var lock = lockWrite()) {
+            return relations.add(new UnorderedPair<>(a, b));
+        }
     }
 
     /**
@@ -64,7 +81,9 @@ public class RelationGraph<T> implements Iterable<Map.Entry<T, T>> {
      * @return If the relation was there and could be removed.
      */
     public boolean remove(Object a, Object b) {
-        return relations.remove(new UnorderedPair<>(a, b));
+        try (var lock = lockWrite()) {
+            return relations.remove(new UnorderedPair<>(a, b));
+        }
     }
 
     /**
@@ -73,7 +92,9 @@ public class RelationGraph<T> implements Iterable<Map.Entry<T, T>> {
      * @return If any relation was found.
      */
     public boolean removeAll(Object value) {
-        return relations.removeIf(pair -> Objects.equals(pair.a, value) || Objects.equals(pair.b, value));
+        try (var lock = lockWrite()) {
+            return relations.removeIf(pair -> Objects.equals(pair.a, value) || Objects.equals(pair.b, value));
+        }
     }
 
     /**
@@ -83,7 +104,9 @@ public class RelationGraph<T> implements Iterable<Map.Entry<T, T>> {
      * @return If values A and B have a relation
      */
     public boolean containsRelation(Object a, Object b) {
-        return relations.contains(new UnorderedPair<>(a, b));
+        try (var lock = lockRead()) {
+            return relations.contains(new UnorderedPair<>(a, b));
+        }
     }
 
     /**
@@ -93,13 +116,16 @@ public class RelationGraph<T> implements Iterable<Map.Entry<T, T>> {
      */
     public Collection<T> getRelations(Object value) {
         List<T> list = new ArrayList<>();
-        for (var pair : relations) {
-            if (Objects.equals(value, pair.a)) {
-                list.add(pair.b);
-            } else if (Objects.equals(value, pair.b)) {
-                list.add(pair.a);
+        try (var lock = lockRead()) {
+            for (var pair : relations) {
+                if (Objects.equals(value, pair.a)) {
+                    list.add(pair.b);
+                } else if (Objects.equals(value, pair.b)) {
+                    list.add(pair.a);
+                }
             }
         }
+
         return list;
     }
 
@@ -109,7 +135,9 @@ public class RelationGraph<T> implements Iterable<Map.Entry<T, T>> {
     }
 
     public int size() {
-        return relations.size();
+        try (var lock = lockRead()) {
+            return relations.size();
+        }
     }
 
     private final RelationSet relationSet = new RelationSet();
@@ -126,7 +154,9 @@ public class RelationGraph<T> implements Iterable<Map.Entry<T, T>> {
 
         @Override
         public int size() {
-            return relations.size();
+            try (var lock = lockRead()) {
+                return relations.size();
+            }
         }
 
         @Override
@@ -136,15 +166,19 @@ public class RelationGraph<T> implements Iterable<Map.Entry<T, T>> {
         
         @Override
         public boolean add(Entry<T, T> e) {
-            return RelationGraph.this.add(e.getKey(), e.getValue());
+            try (var lock = lockWrite()) {
+                return RelationGraph.this.add(e.getKey(), e.getValue());
+            }
         }
 
         @Override
         public boolean remove(Object o) {
-            if (o instanceof Map.Entry entry) {
-                return RelationGraph.this.remove(entry.getKey(), entry.getValue());
-            } else {
-                return false;
+            try (var lock = lockWrite()) {
+                if (o instanceof Map.Entry entry) {
+                    return RelationGraph.this.remove(entry.getKey(), entry.getValue());
+                } else {
+                    return false;
+                }
             }
         }
     }
