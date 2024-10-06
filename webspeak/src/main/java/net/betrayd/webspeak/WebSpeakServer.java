@@ -64,11 +64,6 @@ public class WebSpeakServer implements Executor {
     // private final RelationGraph<WebSpeakPlayer> rtcConnections = new RelationGraph<>();
     private final RTCManager rtcManager = new RTCManager(this);
     private final PlayerCoordinateManager playerCoordinateManager = new PlayerCoordinateManager(this);
-    private final ChannelManager channelManager = new ChannelManager(this);
-
-    public ChannelManager getChannelManager() {
-        return channelManager;
-    }
 
     /**
      * Keep track of all players in scope with each other.
@@ -236,15 +231,15 @@ public class WebSpeakServer implements Executor {
 
     private void joinScope(WebSpeakPlayer a, WebSpeakPlayer b) {
         rtcManager.connectRTC(a, b);
-        a.onJoinedScope(b);
-        b.onJoinedScope(a);
+        a.onJoinScope(b);
+        b.onJoinScope(a);
         ON_JOIN_SCOPE.invoker().accept(a, b);
     }
 
     private void leaveScope(WebSpeakPlayer a, WebSpeakPlayer b) {
         rtcManager.disconnectRTC(a, b);
-        a.onLeftScope(b);
-        b.onLeftScope(a);
+        a.onLeaveScope(b);
+        b.onLeaveScope(a);
         ON_LEAVE_SCOPE.invoker().accept(a, b);
     }
 
@@ -505,8 +500,8 @@ public class WebSpeakServer implements Executor {
             ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
             ON_SESSION_DISCONNECTED.invoker().accept(player);
         }
-        // rtcManager.kickRTC(player);
         player.wsContext = null;
+        player.onRemoved();
         ON_PLAYER_REMOVED.invoker().accept(player);
     }
     

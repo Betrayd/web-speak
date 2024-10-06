@@ -47,13 +47,13 @@ public class TestWebPlayer extends WebSpeakPlayer {
         return player.getName();
     };
 
-    protected void onJoinedScope(WebSpeakPlayer other) {
-        super.onJoinedScope(other);
+    protected void onJoinScope(WebSpeakPlayer other) {
+        super.onJoinScope(other);
         LOGGER.info("I joined scope with {}", other);
     };
 
-    protected void onLeftScope(WebSpeakPlayer other) {
-        super.onLeftScope(other);
+    protected void onLeaveScope(WebSpeakPlayer other) {
+        super.onLeaveScope(other);
         LOGGER.info("I left scope with {}", other);
     };
 

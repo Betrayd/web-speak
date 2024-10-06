@@ -1,180 +1,203 @@
 package net.betrayd.webspeak;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import net.betrayd.webspeak.util.AudioModifier;
 
 /**
- * <p>
- * A "channel" that players may be in. Players can be connected to channels, and
- * channels can be connected to each other. Only players that have at least one
- * channel connected will be considered for scope.
- * </p>
- * <p>
- * Channels may have various modifiers applied to themselves and their relations
- * with other channels. These modifiers will affect the way players hear other
- * players in the channel. If two players are in multiple connected channels,
- * the sum of all modifiers will be applied.
- * </p>
- * 
+ * A channel that players may be in. Players are only considered for scope with
+ * other players that share at least one channel.
  */
 public class WebSpeakChannel {
-    /**
-     * Cache which channels any given player is in so we don't have to go searching for them each time.
-     */
-    private static final Map<WebSpeakPlayer, Set<WebSpeakChannel>> playerChannels = Collections.synchronizedMap(new WeakHashMap<>());
+
+    private Set<WebSpeakPlayer> players = new HashSet<>();
 
     /**
-     * Get a collection of all the channels a given player is in.
-     * @param player Player to check.
-     * @return All the player's channels.
-     */
-    public static Collection<WebSpeakChannel> getPlayerChannels(WebSpeakPlayer player) {
-        Set<WebSpeakChannel> set = playerChannels.get(player);
-        if (set != null) {
-            return List.copyOf(set);
-        } else {
-            return Collections.emptyList();
-        }
-    }
-
-    /**
-     * Get a collection of players that are shared across all the passed channels.
-     * 
-     * @param channels Channels to check.
-     * @return Shared players.
-     */
-    public static Collection<WebSpeakPlayer> getSharedPlayers(WebSpeakChannel... channels) {
-        if (channels.length > 2) {
-            throw new IllegalArgumentException("Channel array must be at least 2 elements.");
-        }
-        return channels[0].players.stream().filter(player -> {
-            for (int i = 1; i < channels.length; i++) {
-                if (!channels[i].players.contains(player))
-                    return false;
-            }
-            return true;
-        }).toList();
-    }
-
-    /**
-     * Get a collection of channels that are shared across all the passed players.
-     * 
-     * @param players Players to check.
-     * @return Shared channels.
-     */
-    public static Collection<WebSpeakChannel> getSharedChannels(WebSpeakPlayer... players) {
-        if (players.length > 2) {
-            throw new IllegalArgumentException("Player array must be at least 2 elements.");
-        }
-        Set<WebSpeakChannel> playerAChannels = playerChannels.get(players[0]);
-        if (playerAChannels == null) {
-            return Collections.emptyList();
-        }
-
-        return playerAChannels.stream().filter(channel -> {
-            for (int i = 1; i < players.length; i++) {
-                Set<WebSpeakChannel> playerBChannels = playerChannels.get(players[i]);
-                if (playerBChannels == null || !playerBChannels.contains(channel))
-                    return false;
-            }
-            return true;
-        }).toList();
-    }
-
-    private final WebSpeakServer server;
-    private final Set<WebSpeakPlayer> players = Collections.newSetFromMap(new ConcurrentHashMap<>());
-
-    public WebSpeakChannel(WebSpeakServer server) {
-        this.server = server;
-    }
-
-    public WebSpeakServer getServer() {
-        return server;
-    }
-    
-    public void connectTo(WebSpeakChannel other) {
-        server.getChannelManager().connectChannels(this, other);
-    }
-
-    public void disconnectFrom(WebSpeakChannel other) {
-        server.getChannelManager().disconnectChannels(this, other);
-    }
-
-    public Collection<WebSpeakChannel> getConnectedChannels() {
-        return server.getChannelManager().getConnectedChannels(this);
-    }
-
-    /**
-     * Get a set of all players in this channel.
-     * @return Unmodifiable view of players.
+     * Get a collection of all players in this channel.
+     * @return An unmodifiable collection of all players.
      */
     public Set<WebSpeakPlayer> getPlayers() {
         return Collections.unmodifiableSet(players);
     }
-    
+
     /**
-     * Add a player to this channel.
+     * Called when a player joins this channel
+     * 
+     * @param player Player that joined the channel.
+     * @apiNote Whether the channel has already been added to the player's list of
+     *          channels is undefined.
+     */
+    protected synchronized void onAddPlayer(WebSpeakPlayer player) {
+        this.players.add(player);
+    }
+
+    /**
+     * Called when a player leaves this channel.
+     * 
+     * @param player Player that left the channel.
+     * @apiNote Whether the channel has already been removed from the player's list
+     *          of channels is undefined.
+     */
+    protected synchronized void onRemovePlayer(WebSpeakPlayer player) {
+        this.players.remove(player);
+    }
+
+    /**
+     * Add a player to this channel. Shortcut for
+     * <code>player.joinChannel(this)</code>
+     * 
      * @param player Player to add.
-     * @return <code>true</code> if the player wasn't already in the channel.
+     * @return If the player was not already in the channel.
+     * @see WebSpeakPlayer#joinChannel
      */
-    public boolean addPlayer(WebSpeakPlayer player) {
-        boolean success = players.add(player);
-        if (success) {
-            onPlayerJoined(player);
-        }
-        return success;
+    public final boolean addPlayer(WebSpeakPlayer player) {
+        return player.joinChannel(this);
     }
 
     /**
-     * Remove a player from this channel.
+     * Remove a player from this channel. Shortcut for
+     * <code>player.leaveChannel(this)</code>
+     * 
      * @param player Player to remove.
-     * @return <code>true</code> if the player was in the channel.
+     * @return If the player was in the channel.
+     * @see WebSpeakPlayer#leaveChannel
      */
-    public boolean removePlayer(WebSpeakPlayer player) {
-        boolean success = players.remove(player);
-        if (success) {
-            onPlayerLeft(player);
-        }
-        return success;
+    public final boolean removePlayer(WebSpeakPlayer player) {
+        return player.leaveChannel(this);
     }
 
     /**
-     * Check if a given player is in this channel.
-     * @param player Player to check.
-     * @return Player channel.
+     * Remove all players from this channel.
      */
-    public boolean containsPlayer(WebSpeakPlayer player) {
-        return players.contains(player);
-    }
-
-    protected void onPlayerJoined(WebSpeakPlayer player) {
-        synchronized(playerChannels) {
-            playerChannels.computeIfAbsent(player, p -> new HashSet<>()).add(this);
+    public final void clearPlayers() {
+        for (var player : players) {
+            player.leaveChannelNoCallback(this);
         }
-        player.onJoinedChannel(this);
+        players.clear();
     }
 
-    protected void onPlayerLeft(WebSpeakPlayer player) {
-        synchronized(playerChannels) {
-            var set = playerChannels.get(player);
-            if (set != null) {
-                set.remove(this);
-            }
+    // If the player or channel are no longer being used, no reason to keep them around here.
+    private static Map<WebSpeakPlayer, AudioModifier> playerAudioModifiers = Collections.synchronizedMap(new WeakHashMap<>());
+    private static Map<WebSpeakChannel, AudioModifier> channelAudioModifiers = Collections.synchronizedMap(new WeakHashMap<>());
+    
+    /**
+     * Add an audio modifier targeting a specific player.
+     * 
+     * @param target   Target player.
+     * @param modifier Modifier to add, or <code>null</code> to remove the modifier.
+     * @return The previous modifier assigned to that player, if any.
+     */
+    public synchronized AudioModifier setAudioModifier(WebSpeakPlayer target, AudioModifier modifier) {
+        AudioModifier prev;
+        if (modifier != null) {
+            prev = playerAudioModifiers.put(target, modifier);
+        } else {
+            prev = playerAudioModifiers.remove(target);
         }
-        player.onLeftChannel(this);
+        updateAudioModifiers(target);
+        return prev;
     }
 
-    protected void onConnectTo(WebSpeakChannel other) {
+    /**
+     * Remove all player-targeted audio modifiers.
+     */
+    public synchronized void clearPlayerAudioModifiers() {
+        var players = playerAudioModifiers.keySet().toArray(WebSpeakPlayer[]::new);
+        playerAudioModifiers.clear();
+        for (var player : players) {
+            updateAudioModifiers(player);
+        }
+    }
 
+    /**
+     * Get the audio modifier targeting a specific player, if any.
+     * 
+     * @param player Target player.
+     * @return The audio modifier, or <code>null</code> if it doesn't exist.
+     */
+    public final AudioModifier getAudioModifier(WebSpeakPlayer player) {
+        return playerAudioModifiers.get(player);
+    }
+
+    /**
+     * Add an audio modifier targeting an entire channel.
+     * 
+     * @param target   Target channel.
+     * @param modifier Modifier to add, or <code>null</code> to remove the modifier.
+     * @return The previous modifier assigned to that channel, if any.
+     */
+    public synchronized AudioModifier setAudioModifier(WebSpeakChannel channel, AudioModifier modifier) {
+        AudioModifier prev;
+        if (modifier != null) {
+            prev = channelAudioModifiers.put(channel, modifier);
+        } else {
+            prev = channelAudioModifiers.remove(channel);
+        }
+        for (var player : channel.getPlayers()) {
+            updateAudioModifiers(player);
+        }
+        return prev;
+    }
+
+    /**
+     * Remove all channel-targeted audio modifiers.
+     */
+    public synchronized void clearChannelAudioModifiers() {
+        var players = channelAudioModifiers.keySet().stream().flatMap(channel -> channel.getPlayers().stream())
+                .collect(Collectors.toSet());
+        
+        channelAudioModifiers.clear();
+        for (var player : players) {
+            updateAudioModifiers(player);
+        }
+    }
+
+    /**
+     * Get the audio modifier targeting a channel, if any.
+     * @param channel Target channel.
+     * @return The audio modifier, or <code>null</code> if it doesn't exist.
+     */
+    public final AudioModifier getAudioModifier(WebSpeakChannel channel) {
+        return channelAudioModifiers.get(channel);
+    }
+
+    private synchronized void updateAudioModifiers(WebSpeakPlayer target) {
+        for (var player : players) {
+            player.updateAudioModifiers(target);
+        }
+    }
+
+    /**
+     * Calculate the composite audio modifier of a player based on the modifiers in
+     * this channel.
+     * 
+     * @param player Target player.
+     * @return Composite audio modifier.
+     */
+    public AudioModifier calculateAudioModifier(WebSpeakPlayer player) {
+        AudioModifier modifier = AudioModifier.EMPTY;
+
+        for (var channel : player.getChannels()) {
+            modifier = modifier.append(channelAudioModifiers.get(channel));
+        }
+
+        modifier.append(playerAudioModifiers.get(player));
+        return modifier;
     }
     
-    protected void onDisconnectFrom(WebSpeakChannel other) {
-        
+    /**
+     * Get all the players that may have their audio modified by this channel.
+     * @return All audio-modified players.
+     */
+    public final Set<WebSpeakPlayer> getAudioModifiedPlayers() {
+        return Stream.concat(
+                channelAudioModifiers.keySet().stream().flatMap(channel -> channel.getPlayers().stream()),
+                playerAudioModifiers.keySet().stream()).collect(Collectors.toSet());
     }
 }

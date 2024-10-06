@@ -26,6 +26,16 @@ public abstract class S2CPacket<T> {
         context.send(WebSpeakNet.writePacket(this, val));
     }
 
+    /**
+     * Create an S2C packet that serializes its payload to JSON.
+     * @param <T> Packet type.
+     * @param id Packet ID.
+     * @return The packet.
+     */
+    public static <T> JsonS2CPacket<T> json(String id) {
+        return new JsonS2CPacket<>(id);
+    }
+
     public static class JsonS2CPacket<T> extends S2CPacket<T> {
         private static final Gson GSON = new Gson();
 

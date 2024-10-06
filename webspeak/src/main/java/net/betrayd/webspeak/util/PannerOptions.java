@@ -132,5 +132,62 @@ public class PannerOptions {
         public Float positionZ = null;
         public Float refDistance = null;
         public Float rolloffFactor = null;
+
+        /**
+         * Append values from another partial panner options to this.
+         * 
+         * @param other Other panner options.
+         * @return <code>this</code>
+         */
+        public Partial append(Partial other) {
+            if (other.coneInnerAngle != null)
+                coneInnerAngle = other.coneInnerAngle;
+            if (other.coneOuterAngle != null)
+                coneOuterAngle = other.coneOuterAngle;
+            if (other.coneOuterGain != null)
+                coneOuterGain = other.coneOuterGain;
+            if (other.distanceModel != null)
+                distanceModel = other.distanceModel;
+            if (other.maxDistance != null)
+                maxDistance = other.maxDistance;
+            if (other.orientationX != null)
+                orientationX = other.orientationX;
+            if (other.orientationY != null)
+                orientationY = other.orientationY;
+            if (other.orientationZ != null)
+                orientationZ = other.orientationZ;
+            if (other.panningModel != null)
+                panningModel = other.panningModel;
+            if (other.positionX != null)
+                positionX = other.positionX;
+            if (other.positionY != null)
+                positionY = other.positionY;
+            if (other.positionZ != null)
+                positionZ = other.positionZ;
+            if (other.refDistance != null)
+                refDistance = other.refDistance;
+            if (other.rolloffFactor != null)
+                rolloffFactor = other.rolloffFactor;
+            return this;
+        }
+
+        public Partial copy() {
+            Partial partial = new Partial();
+            partial.coneInnerAngle = this.coneInnerAngle;
+            partial.coneOuterAngle = this.coneOuterAngle;
+            partial.coneOuterGain = this.coneOuterGain;
+            partial.distanceModel = this.distanceModel;
+            partial.maxDistance = this.maxDistance;
+            partial.orientationX = this.orientationX;
+            partial.orientationY = this.orientationY;
+            partial.orientationZ = this.orientationZ;
+            partial.panningModel = this.panningModel;
+            partial.positionX = this.positionX;
+            partial.positionY = this.positionY;
+            partial.positionZ = this.positionZ;
+            partial.refDistance = this.refDistance;
+            partial.rolloffFactor = this.rolloffFactor;
+            return partial;
+        }
     }
 }
