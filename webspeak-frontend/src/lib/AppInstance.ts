@@ -94,7 +94,11 @@ export default class AppInstance {
      * @param useDummy Make a dummy player if the real player doesn't exist.
      * @returns Either the real player, a dummy, or `undefined`
      */
-    getPlayer(playerID: string, useDummy: boolean = true): WebSpeakPlayer | undefined {
+    getPlayer(playerID?: string, useDummy: boolean = true): WebSpeakPlayer | undefined {
+        if (!playerID) {
+            return undefined;
+        }
+
         if (playerID === this.localPlayerID) {
             return this.localPlayer;
         } else {

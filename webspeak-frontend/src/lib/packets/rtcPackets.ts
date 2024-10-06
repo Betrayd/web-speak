@@ -69,6 +69,14 @@ module rtcPackets {
 
         app.netManager.sendPacket('returnAnswer', JSON.stringify(packet));
     }
+
+    export function sendReturnIce(app: AppInstance, playerID: string, candidate: RTCIceCandidate) {
+        let packet = {
+            playerID,
+            payload: candidate
+        };
+        app.netManager.sendPacket('returnIce', JSON.stringify(packet));
+    }
 }
 
 export default rtcPackets;

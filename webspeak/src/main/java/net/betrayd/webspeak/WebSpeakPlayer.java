@@ -213,7 +213,7 @@ public abstract class WebSpeakPlayer {
     public synchronized AudioModifier calculateAudioModifiers(WebSpeakPlayer other) {
         // TODO: can we make audio modifier updates more efficient? 
         // Right now, there's a lot of unneeded recursion.
-        AudioModifier modifier = AudioModifier.EMPTY;
+        AudioModifier modifier = AudioModifier.DEFAULT;
 
         for (var channel : this.getChannels()) {
             modifier.append(channel.calculateAudioModifier(other));

@@ -21,8 +21,6 @@ package net.betrayd.webspeak.util;
  *                      Default: <code>true</code>
  * @param muted         Mute the audio of the target player, while remaining in
  *                      scope. Default: <code>false</code>
- * @param pannerOptions An optional panner options override to use. Default:
- *                      <code>null</code>
  */
 public record AudioModifier(Boolean spatialized, Boolean muted) {
 

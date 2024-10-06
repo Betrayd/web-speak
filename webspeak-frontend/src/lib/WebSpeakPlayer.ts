@@ -1,7 +1,8 @@
+import AudioModifier from "../util/AudioModifier";
 import AppInstance, { PlayerTransform, WebSpeakVector } from "./AppInstance";
 import webSpeakClient from "./WebSpeakClient";
+import rtcPackets from "./packets/rtcPackets";
 import webSpeakAudio from "./webSpeakAudio";
-import webspeakPackets from "./webspeakPackets";
 
 /**
  * A base class for webspeak players being synced to the client.
@@ -74,8 +75,10 @@ export default abstract class WebSpeakPlayer {
 
         this.updateTransform();
 
-        this.muted = other.muted;
-        this.spatialized = other.spatialized;
+        this.audioModifier = other.audioModifier;
+
+        // this.muted = other.muted;
+        // this.spatialized = other.spatialized;
     }
 
     /**
@@ -118,6 +121,22 @@ export default abstract class WebSpeakPlayer {
     onRemoved() {
 
     }
+
+    private _audioModifier: AudioModifier = {
+        spatialized: true,
+        muted: false
+    };
+
+    set audioModifier(modifier: AudioModifier) {
+        Object.assign(this._audioModifier, modifier);
+        this.onSetAudioModifier(this._audioModifier);
+    }
+
+    get audioModifier(): Readonly<AudioModifier> {
+        return this._audioModifier;
+    }
+
+    protected onSetAudioModifier(_modifier: AudioModifier) { };
         
     isRemote(): this is WebSpeakRemotePlayer {
         return this.type === "remote";
@@ -127,39 +146,6 @@ export default abstract class WebSpeakPlayer {
         return this.type === "local";
     }
 
-    private _muted: boolean = false;
-
-    get muted() {
-        return this._muted;
-    }
-
-    set muted(muted: boolean) {
-        this._muted = muted;
-        this.onSetMuted(muted);
-    }
-
-    /**
-     * Called whenever the `muted` property is updated.
-     * @param _muted Is muted
-     */
-    protected onSetMuted(_muted: boolean) { }
-    
-    private _spatialized: boolean = true;
-
-    get spatialized() {
-        return this._spatialized;
-    }
-
-    set spatialized(spatialized: boolean) {
-        this._spatialized = spatialized;
-        this.onSetSpatialized;
-    }
-
-    /**
-     * Called whenever `spatialized` property is updated.
-     * @param _spatialized Is spatialized
-     */
-    protected onSetSpatialized(_spatialized: boolean) { };
 }
 
 /**
@@ -175,16 +161,37 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
     mediaStream?: MediaStream;
 
-    protected onSetMuted(muted: boolean) {
+    protected onSetAudioModifier(modifier: AudioModifier): void {
+        console.debug("Updating audio modifier:", modifier);
+        if (modifier.muted !== undefined) {
+            this.setMuted(modifier.muted);
+        }
+        if (modifier.spatialized !== undefined) {
+            this.setSpatialized(modifier.spatialized);
+        }
+    }
+
+    private setMuted(muted: boolean) {
         if (!this.mediaStream) return;
         this.mediaStream.getTracks().forEach(track => {
             track.enabled = !muted;
-        });
+        })
     }
 
-    protected onSetSpatialized(_spatialized: boolean): void {
+    private setSpatialized(_spatialized: boolean) {
         // TODO: actually implement this
     }
+
+    // protected onSetMuted(muted: boolean) {
+    //     if (!this.mediaStream) return;
+    //     this.mediaStream.getTracks().forEach(track => {
+    //         track.enabled = !muted;
+    //     });
+    // }
+
+    // protected onSetSpatialized(_spatialized: boolean): void {
+    //     // TODO: actually implement this
+    // }
     
     /**
      * Construct a webspeak player and a panner for it. Panner options will be supplied bu the app.
@@ -226,9 +233,10 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                 
                 this.audioStream = audioCtx.createMediaStreamSource(mediaStream);
                 this.audioStream.connect(this.panner);
-                // Update muted status
-                this.onSetMuted(this.muted);
-  
+
+                // Force-update the audio modifier with new stream.
+                this.onSetAudioModifier(this.audioModifier);
+
                 this.panner.connect(audioCtx.destination);
             } else {
                 console.error("IT WAS THE WRONG TYPE OH NOOOOOOOO");
@@ -238,7 +246,7 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         this.connection.onicecandidate = event => {
             if (event.candidate) {
                 console.debug("Sending ICE candidate: ", event.candidate);
-                webspeakPackets.sendReturnIce(app, playerID, event.candidate);
+                rtcPackets.sendReturnIce(app, playerID, event.candidate);
             }
         }
     }
