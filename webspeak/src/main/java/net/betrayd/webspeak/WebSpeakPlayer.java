@@ -71,6 +71,28 @@ public abstract class WebSpeakPlayer {
         return server;
     }
 
+    private WebSpeakChannel channel;
+
+    public final WebSpeakChannel getChannel() {
+        return channel;
+    }
+
+    public void setChannel(WebSpeakChannel channel) {
+        if (channel == this.channel) {
+            return;
+        }
+        if (channel != null && channel.getServer() != this.server) {
+            throw new IllegalArgumentException("Channel belongs to the wrong server!");
+        }
+        if (this.channel != null) {
+            this.channel.onRemovePlayer(this);
+        }
+        this.channel = channel;
+        if (channel != null) {
+            this.channel.onAddPlayer(this);
+        }
+    }
+    
     
     /**
      * Called when this player has joined the scope of another player.
@@ -176,6 +198,7 @@ public abstract class WebSpeakPlayer {
     public final boolean isConnected() {
         return wsContext != null;
     }
+    
 
     /**
      * Get a URL for clients to connect to this webspeak player.

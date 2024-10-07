@@ -5,7 +5,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
@@ -58,8 +60,13 @@ public class WebSpeakServer implements Executor {
     /**
      * All the players that are relevent to the game
      */
-    // private final Set<WebSpeakPlayer> players = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<String, WebSpeakPlayer> players = new ConcurrentHashMap<>();
+
+    // If the channel is not being referenced by any players or held externally, no need to keep it around.
+    private final Set<WebSpeakChannel> channels = Collections
+            .synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
+    
+    private final WebSpeakChannel defaultChannel;
 
     // private final RelationGraph<WebSpeakPlayer> rtcConnections = new RelationGraph<>();
     private final RTCManager rtcManager = new RTCManager(this);
@@ -131,6 +138,10 @@ public class WebSpeakServer implements Executor {
         return app != null ? app.port() : -1;
     }
 
+    public WebSpeakServer() {
+        defaultChannel = createChannel("default");
+    }
+
     /**
      * Start the server.
      * 
@@ -196,7 +207,13 @@ public class WebSpeakServer implements Executor {
     }
 
     private void tickScopes() {
-        List<WebSpeakPlayer> connectedPlayers = getPlayers().stream().filter(p -> p.isConnected()).toList();
+        for (var channel : channels) {
+            tickChannelScope(channel);
+        }
+    }
+
+    private void tickChannelScope(WebSpeakChannel channel) {
+        List<WebSpeakPlayer> connectedPlayers = channel.getPlayers().stream().filter(p -> p.isConnected()).toList();
 
         for (var pair : WebSpeakUtils.compareAll(connectedPlayers)) {
             if (pair.a().equals(pair.b())) {
@@ -210,8 +227,8 @@ public class WebSpeakServer implements Executor {
                 scopes.add(pair.a(), pair.b());
                 joinScope(pair.a(), pair.b());
             } else if (wasInScope && !isInScope) {
-                leaveScope(pair.a(), pair.b());
                 scopes.remove(pair.a(), pair.b());
+                leaveScope(pair.a(), pair.b());
             }
         }
     }
@@ -236,6 +253,7 @@ public class WebSpeakServer implements Executor {
         ON_JOIN_SCOPE.invoker().accept(a, b);
     }
 
+    // Left package-private so channel can clear scopes when player removed.
     private void leaveScope(WebSpeakPlayer a, WebSpeakPlayer b) {
         rtcManager.disconnectRTC(a, b);
         a.onLeftScope(b);
@@ -325,8 +343,44 @@ public class WebSpeakServer implements Executor {
     }
 
     /**
-     * Get an unmodifiable collection of all the players in the server.
+     * Get an unmodifiable collection of all the channels in the server.
+     * @return Unmodifiable view of channels.
+     */
+    public Set<WebSpeakChannel> getChannels() {
+        return Collections.unmodifiableSet(channels);
+    }
+
+    /**
+     * Create a WebSpeak channel.
+     * @param name Channel name.
+     * @return The channel.
+     */
+    public WebSpeakChannel createChannel(String name) {
+        WebSpeakChannel channel = new WebSpeakChannel(this, name);
+        channels.add(channel);
+        return channel;
+    }
+
+    /**
+     * Remove a channel from the server and unassign all players.
      * 
+     * @param channel Channel to remove.
+     * @return If the channel was in the server.
+     */
+    public boolean removeChannel(WebSpeakChannel channel) {
+        if (channels.remove(channel)) {
+            channel.onRemoved();
+            return true;
+        }
+        return false;
+    }
+
+    public WebSpeakChannel getDefaultChannel() {
+        return defaultChannel;
+    }
+
+    /**
+     * Get an unmodifiable collection of all the players in the server.
      * @return All webspeak players
      */
     public Collection<WebSpeakPlayer> getPlayers() {
@@ -424,7 +478,7 @@ public class WebSpeakServer implements Executor {
         } else {
             old = players.put(player.getPlayerId(), player);
         }
-
+        player.setChannel(getDefaultChannel());
         if (old != null) {
             onRemovePlayer(player);
         }
@@ -495,7 +549,7 @@ public class WebSpeakServer implements Executor {
 
     protected void onRemovePlayer(WebSpeakPlayer player) {
         WsContext ws = wsSessions.remove(player);
-        kickScopes(player);
+        player.setChannel(null); // will automatically kick scopes
         if (ws != null) {
             ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
             ON_SESSION_DISCONNECTED.invoker().accept(player);
