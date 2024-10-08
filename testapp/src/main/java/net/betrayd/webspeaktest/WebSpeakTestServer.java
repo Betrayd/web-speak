@@ -43,6 +43,10 @@ public class WebSpeakTestServer implements Executor {
         return webSpeakServer;
     }
 
+    public boolean hasStarted() {
+        return webSpeakServer != null && webSpeakServer.isRunning();
+    }
+
     public boolean isOnThread() {
         return Thread.currentThread().equals(thread);
     }

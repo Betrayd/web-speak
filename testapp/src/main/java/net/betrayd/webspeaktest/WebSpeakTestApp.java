@@ -18,11 +18,14 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import net.betrayd.webspeak.WebSpeakChannel;
 import net.betrayd.webspeaktest.ui.MainUIController;
 
 public class WebSpeakTestApp extends Application {
@@ -120,6 +123,36 @@ public class WebSpeakTestApp extends Application {
         }
     }
 
+    private final ObservableList<WebSpeakChannel> channels = FXCollections.observableArrayList();
+
+    public ObservableList<WebSpeakChannel> getChannels() {
+        return channels;
+    }
+
+    public final WebSpeakChannel defaultChannel = new WebSpeakChannel("Default Channel");
+
+    {
+        channels.add(defaultChannel);
+        channels.addListener(new ListChangeListener<>() {
+
+            @Override
+            public void onChanged(Change<? extends WebSpeakChannel> c) {
+                WebSpeakTestServer server = getServer();
+                if (server == null || server.hasStarted())
+                    return;
+                while (c.next()) {
+                    for (var item : c.getRemoved()) {
+                        server.getWebSpeakServer().removeChannel(item);
+                    }
+                    for (var item : c.getAddedSubList()) {
+                        server.getWebSpeakServer().addChannel(item);
+                    }
+                }
+            }
+            
+        });
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         instance = this;
@@ -152,7 +185,15 @@ public class WebSpeakTestApp extends Application {
                 addPlayerToServer(webServer, player);
             }
             
-            webServer.awaitStart().thenAccept(server -> {
+            var future = webServer.awaitStart();
+
+            future.thenAcceptAsync(server -> {
+                for (var channel : getChannels()) {
+                    server.addChannel(channel);
+                }
+            }, Platform::runLater);
+            
+            future.thenAccept(server -> {
                 server.onSessionConnected(player -> {
                     if (player instanceof TestWebPlayer testPlayer) {
                         String connectionIp = testPlayer.getWsContext().session.getRemoteAddress().toString();
@@ -165,8 +206,7 @@ public class WebSpeakTestApp extends Application {
                     }
                 }));
             });
-
-
+            
             return true;
         } catch (Exception e) {
             LOGGER.error("Exception starting server: ", e);
@@ -175,6 +215,9 @@ public class WebSpeakTestApp extends Application {
     }
 
     private void addPlayerToServer(WebSpeakTestServer server, Player player) {
+        if (player.getChannel() == null) {
+            player.setChannel(defaultChannel);
+        }
         CompletableFuture.supplyAsync(() -> server.getWebSpeakServer()
                 .createPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session)), server)
                 .thenAcceptAsync(p -> player.setWebPlayer(p), Platform::runLater);

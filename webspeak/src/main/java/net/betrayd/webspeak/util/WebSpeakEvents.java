@@ -94,7 +94,7 @@ public class WebSpeakEvents {
         }
 
         @Override
-        public boolean removeListener(Object listener) {
+        public synchronized boolean removeListener(Object listener) {
             boolean success = listeners.remove(listener);
             if (success) {
                 invoker = invokerFactory.apply(List.copyOf(listeners));

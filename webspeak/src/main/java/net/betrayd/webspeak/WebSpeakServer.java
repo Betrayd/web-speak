@@ -134,6 +134,10 @@ public class WebSpeakServer implements Executor {
         return app;
     }
 
+    public boolean isRunning() {
+        return app != null;
+    }
+
     public int getPort() {
         return app != null ? app.port() : -1;
     }
@@ -151,7 +155,7 @@ public class WebSpeakServer implements Executor {
         if (app != null) {
             throw new IllegalStateException("Server is already started.");
         }
-        app = Javalin.create(config -> {
+        var app = Javalin.create(config -> {
             config.showJavalinBanner = false;
             CONFIGURE_JAVALIN.invoker().accept(config);
         })
@@ -160,6 +164,9 @@ public class WebSpeakServer implements Executor {
 
         CONFIGURE_ENDPOINTS.invoker().accept(app);
         app.start(port);
+        // Assign app at the end for thread safety; if something tries to access the app
+        // before it's done initializing, it will return null.
+        this.app = app;
     }
 
     /**
@@ -352,13 +359,17 @@ public class WebSpeakServer implements Executor {
 
     /**
      * Create a WebSpeak channel.
-     * @param name Channel name.
+     * @param name Channel name. Mainly for debugging purposes.
      * @return The channel.
      */
     public WebSpeakChannel createChannel(String name) {
-        WebSpeakChannel channel = new WebSpeakChannel(this, name);
+        WebSpeakChannel channel = new WebSpeakChannel(name);
         channels.add(channel);
         return channel;
+    }
+
+    public synchronized boolean addChannel(WebSpeakChannel channel) {
+        return channels.add(channel);
     }
 
     /**
@@ -367,11 +378,7 @@ public class WebSpeakServer implements Executor {
      * @param channel Channel to remove.
      * @return If the channel was in the server.
      */
-    public boolean removeChannel(WebSpeakChannel channel) {
-        if (channels.remove(channel)) {
-            channel.onRemoved();
-            return true;
-        }
+    public synchronized boolean removeChannel(WebSpeakChannel channel) {
         return false;
     }
 
@@ -478,7 +485,9 @@ public class WebSpeakServer implements Executor {
         } else {
             old = players.put(player.getPlayerId(), player);
         }
-        player.setChannel(getDefaultChannel());
+        if (player.getChannel() == null) {
+            player.setChannel(defaultChannel);
+        }
         if (old != null) {
             onRemovePlayer(player);
         }
@@ -556,6 +565,7 @@ public class WebSpeakServer implements Executor {
         }
         // rtcManager.kickRTC(player);
         player.wsContext = null;
+        player.onRemoved();
         ON_PLAYER_REMOVED.invoker().accept(player);
     }
     

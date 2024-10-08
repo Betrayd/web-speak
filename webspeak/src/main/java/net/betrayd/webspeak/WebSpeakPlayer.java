@@ -77,12 +77,9 @@ public abstract class WebSpeakPlayer {
         return channel;
     }
 
-    public void setChannel(WebSpeakChannel channel) {
+    public synchronized void setChannel(WebSpeakChannel channel) {
         if (channel == this.channel) {
             return;
-        }
-        if (channel != null && channel.getServer() != this.server) {
-            throw new IllegalArgumentException("Channel belongs to the wrong server!");
         }
         if (this.channel != null) {
             this.channel.onRemovePlayer(this);
@@ -199,6 +196,12 @@ public abstract class WebSpeakPlayer {
         return wsContext != null;
     }
     
+    /**
+     * Called after the player is removed from the server.
+     */
+    protected void onRemoved() {
+
+    }
 
     /**
      * Get a URL for clients to connect to this webspeak player.

@@ -7,19 +7,17 @@ import java.util.WeakHashMap;
 /**
  * A channel that a player can be in. Players will only be considered for scope
  * with other players in the same channel.
+ * 
+ * @apiNote The channel must be added to the server via
+ *          {@link WebSpeakServer#addChannel} before any of its players will be
+ *          considered for scope.
  */
 public class WebSpeakChannel {
 
-    private final WebSpeakServer server;
     private final String name;
 
-    protected WebSpeakChannel(WebSpeakServer server, String name) {
-        this.server = server;
+    public WebSpeakChannel(String name) {
         this.name = name;
-    }
-
-    public WebSpeakServer getServer() {
-        return server;
     }
 
     public String getName() {
@@ -29,14 +27,26 @@ public class WebSpeakChannel {
     // If the player is no longer being tracked by the server, no reason to keep it here.
     private final Set<WebSpeakPlayer> players = Collections.newSetFromMap(new WeakHashMap<>());
 
-    public Set<WebSpeakPlayer> getPlayers() {
+    public final Set<WebSpeakPlayer> getPlayers() {
         return Collections.unmodifiableSet(players);
     }
 
+    /**
+     * Called when a player is added to the channel.
+     * @param player Player that was added.
+     * @return If the player was not already in the channel.
+     * @apiNote Should only be called by the player's <code>setChannel</code> function.
+     */
     protected synchronized boolean onAddPlayer(WebSpeakPlayer player) {
         return players.add(player);
     }
     
+    /**
+     * Called when a player is removed from the channel.
+     * @param player Player that was removed.
+     * @return If the player was in the channel.
+     * @apiNote Should only be called by the player's <code>setChannel</code> function.
+     */
     protected synchronized boolean onRemovePlayer(WebSpeakPlayer player) {
         if (players.remove(player)) {
             // Manually remove all players from scope
@@ -45,16 +55,6 @@ public class WebSpeakChannel {
             return true;
         }
         return false;
-    }
-
-    /**
-     * Called when this channel is removed from the server.
-     */
-    protected synchronized void onRemoved() {
-        for (var player : players) {
-            if (player.getChannel() == this)
-                player.setChannel(null);
-        }
     }
 
     @Override
