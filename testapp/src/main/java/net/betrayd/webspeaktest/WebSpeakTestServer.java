@@ -60,6 +60,7 @@ public class WebSpeakTestServer implements Executor {
         webSpeakServer = new WebSpeakServer();
         webSpeakServer.setFlag(WebSpeakFlags.DEBUG_CONNECTION_REQUESTS, true);
         webSpeakServer.setFlag(WebSpeakFlags.DEBUG_KEEPALIVE, true);
+        webSpeakServer.setFlag(WebSpeakFlags.DEBUG_CHANNEL_SWAPS, true);
         webSpeakServer.getPannerOptions().maxDistance = 5;
         webSpeakServer.start(port);
         startFuture.complete(webSpeakServer);
@@ -77,7 +78,11 @@ public class WebSpeakTestServer implements Executor {
             }
         }
 
-        webSpeakServer.stop();
+        try {
+            webSpeakServer.stop();
+        } catch (Exception e) {
+            LOGGER.error("Exception stopping WebSpeak server: ", e);
+        }
         shutdownFuture.complete(null);
     }
 

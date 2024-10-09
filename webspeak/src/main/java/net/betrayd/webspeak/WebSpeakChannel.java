@@ -1,6 +1,7 @@
 package net.betrayd.webspeak;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
 
@@ -13,6 +14,11 @@ import java.util.WeakHashMap;
  *          considered for scope.
  */
 public class WebSpeakChannel {
+
+    /**
+     * A "default" channel for convenience. Players will use this channel when constructed.
+     */
+    public static final WebSpeakChannel DEFAULT_CHANNEL = new WebSpeakChannel("Default");
 
     private final String name;
 
@@ -55,6 +61,26 @@ public class WebSpeakChannel {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Remove all players from this channel, transferring them to the default channel.
+     */
+    public final void clear() {
+        clear(DEFAULT_CHANNEL);
+    }
+
+    /**
+     * Remove all players from this channel, transfering them to another channel.
+     * @param other Channel to transfer players to.
+     */
+    public synchronized void clear(WebSpeakChannel other) {
+        if (other == this)
+            return;
+        // Copy player list to avoid concurrent modification
+        for (var player : List.copyOf(players)) {
+            player.setChannel(other);
+        }
     }
 
     @Override

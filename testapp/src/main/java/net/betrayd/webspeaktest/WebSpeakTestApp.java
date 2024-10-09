@@ -18,7 +18,6 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.fxml.FXMLLoader;
@@ -129,33 +128,13 @@ public class WebSpeakTestApp extends Application {
         return channels;
     }
 
-    public final WebSpeakChannel defaultChannel = new WebSpeakChannel("Default Channel");
-
-    {
-        channels.add(defaultChannel);
-        channels.addListener(new ListChangeListener<>() {
-
-            @Override
-            public void onChanged(Change<? extends WebSpeakChannel> c) {
-                WebSpeakTestServer server = getServer();
-                if (server == null || server.hasStarted())
-                    return;
-                while (c.next()) {
-                    for (var item : c.getRemoved()) {
-                        server.getWebSpeakServer().removeChannel(item);
-                    }
-                    for (var item : c.getAddedSubList()) {
-                        server.getWebSpeakServer().addChannel(item);
-                    }
-                }
-            }
-            
-        });
-    }
-
     @Override
     public void start(Stage primaryStage) throws Exception {
         instance = this;
+
+        channels.add(WebSpeakChannel.DEFAULT_CHANNEL);
+        channels.add(new WebSpeakChannel("Channel 1"));
+        channels.add(new WebSpeakChannel("Channel 2"));
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/ui/mainUI.fxml"));
         Parent root = loader.load();
@@ -215,9 +194,6 @@ public class WebSpeakTestApp extends Application {
     }
 
     private void addPlayerToServer(WebSpeakTestServer server, Player player) {
-        if (player.getChannel() == null) {
-            player.setChannel(defaultChannel);
-        }
         CompletableFuture.supplyAsync(() -> server.getWebSpeakServer()
                 .createPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session)), server)
                 .thenAcceptAsync(p -> player.setWebPlayer(p), Platform::runLater);

@@ -18,4 +18,9 @@ public class WebSpeakFlags {
      * Log to console whenever a client sends a keepalive packet.
      */
     public static final WebSpeakFlag<Boolean> DEBUG_KEEPALIVE = new WebSpeakFlag<>("deugKeepAlive", false);
+
+    /**
+     * Log to console whenever a player swaps channels.
+     */
+    public static final WebSpeakFlag<Boolean> DEBUG_CHANNEL_SWAPS = new WebSpeakFlag<>("debugChannelSwaps", false);
 }

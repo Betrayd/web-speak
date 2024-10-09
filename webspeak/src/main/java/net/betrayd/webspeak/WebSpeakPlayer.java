@@ -3,6 +3,9 @@ package net.betrayd.webspeak;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.net.packets.SetAudioParamsS2CPacket;
 import net.betrayd.webspeak.impl.net.packets.UpdateTransformS2CPacket;
@@ -18,10 +21,14 @@ public abstract class WebSpeakPlayer {
 
     private final ObservableSet<WebSpeakPlayer> mutedPlayers = new ObservableSet<>(new HashSet<>());
     private final ObservableSet<WebSpeakPlayer> unspatializedPlayers = new ObservableSet<>(new HashSet<>());
+    
+    protected final Logger LOGGER;
 
     WsContext wsContext;
     
     public WebSpeakPlayer(WebSpeakServer server, String playerId, String sessionId) {
+        LOGGER = LoggerFactory.getLogger("WebSpeak Player (" + playerId + ")");
+
         this.server = server;
         this.playerId = playerId;
         this.sessionId = sessionId;
@@ -71,7 +78,7 @@ public abstract class WebSpeakPlayer {
         return server;
     }
 
-    private WebSpeakChannel channel;
+    private WebSpeakChannel channel = null;
 
     public final WebSpeakChannel getChannel() {
         return channel;
@@ -87,6 +94,10 @@ public abstract class WebSpeakPlayer {
         this.channel = channel;
         if (channel != null) {
             this.channel.onAddPlayer(this);
+        }
+        if (getServer().getFlag(WebSpeakFlags.DEBUG_CHANNEL_SWAPS)) {
+            // if (channel != null)
+                LOGGER.info("Player joined channel " + (channel != null ? channel.getName() : "null"));
         }
     }
     

@@ -99,7 +99,7 @@ public class Player {
         return webPlayerProperty;
     }
 
-    private final SimpleObjectProperty<WebSpeakChannel> channelProperty = new SimpleObjectProperty<>();
+    private final SimpleObjectProperty<WebSpeakChannel> channelProperty = new SimpleObjectProperty<>(WebSpeakChannel.DEFAULT_CHANNEL);
 
     public WebSpeakChannel getChannel() {
         return channelProperty.get();

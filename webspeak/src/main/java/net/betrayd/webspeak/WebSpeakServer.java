@@ -372,16 +372,6 @@ public class WebSpeakServer implements Executor {
         return channels.add(channel);
     }
 
-    /**
-     * Remove a channel from the server and unassign all players.
-     * 
-     * @param channel Channel to remove.
-     * @return If the channel was in the server.
-     */
-    public synchronized boolean removeChannel(WebSpeakChannel channel) {
-        return false;
-    }
-
     public WebSpeakChannel getDefaultChannel() {
         return defaultChannel;
     }
@@ -557,16 +547,20 @@ public class WebSpeakServer implements Executor {
     }
 
     protected void onRemovePlayer(WebSpeakPlayer player) {
-        WsContext ws = wsSessions.remove(player);
-        player.setChannel(null); // will automatically kick scopes
-        if (ws != null) {
-            ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
-            ON_SESSION_DISCONNECTED.invoker().accept(player);
+        try {
+            WsContext ws = wsSessions.remove(player);
+            player.setChannel(null); // will automatically kick scopes
+            if (ws != null) {
+                ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
+                ON_SESSION_DISCONNECTED.invoker().accept(player);
+            }
+            // rtcManager.kickRTC(player);
+            player.wsContext = null;
+            player.onRemoved();
+            ON_PLAYER_REMOVED.invoker().accept(player);
+        } catch (Exception e) {
+            LOGGER.error("Error removing player " + player.getPlayerId(), e);
         }
-        // rtcManager.kickRTC(player);
-        player.wsContext = null;
-        player.onRemoved();
-        ON_PLAYER_REMOVED.invoker().accept(player);
     }
     
     private WebSpeakPlayer playerFromSessionId(String sessionId) {
