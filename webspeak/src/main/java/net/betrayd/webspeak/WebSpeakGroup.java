@@ -128,6 +128,7 @@ public class WebSpeakGroup {
 
     /**
      * Compute the audio modifier this group will use for a given player.
+     * 
      * @param player Target player.
      * @return Audio modifier.
      */

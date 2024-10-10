@@ -131,6 +131,7 @@ public abstract class WebSpeakPlayer {
      */
     protected void onAddGroup(WebSpeakGroup group) {
         group.ON_MODIFIER_INVALIDATED.addListener(invalidateAudioModifiersListener);
+        onInvalidateAudioModifiers(group.getAudioModifiedPlayers());
     }
 
     /**
@@ -139,6 +140,7 @@ public abstract class WebSpeakPlayer {
      */
     protected void onRemoveGroup(WebSpeakGroup group) {
         group.ON_MODIFIER_INVALIDATED.removeListener(invalidateAudioModifiersListener);
+        onInvalidateAudioModifiers(group.getAudioModifiedPlayers());
     }
     
     /**
