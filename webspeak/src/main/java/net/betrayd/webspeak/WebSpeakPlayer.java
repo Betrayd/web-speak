@@ -1,11 +1,9 @@
 package net.betrayd.webspeak;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -14,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.net.packets.SetAudioModifierS2CPacket;
 import net.betrayd.webspeak.impl.net.packets.UpdateTransformS2CPacket;
-import net.betrayd.webspeak.impl.util.SimpleObservableList;
 import net.betrayd.webspeak.impl.util.URIComponent;
 import net.betrayd.webspeak.util.AudioModifier;
 import net.betrayd.webspeak.util.WebSpeakVector;
@@ -57,96 +54,112 @@ public abstract class WebSpeakPlayer {
         return server;
     }
 
-    // No reason to keep players & groups around that aren't being used.
-    private final Map<WebSpeakPlayer, AudioModifier> playerAudioModifiers = new WeakHashMap<>();
-    private final Map<WebSpeakPlayerGroup, AudioModifier> groupAudioModifiers = new WeakHashMap<>();
+    private WebSpeakChannel channel = null;
 
-    private final SimpleObservableList<WebSpeakPlayerGroup> groups = new SimpleObservableList<>();
-    private final List<WebSpeakPlayerGroup> synchronizedGroups = Collections.synchronizedList(groups);
+    private List<WebSpeakGroup> groups = new ArrayList<>();
 
     /**
-     * Return a list with all player groups. Modifications to this list will
-     * properly propagate and notify all relevent listeners.
+     * Return an unmodifiable list of groups the player is in. Groups with a greater
+     * index take a higher priority over groups with a lesser index.
      * 
-     * @return Player groups.
+     * @return Unmodifiable list.
      */
-    public List<WebSpeakPlayerGroup> getGroups() {
-        return synchronizedGroups;
+    public List<WebSpeakGroup> getGroups() {
+        return Collections.unmodifiableList(groups);
     }
 
-    
-    private final Consumer<WebSpeakPlayer> onInvalidateAudioModifier = player -> {
-        recalculateAudioModifiers(Collections.singleton(player));
-    };
-
-    private final Consumer<Void> onInvalidateGlobal = v -> recalculateAllAudioModifiers();
-
-    protected synchronized void onJoinGroup(Collection<? extends WebSpeakPlayerGroup> groups) {
-        for (var group : groups) {
-            group.onAddPlayer(this);
-            group.ON_INVALIDATE_MODIFIER.addListener(onInvalidateAudioModifier);
-            group.ON_INVALIDATE_GLOBAL.addListener(onInvalidateGlobal);
-        }
-        // Groups can declare global audio modifiers, so we need to recalculate all players.
-        recalculateAllAudioModifiers();
-    }
-
-    protected synchronized void onLeaveGroup(Collection<? extends WebSpeakPlayerGroup> groups) {
-        for (var group : groups) {
-            group.onRemovePlayer(this);
-            group.ON_INVALIDATE_MODIFIER.removeListener(onInvalidateAudioModifier);
-            group.ON_INVALIDATE_GLOBAL.removeListener(onInvalidateGlobal);
-        }
-        // Groups can declare global audio modifiers, so we need to recalculate all players.
-        recalculateAllAudioModifiers();
-    }
-
-
-    protected synchronized void recalculateAllAudioModifiers() {
-        var inScope = server.getPlayers().stream().filter(p -> server.areInScope(p, this)).toList();
-        recalculateAudioModifiers(inScope);
+    public boolean isInGroup(WebSpeakGroup group) {
+        return groups.contains(group);
     }
 
     /**
-     * Recalculate the audio modifiers for a group of players.
-     * @param players Players to recalculate.
+     * Add this player to a group.
+     * @param group Group to add.
+     * @return If the player was not already in the group.
      */
-    protected synchronized Map<WebSpeakPlayer, AudioModifier> recalculateAudioModifiers(Iterable<WebSpeakPlayer> players) {
-        Map<WebSpeakPlayer, AudioModifier> modifiers = new HashMap<>();
-        for (var player : players) {
-            modifiers.put(player, calculateAudioModifier(player));
+    public synchronized boolean addGroup(WebSpeakGroup group) {
+        if (groups.contains(group)) {
+            return false;
         }
-        for (var entry : modifiers.entrySet()) {
-            new SetAudioModifierS2CPacket(entry.getKey().playerId, entry.getValue());
+        groups.add(group);
+        group.onAddPlayer(this);
+        onAddGroup(group);
+        return true;
+    }
+    
+    /**
+     * Add this player to a group at a specified index.
+     * @param group Group to add.
+     * @param index Index to add at. Higher indexes take priority over lower indexes.
+     * @return If the player was not already in the group.
+     */
+    public synchronized boolean addGroup(WebSpeakGroup group, int index) {
+        if (groups.contains(group)) {
+            return false;
         }
-        return modifiers;
+        groups.add(index, group);
+        group.onAddPlayer(this);
+        onAddGroup(group);
+        return true;
     }
 
-    protected synchronized AudioModifier calculateAudioModifier(WebSpeakPlayer player) {
-        if (player == this) {
-            return AudioModifier.EMPTY;
+    /**
+     * Remove this player from a group.
+     * @param group Group to remove from.
+     * @return
+     */
+    public synchronized boolean removeGroup(WebSpeakGroup group) {
+        if (groups.remove(group)) {
+            group.onRemovePlayer(this);
+            onRemoveGroup(group);
+            return true;
         }
+        return false;
+    }
 
-        AudioModifier modifier = AudioModifier.EMPTY;
-        for (var group : getGroups()) {
-            AudioModifier.combine(group.getPlayerAudioModifier(player), modifier);
+    private void onInvalidateAudioModifiers(Collection<? extends WebSpeakPlayer> players) {
+        for (var player : players) {
+            updatePlayerAudioModifiers(player);
         }
-        for (var otherGroup : player.getGroups()) {
-            AudioModifier groupModifier = groupAudioModifiers.get(otherGroup);
-            if (groupModifier != null) {
-                AudioModifier.combine(groupModifier, modifier);
-            }
-        }
-        AudioModifier playerModifier = playerAudioModifiers.get(player);
-        if (playerModifier != null) {
-            AudioModifier.combine(playerModifier, modifier);
-        }
+    }
 
+    private final Consumer<Collection<? extends WebSpeakPlayer>> invalidateAudioModifiersListener = this::onInvalidateAudioModifiers;
+
+    /**
+     * Called when this player is added to a group.
+     * @param group Group that was added to.
+     */
+    protected void onAddGroup(WebSpeakGroup group) {
+        group.ON_MODIFIER_INVALIDATED.addListener(invalidateAudioModifiersListener);
+    }
+
+    /**
+     * Called when this player is removed from a group.
+     * @param group Group that was removed from.
+     */
+    protected void onRemoveGroup(WebSpeakGroup group) {
+        group.ON_MODIFIER_INVALIDATED.removeListener(invalidateAudioModifiersListener);
+    }
+    
+    /**
+     * Re-calculate the audio modifiers used on a given player and send to the client.
+     * @param player Player to calculate.
+     */
+    protected synchronized void updatePlayerAudioModifiers(WebSpeakPlayer player) {
+        if (!isConnected() || !server.areInScope(this, player))
+            return;
+        
+        AudioModifier modifier = computeAudioModifier(player);
+        new SetAudioModifierS2CPacket(playerId, modifier).send(wsContext);
+    }
+
+    protected synchronized AudioModifier computeAudioModifier(WebSpeakPlayer player) {
+        AudioModifier modifier = AudioModifier.DEFAULT;
+        for (var group : groups) {
+            modifier = AudioModifier.combine(group.computeAudioModifier(player), modifier);
+        }
         return modifier;
     }
-
-
-    private WebSpeakChannel channel = null;
 
     public final WebSpeakChannel getChannel() {
         return channel;
@@ -176,7 +189,7 @@ public abstract class WebSpeakPlayer {
     protected void onJoinedScope(WebSpeakPlayer other) {
         if (wsContext != null) {
             UpdateTransformS2CPacket.fromPlayer(other).send(wsContext);
-            recalculateAudioModifiers(Collections.singleton(other));
+            updatePlayerAudioModifiers(other);
         }
     }
 

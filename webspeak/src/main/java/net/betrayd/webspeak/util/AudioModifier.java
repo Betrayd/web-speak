@@ -35,6 +35,11 @@ public record AudioModifier(Boolean muted, Boolean spatialized) {
      * @return The combined modifier.
      */
     public static AudioModifier combine(AudioModifier a, AudioModifier b) {
+        if (a == null)
+            a = DEFAULT;
+        if (b == null)
+            b = DEFAULT;
+
         return new AudioModifier(
                 a.muted != null ? a.muted : b.muted,
                 a.spatialized != null ? a.spatialized : b.muted);
