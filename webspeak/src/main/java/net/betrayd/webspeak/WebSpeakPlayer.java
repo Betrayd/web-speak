@@ -1,16 +1,22 @@
 package net.betrayd.webspeak;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.javalin.websocket.WsContext;
-import net.betrayd.webspeak.impl.net.packets.SetAudioParamsS2CPacket;
+import net.betrayd.webspeak.impl.net.packets.SetAudioModifierS2CPacket;
 import net.betrayd.webspeak.impl.net.packets.UpdateTransformS2CPacket;
-import net.betrayd.webspeak.impl.util.ObservableSet;
+import net.betrayd.webspeak.impl.util.SimpleObservableList;
 import net.betrayd.webspeak.impl.util.URIComponent;
+import net.betrayd.webspeak.util.AudioModifier;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
 public abstract class WebSpeakPlayer {
@@ -18,9 +24,6 @@ public abstract class WebSpeakPlayer {
     private final WebSpeakServer server;
     private final String playerId;
     private final String sessionId;
-
-    private final ObservableSet<WebSpeakPlayer> mutedPlayers = new ObservableSet<>(new HashSet<>());
-    private final ObservableSet<WebSpeakPlayer> unspatializedPlayers = new ObservableSet<>(new HashSet<>());
     
     protected final Logger LOGGER;
 
@@ -32,30 +35,6 @@ public abstract class WebSpeakPlayer {
         this.server = server;
         this.playerId = playerId;
         this.sessionId = sessionId;
-
-        mutedPlayers.ON_ADDED.addListener(player -> {
-            if (wsContext != null && server.areInScope(this, player)) {
-                new SetAudioParamsS2CPacket(playerId, null, true).send(wsContext);
-            }
-        });
-
-        mutedPlayers.ON_REMOVED.addListener(player -> {
-            if (wsContext != null && server.areInScope(this, player)) {
-                new SetAudioParamsS2CPacket(playerId, null, true).send(wsContext);
-            }
-        });
-
-        unspatializedPlayers.ON_ADDED.addListener(player -> {
-            if (wsContext != null && server.areInScope(this, player)) {
-                new SetAudioParamsS2CPacket(playerId, false, null).send(wsContext);
-            }
-        });
-
-        unspatializedPlayers.ON_REMOVED.addListener(player -> {
-            if (wsContext != null && server.areInScope(this, player)) {
-                new SetAudioParamsS2CPacket(playerId, true, null).send(wsContext);
-            }
-        });
     }
 
     /**
@@ -77,6 +56,95 @@ public abstract class WebSpeakPlayer {
     public final WebSpeakServer getServer() {
         return server;
     }
+
+    // No reason to keep players & groups around that aren't being used.
+    private final Map<WebSpeakPlayer, AudioModifier> playerAudioModifiers = new WeakHashMap<>();
+    private final Map<WebSpeakPlayerGroup, AudioModifier> groupAudioModifiers = new WeakHashMap<>();
+
+    private final SimpleObservableList<WebSpeakPlayerGroup> groups = new SimpleObservableList<>();
+    private final List<WebSpeakPlayerGroup> synchronizedGroups = Collections.synchronizedList(groups);
+
+    /**
+     * Return a list with all player groups. Modifications to this list will
+     * properly propagate and notify all relevent listeners.
+     * 
+     * @return Player groups.
+     */
+    public List<WebSpeakPlayerGroup> getGroups() {
+        return synchronizedGroups;
+    }
+
+    
+    private final Consumer<WebSpeakPlayer> onInvalidateAudioModifier = player -> {
+        recalculateAudioModifiers(Collections.singleton(player));
+    };
+
+    private final Consumer<Void> onInvalidateGlobal = v -> recalculateAllAudioModifiers();
+
+    protected synchronized void onJoinGroup(Collection<? extends WebSpeakPlayerGroup> groups) {
+        for (var group : groups) {
+            group.onAddPlayer(this);
+            group.ON_INVALIDATE_MODIFIER.addListener(onInvalidateAudioModifier);
+            group.ON_INVALIDATE_GLOBAL.addListener(onInvalidateGlobal);
+        }
+        // Groups can declare global audio modifiers, so we need to recalculate all players.
+        recalculateAllAudioModifiers();
+    }
+
+    protected synchronized void onLeaveGroup(Collection<? extends WebSpeakPlayerGroup> groups) {
+        for (var group : groups) {
+            group.onRemovePlayer(this);
+            group.ON_INVALIDATE_MODIFIER.removeListener(onInvalidateAudioModifier);
+            group.ON_INVALIDATE_GLOBAL.removeListener(onInvalidateGlobal);
+        }
+        // Groups can declare global audio modifiers, so we need to recalculate all players.
+        recalculateAllAudioModifiers();
+    }
+
+
+    protected synchronized void recalculateAllAudioModifiers() {
+        var inScope = server.getPlayers().stream().filter(p -> server.areInScope(p, this)).toList();
+        recalculateAudioModifiers(inScope);
+    }
+
+    /**
+     * Recalculate the audio modifiers for a group of players.
+     * @param players Players to recalculate.
+     */
+    protected synchronized Map<WebSpeakPlayer, AudioModifier> recalculateAudioModifiers(Iterable<WebSpeakPlayer> players) {
+        Map<WebSpeakPlayer, AudioModifier> modifiers = new HashMap<>();
+        for (var player : players) {
+            modifiers.put(player, calculateAudioModifier(player));
+        }
+        for (var entry : modifiers.entrySet()) {
+            new SetAudioModifierS2CPacket(entry.getKey().playerId, entry.getValue());
+        }
+        return modifiers;
+    }
+
+    protected synchronized AudioModifier calculateAudioModifier(WebSpeakPlayer player) {
+        if (player == this) {
+            return AudioModifier.EMPTY;
+        }
+
+        AudioModifier modifier = AudioModifier.EMPTY;
+        for (var group : getGroups()) {
+            AudioModifier.combine(group.getPlayerAudioModifier(player), modifier);
+        }
+        for (var otherGroup : player.getGroups()) {
+            AudioModifier groupModifier = groupAudioModifiers.get(otherGroup);
+            if (groupModifier != null) {
+                AudioModifier.combine(groupModifier, modifier);
+            }
+        }
+        AudioModifier playerModifier = playerAudioModifiers.get(player);
+        if (playerModifier != null) {
+            AudioModifier.combine(playerModifier, modifier);
+        }
+
+        return modifier;
+    }
+
 
     private WebSpeakChannel channel = null;
 
@@ -101,7 +169,6 @@ public abstract class WebSpeakPlayer {
         }
     }
     
-    
     /**
      * Called when this player has joined the scope of another player.
      * @param other The other player.
@@ -109,7 +176,7 @@ public abstract class WebSpeakPlayer {
     protected void onJoinedScope(WebSpeakPlayer other) {
         if (wsContext != null) {
             UpdateTransformS2CPacket.fromPlayer(other).send(wsContext);
-            new SetAudioParamsS2CPacket(other.playerId, isPlayerSpatialized(other), isPlayerMuted(other)).send(wsContext);
+            recalculateAudioModifiers(Collections.singleton(other));
         }
     }
 
@@ -149,46 +216,6 @@ public abstract class WebSpeakPlayer {
      * Perform any additional ticking this webspeak player desires.
      */
     public void tick() {
-    }
-
-    /**
-     * Get a set of all muted players. Updates to this set will trigger packets to be sent to the client.
-     * @return Muted players set.
-     */
-    public final Set<WebSpeakPlayer> getMutedPlayers() {
-        return mutedPlayers;
-    }
-
-    public final void setPlayerMuted(WebSpeakPlayer other, boolean muted) {
-        if (muted) {
-            mutedPlayers.add(other);
-        } else {
-            mutedPlayers.remove(other);
-        }
-    }
-
-    public final boolean isPlayerMuted(WebSpeakPlayer other) {
-        return mutedPlayers.contains(other);
-    }
-    
-    /**
-     * Get a set of all non-spatialized. Updates to this set will trigger packets to be sent to the client.
-     * @return Muted players set.
-     */
-    public final ObservableSet<WebSpeakPlayer> getUnspatializedPlayers() {
-        return unspatializedPlayers;
-    }
-    
-    public final void setPlayerSpatialized(WebSpeakPlayer other, boolean spatialized) {
-        if (spatialized) {
-            unspatializedPlayers.remove(other);
-        } else {
-            unspatializedPlayers.add(other);
-        }
-    }
-
-    public final boolean isPlayerSpatialized(WebSpeakPlayer other) {
-        return !unspatializedPlayers.contains(other);
     }
     
     /**
