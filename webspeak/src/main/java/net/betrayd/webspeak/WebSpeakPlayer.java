@@ -192,6 +192,10 @@ public abstract class WebSpeakPlayer {
             }
         }
 
+        if (prev.equals(modified)) {
+            return;
+        }
+
         List<WebSpeakGroup> removedGroups = new ArrayList<>(modified.size());
         List<WebSpeakGroup> addedGroups = new ArrayList<>(modified.size());
 
@@ -206,19 +210,25 @@ public abstract class WebSpeakPlayer {
                 removedGroups.add(group);
             }
         }
-
+        
         groups.clear();
         groups.addAll(modified);
 
-        // Don't invalidate audio modifier for players twice.
+        // Invalidate all players who are in all groups + removed groups because order
+        // could have changed.
         Set<WebSpeakPlayer> invalidModifiers = new HashSet<>();
+        for (var group : groups) {
+            invalidModifiers.addAll(group.getAudioModifiedPlayers());
+        }
+        for (var group : removedGroups) {
+            invalidModifiers.addAll(group.getAudioModifiedPlayers());
+        }
+
         for (var added : addedGroups) {
             onAddGroup(added);
-            invalidModifiers.addAll(added.getAudioModifiedPlayers());
         }
         for (var removed : removedGroups) {
             onRemoveGroup(removed);
-            invalidModifiers.addAll(removed.getAudioModifiedPlayers());
         }
         
         onInvalidateAudioModifiers(invalidModifiers);

@@ -1,7 +1,9 @@
 package net.betrayd.webspeaktest;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -25,6 +27,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import net.betrayd.webspeak.WebSpeakChannel;
+import net.betrayd.webspeak.WebSpeakGroup;
+import net.betrayd.webspeak.util.AudioModifier;
 import net.betrayd.webspeaktest.ui.MainUIController;
 
 public class WebSpeakTestApp extends Application {
@@ -81,6 +85,7 @@ public class WebSpeakTestApp extends Application {
         return connectionIps;
     }
 
+
     private MainUIController mainUIController;
 
     private final Set<Player> players = new HashSet<>();
@@ -127,14 +132,41 @@ public class WebSpeakTestApp extends Application {
     public ObservableList<WebSpeakChannel> getChannels() {
         return channels;
     }
+    
+
+    private final List<WebSpeakGroup> globalGroups = new ArrayList<>();
+    
+    /**
+     * Get a list of groups that will appear in the players' info panels. Shouldn't
+     * be modified after app starts.
+     */
+    public List<WebSpeakGroup> getGlobalGroups() {
+        return globalGroups;
+    }
+
+    private void setupGroups() {
+        var survival = new WebSpeakGroup("Survival Mode");
+        var spectator = new WebSpeakGroup("Spectator");
+        var admins = new WebSpeakGroup("Admins");
+
+        survival.setAudioModifier(spectator, new AudioModifier(true, null));
+        spectator.setAudioModifier(spectator, new AudioModifier(null, false));
+        admins.setAudioModifier(spectator, new AudioModifier(false, null));
+
+        globalGroups.add(survival);
+        globalGroups.add(spectator);
+        globalGroups.add(admins);
+    }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
         instance = this;
-
+        
         channels.add(WebSpeakChannel.DEFAULT_CHANNEL);
         channels.add(new WebSpeakChannel("Channel 1"));
         channels.add(new WebSpeakChannel("Channel 2"));
+
+        setupGroups();
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/ui/mainUI.fxml"));
         Parent root = loader.load();

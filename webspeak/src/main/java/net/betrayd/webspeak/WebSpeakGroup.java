@@ -21,10 +21,33 @@ public class WebSpeakGroup {
     private final Set<WebSpeakPlayer> players = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /**
+     * Create a WebSpeak group.
+     * @param name A group name to use for debugging.
+     */
+    public WebSpeakGroup(String name) {
+        this.name = name;
+    }
+
+    private String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    /**
      * Called when a change in modifiers has invalidaded the audio modifier for a set of players.
      */
     public final WebSpeakEvent<Consumer<Collection<? extends WebSpeakPlayer>>> ON_MODIFIER_INVALIDATED = WebSpeakEvents
             .createSimple();
+    
+    private void onModifierInvalidated(Collection<? extends WebSpeakPlayer> collection) {
+        audioModifiedPlayersCache.clear();
+        ON_MODIFIER_INVALIDATED.invoker().accept(collection);
+    }
     
     public final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_ADDED = WebSpeakEvents.createSimple();
     public final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_REMOVED = WebSpeakEvents.createSimple();
@@ -52,15 +75,13 @@ public class WebSpeakGroup {
     // No need to keep track of audio modifiers for players & groups not being used.
     private final Map<WebSpeakGroup, AudioModifier> groupAudioModifiers = new WeakHashMap<>();
     private final Map<WebSpeakPlayer, AudioModifier> playerAudioModifiers = new WeakHashMap<>();
-    
+
     /**
      * Called when any of the players in a group that has an audio modifier on it is updated.
      */
-    private void onGroupTargetPlayerUpdated(WebSpeakPlayer player) {
-        ON_MODIFIER_INVALIDATED.invoker().accept(Collections.singleton(player));
-    }
-    
-    private final Consumer<WebSpeakPlayer> groupTargetPlayerUpdatedListener = this::onGroupTargetPlayerUpdated;
+    private final Consumer<WebSpeakPlayer> groupTargetPlayerUpdatedListener = player -> {
+        onModifierInvalidated(Collections.singleton(player));
+    };
 
     /**
      * Set the audio modifier for a target player. Modifier will be heard by players
@@ -78,7 +99,7 @@ public class WebSpeakGroup {
             prev = playerAudioModifiers.remove(player);
         }
 
-        ON_MODIFIER_INVALIDATED.invoker().accept(Collections.singleton(player));
+        onModifierInvalidated(Collections.singleton(player));
         return prev;
     }
 
@@ -112,7 +133,8 @@ public class WebSpeakGroup {
             group.ON_PLAYER_ADDED.removeListener(groupTargetPlayerUpdatedListener);
             group.ON_PLAYER_REMOVED.removeListener(groupTargetPlayerUpdatedListener);
         }
-        ON_MODIFIER_INVALIDATED.invoker().accept(group.getPlayers());
+        // ON_MODIFIER_INVALIDATED.invoker().accept(group.getPlayers());
+        onModifierInvalidated(group.getPlayers());
         return prev;
     }
 
@@ -148,17 +170,26 @@ public class WebSpeakGroup {
         return modifier;
     }
 
+    private final Set<WebSpeakPlayer> audioModifiedPlayersCache = new HashSet<>();
+
     /**
      * Get a set of all players that have an audio modifier because of this group.
      * 
      * @return Set of players.
      */
     public synchronized Set<WebSpeakPlayer> getAudioModifiedPlayers() {
-        Set<WebSpeakPlayer> set = new HashSet<>();
-        for (var group : groupAudioModifiers.keySet()) {
-            set.addAll(group.players);
+        if (audioModifiedPlayersCache.isEmpty()) {
+            for (var group : groupAudioModifiers.keySet()) {
+                audioModifiedPlayersCache.addAll(group.players);
+            }
+            audioModifiedPlayersCache.addAll(playerAudioModifiers.keySet());
         }
-        set.addAll(playerAudioModifiers.keySet());
-        return set;
+        return audioModifiedPlayersCache;
+
+    }
+
+    @Override
+    public String toString() {
+        return "WebSpeakGroup[" + getName() + "]";
     }
 }

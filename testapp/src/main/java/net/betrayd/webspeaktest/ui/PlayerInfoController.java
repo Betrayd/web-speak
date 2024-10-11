@@ -9,6 +9,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -17,13 +18,7 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Border;
-import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.BorderStrokeStyle;
-import javafx.scene.layout.BorderWidths;
-import javafx.scene.layout.CornerRadii;
+
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
@@ -85,6 +80,9 @@ public class PlayerInfoController {
     @FXML
     private ChoiceBox<WebSpeakChannel> channelSelector;
 
+    @FXML
+    private GroupListController groupListController;
+
     private BooleanProperty selectedProperty = new SimpleBooleanProperty(false);
 
     public boolean isSelected() {
@@ -98,6 +96,8 @@ public class PlayerInfoController {
     public BooleanProperty selectedProperty() {
         return selectedProperty;
     }
+
+    private static final PseudoClass SELECTED = PseudoClass.getPseudoClass("selected");
 
     @FXML
     protected void initialize() {
@@ -116,16 +116,9 @@ public class PlayerInfoController {
                 connectionText.setTextFill(Color.GREEN);
             }
         });
-
+        
         selectedProperty.addListener((prop, oldVal, newVal) -> {
-            if (newVal) {
-                // I know I *should* be using CSS but I don't care
-                titledPane.setBorder(new Border(new BorderStroke(Color.LIGHTBLUE, BorderStrokeStyle.SOLID,
-                        CornerRadii.EMPTY, new BorderWidths(2))));
-                titledPane.setExpanded(true);
-            } else {
-                titledPane.setBorder(Border.EMPTY);
-            }
+            gridPane.pseudoClassStateChanged(SELECTED, newVal);
         });
 
         titleBox.prefWidthProperty().bind(titledPane.widthProperty().subtract(60));
@@ -207,18 +200,12 @@ public class PlayerInfoController {
             }
         });
 
-        player.getNode().addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
-            if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2) {
-                titledPane.requestFocus();
-                e.consume();
-            }
-        });
-
         channelSelector.getSelectionModel().select(player.getChannel());
         channelSelector.getSelectionModel().selectedItemProperty().addListener((prop, oldVal, newVal) -> {
             player.setChannel(newVal);
         });
 
+        groupListController.initPlayer(player);
         WebSpeakTestApp.getInstance().getConnectionIps().addListener(mapChangeListener);
     }
 

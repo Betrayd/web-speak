@@ -42,7 +42,7 @@ public record AudioModifier(Boolean muted, Boolean spatialized) {
 
         return new AudioModifier(
                 a.muted != null ? a.muted : b.muted,
-                a.spatialized != null ? a.spatialized : b.muted);
+                a.spatialized != null ? a.spatialized : b.spatialized);
     }
 
     public static final AudioModifier EMPTY = new AudioModifier(null, null);

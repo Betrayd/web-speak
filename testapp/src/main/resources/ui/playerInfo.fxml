@@ -16,7 +16,7 @@
 
 <TitledPane fx:id="titledPane" alignment="TOP_LEFT" animated="false" contentDisplay="RIGHT" maxHeight="-Infinity" minHeight="-Infinity" styleClass="playerInfo" stylesheets="@style.css" text="test" xmlns="http://javafx.com/javafx/21.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.betrayd.webspeaktest.ui.PlayerInfoController">
    <content>
-      <GridPane fx:id="gridPane" hgap="10.0">
+      <GridPane fx:id="gridPane" hgap="10.0" styleClass="playerinfo">
         <columnConstraints>
           <ColumnConstraints halignment="LEFT" hgrow="NEVER" minWidth="-Infinity" />
           <ColumnConstraints hgrow="ALWAYS" prefWidth="256.0" />
@@ -27,6 +27,7 @@
           <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
             <RowConstraints vgrow="SOMETIMES" />
         </rowConstraints>
          <children>
@@ -46,6 +47,7 @@
             <Label fx:id="connectionText" text="Not Connected" textFill="RED" GridPane.columnIndex="1" GridPane.rowIndex="4" />
             <Label text="Channel" GridPane.rowIndex="5" GridPane.valignment="TOP" />
             <ChoiceBox fx:id="channelSelector" prefWidth="150.0" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+            <fx:include fx:id="groupList" source="groupList.fxml" GridPane.columnSpan="2" GridPane.rowIndex="6" />
          </children>
       </GridPane>
    </content>

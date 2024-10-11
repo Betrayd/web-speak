@@ -57,6 +57,11 @@ public class TestWebPlayer extends WebSpeakPlayer {
         LOGGER.info("I left scope with {}", other);
     };
 
+    protected void onAddGroup(net.betrayd.webspeak.WebSpeakGroup group) {
+        super.onAddGroup(group);
+        LOGGER.info("I joined group " + group);
+    };
+
     /**
      * Get a connection URL for this web player when the server and frontend are both running on localhost.
      * @param frontendPort The port the frontend is running on.
