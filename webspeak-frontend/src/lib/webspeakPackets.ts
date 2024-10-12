@@ -63,7 +63,7 @@ module webspeakPackets {
     function onSetAudioModifier(app: AppInstance, payload: string) {
         interface PacketPayload {
             playerID: string,
-            audioModifier: AudioModifier
+            audioModifier: Partial<AudioModifier>
         }
 
         const data: Partial<PacketPayload> = JSON.parse(payload);
@@ -78,8 +78,8 @@ module webspeakPackets {
         if (!player) {
             throw new Error("Invalid player ID: " + data.playerID);
         }
-
-        player.audioModifier = data.audioModifier;
+        
+        player.applyAudioModifier(data.audioModifier);
     }
 }
 

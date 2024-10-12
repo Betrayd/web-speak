@@ -4,8 +4,8 @@ import rtcPackets from "./packets/rtcPackets";
 import webSpeakAudio from "./webSpeakAudio";
 
 export interface AudioModifier {
-    silenced?: boolean,
-    spatialized?: boolean
+    silenced: boolean,
+    spatialized: boolean
 }
 
 /**
@@ -131,7 +131,10 @@ export default abstract class WebSpeakPlayer {
         return this.type === "local";
     }
 
-    private _audioModifier: AudioModifier = {};
+    private _audioModifier: AudioModifier = {
+        spatialized: true,
+        silenced: false
+    };
 
     get audioModifier() {
         return this._audioModifier as Readonly<AudioModifier>;
@@ -139,6 +142,20 @@ export default abstract class WebSpeakPlayer {
 
     set audioModifier(modifier: AudioModifier) {
         this._audioModifier = {...modifier};
+        this.onSetAudioModifier(this._audioModifier);
+    }
+
+    /**
+     * Apply an audio modifier on top of the current audio modifier.
+     * @param modifier Partial audio modifier to apply.
+     */
+    public applyAudioModifier(modifier: Partial<AudioModifier>) {
+        if (modifier.spatialized !== undefined) {
+            this._audioModifier.spatialized = modifier.spatialized;
+        }
+        if (modifier.silenced !== undefined) {
+            this._audioModifier.silenced = modifier.silenced;
+        }
         this.onSetAudioModifier(this._audioModifier);
     }
 
@@ -167,6 +184,9 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     private audioStream?: MediaStreamAudioSourceNode;
     readonly panner: PannerNode;
 
+    private readonly pannerGain: GainNode;
+    private readonly directGain: GainNode;
+
     mediaStream?: MediaStream;
     
     /**
@@ -178,6 +198,9 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         super(playerID);
         this.app = app;
         this.panner = new PannerNode(webSpeakAudio.getAudioCtx(), app.pannerOptions);
+        this.pannerGain = new GainNode(webSpeakAudio.getAudioCtx());
+        this.directGain = new GainNode(webSpeakAudio.getAudioCtx());
+        this.directGain.gain.value = 0;
         
         let userMic = webSpeakAudio.userMic;
         if (userMic != undefined && userMic.active) {
@@ -208,11 +231,20 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                 });
                 
                 this.audioStream = audioCtx.createMediaStreamSource(mediaStream);
-                this.audioStream.connect(this.panner);
+
+                // Swap between panner node and direct to toggle spatialization
+                this.audioStream.connect(this.pannerGain);
+                this.pannerGain.connect(this.panner);
+                this.panner.connect(audioCtx.destination);
+
+                this.audioStream.connect(this.directGain);
+                this.directGain.connect(audioCtx.destination);
+
                 this.mediaStream = mediaStream;
                 // Update muted status
                 // this.onSetMuted(this.muted);
                 this.setMuted(this.shouldMute);
+                this.setSpatialized(this.shouldSpatialize);
                 this.panner.connect(audioCtx.destination);
             } else {
                 console.error("IT WAS THE WRONG TYPE OH NOOOOOOOO");
@@ -230,11 +262,16 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     protected onSetAudioModifier(modifier: Readonly<AudioModifier>): void {
         super.onSetAudioModifier(modifier);
         this.setMuted(this.shouldMute);
+        this.setSpatialized(this.shouldSpatialize);
         console.log("Updated audio modifier for player " + this.playerID, modifier);
     }
 
     protected get shouldMute(): boolean {
-        return this.audioModifier.silenced !== undefined && this.audioModifier.silenced;
+        return this.audioModifier.silenced;
+    }
+    
+    protected get shouldSpatialize(): boolean {
+        return this.audioModifier.spatialized;
     }
     
     private setMuted(muted: boolean) {
@@ -242,9 +279,16 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         this.mediaStream.getTracks().forEach(track => {
             track.enabled = !muted;
         })
-        // for (let track of this.mediaStream.getTracks()) {
-        //     track.enabled = !muted;
-        // }
+    }
+
+    private setSpatialized(spatialized: boolean) {
+        if (spatialized) {
+            this.pannerGain.gain.value = 1;
+            this.directGain.gain.value = 0;
+        } else {
+            this.pannerGain.gain.value = 0;
+            this.directGain.gain.value = 1;
+        }
     }
 
     private _pannerOptions: Partial<PannerOptions> = {...webSpeakAudio.defaultPannerOptions};
