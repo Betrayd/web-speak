@@ -32,12 +32,6 @@ public class TestWebPlayer extends WebSpeakPlayer {
         Point2D point = MathUtils.rotatePoint(0, 1, Math.toRadians(player.getRotation() + 180d));
         return new WebSpeakVector(point.getX(), 0, point.getY());
     };
-
-    @Override
-    public boolean isInScope(WebSpeakPlayer player) {
-        double scopeRadius = WebSpeakTestApp.getInstance().getScopeRadius();
-        return this.getLocation().squaredDistanceTo(player.getLocation()) <= scopeRadius * scopeRadius;
-    }
     
     public Player getPlayer() {
         return player;

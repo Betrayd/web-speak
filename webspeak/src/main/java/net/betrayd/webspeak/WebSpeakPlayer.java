@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 
 import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.net.packets.SetAudioModifierS2CPacket;
-import net.betrayd.webspeak.impl.net.packets.UpdateTransformS2CPacket;
 import net.betrayd.webspeak.impl.util.URIComponent;
 import net.betrayd.webspeak.util.AudioModifier;
 import net.betrayd.webspeak.util.WebSpeakVector;
@@ -261,7 +260,8 @@ public abstract class WebSpeakPlayer {
     }
 
     /**
-     * Cache the audio modifiers sent to the player so we don't resend. Make sure to clear on left scope.
+     * Cache of the audio modifiers being used for each player. This way, we don't
+     * have to constantly re-calculate them.
      */
     private final WeakHashMap<WebSpeakPlayer, AudioModifier> audioModifierCache = new WeakHashMap<>();
     
@@ -270,14 +270,21 @@ public abstract class WebSpeakPlayer {
      * @param player Player to calculate.
      */
     protected synchronized void updatePlayerAudioModifiers(WebSpeakPlayer player) {
-        if (!isConnected() || !server.areInScope(this, player))
-            return;
-        
-        AudioModifier modifier = computeAudioModifier(player);
-        if (!modifier.equals(audioModifierCache.get(player))) {
-            new SetAudioModifierS2CPacket(player.playerId, modifier).send(wsContext);
-            audioModifierCache.put(player, modifier);
+        if (isConnected() && server.areInScope(this, player)) {
+            AudioModifier modifier = computeAudioModifier(player);
+            if (!modifier.equals(audioModifierCache.get(player))) {
+                // new SetAudioModifierS2CPacket(player.playerId, modifier).send(wsContext);
+                audioModifierCache.put(player, modifier);
+                sendAudioModifierUpdate(player, modifier);
+            }
+        } else {
+            // Just invalidate the cache if we're not in scope.
+            audioModifierCache.remove(player);
         }
+    }
+
+    private synchronized void sendAudioModifierUpdate(WebSpeakPlayer target, AudioModifier modifier) {
+        new SetAudioModifierS2CPacket(target.playerId, modifier).send(wsContext);
     }
     
     /**
@@ -300,14 +307,26 @@ public abstract class WebSpeakPlayer {
     
     /**
      * Get the audio modifier this player has cached for another player without
-     * recalculating. Will only be valid if players are in scope.
+     * recalculating.
      * 
      * @param player Target player.
-     * @return The audio modifier, or <code>null</code> if the players aren't in
-     *         scope.
+     * @return The audio modifier, or <code>null</code> if the audio modifier hasn't
+     *         been cached.
      */
     public synchronized AudioModifier getCachedAudioModifier(WebSpeakPlayer player) {
         return audioModifierCache.get(player);
+    }
+    
+    /**
+     * Compute the audio modifier this player will use for a target player based on
+     * both players' groups. If the audio modifier has been cached use the cached
+     * version. Otherwise, compute it and save it in the cache.
+     * 
+     * @param player Target player.
+     * @return Combined audio modifier.
+     */
+    public synchronized AudioModifier getAudioModifier(WebSpeakPlayer player) {
+        return audioModifierCache.computeIfAbsent(player, this::computeAudioModifier);
     }
 
     public final WebSpeakChannel getChannel() {
@@ -337,8 +356,7 @@ public abstract class WebSpeakPlayer {
      */
     protected void onJoinedScope(WebSpeakPlayer other) {
         if (wsContext != null) {
-            UpdateTransformS2CPacket.fromPlayer(other).send(wsContext);
-            updatePlayerAudioModifiers(other);
+            sendAudioModifierUpdate(other, getAudioModifier(other));
         }
     }
 
@@ -355,7 +373,7 @@ public abstract class WebSpeakPlayer {
 
     /**
      * Get the global location of this player.
-     * @return Player location vector, using a Z-up coordinate space.
+     * @return Player location vector.
      */
     public abstract WebSpeakVector getLocation();
 
@@ -375,7 +393,20 @@ public abstract class WebSpeakPlayer {
         return new WebSpeakVector(0, 1, 0);
     }
 
-    public abstract boolean isInScope(WebSpeakPlayer other);
+    /**
+     * Check if this player is in scope with another player.
+     * 
+     * @param other Other player.
+     * @return If we're in scope
+     */
+    public boolean isInScope(WebSpeakPlayer other) {
+        if (!this.getAudioModifier(other).isSpatialized() || !other.getAudioModifier(this).isSpatialized()) {
+            return true;
+        }
+
+        float range = server.getPannerOptions().maxDistance;
+        return this.getLocation().squaredDistanceTo(other.getLocation()) <= range * range;
+    }
 
     /**
      * Perform any additional ticking this webspeak player desires.

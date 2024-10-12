@@ -30,6 +30,10 @@ public class WebSpeakTestServer implements Executor {
         thread.start();
     }
     
+    /**
+     * Wait for the server to finish starting.
+     * @return A future that completes once the server has started.
+     */
     public CompletableFuture<WebSpeakServer> awaitStart() {
         return startFuture;
     }

@@ -79,6 +79,17 @@ public class WebSpeakTestApp extends Application {
         return scopeRadiusProperty;
     }
 
+    {
+        scopeRadiusProperty.addListener((prop, oldVal, newVal) -> {
+            WebSpeakTestServer server = this.server.get();
+            if (server == null) return;
+            server.execute(() -> {
+                server.getWebSpeakServer().getPannerOptions().maxDistance = newVal.floatValue();
+                server.getWebSpeakServer().updatePannerOptions();
+            }); 
+        });
+    }
+
     private final ObservableMap<Player, String> connectionIps = FXCollections.observableHashMap();
 
     public ObservableMap<Player, String> getConnectionIps() {
@@ -190,7 +201,7 @@ public class WebSpeakTestApp extends Application {
         try {
             WebSpeakTestServer webServer = new WebSpeakTestServer(port);
             server.set(webServer);
-
+            
             // Add all players to server
             for (var player : players) {
                 addPlayerToServer(webServer, player);
@@ -205,6 +216,7 @@ public class WebSpeakTestApp extends Application {
             }, Platform::runLater);
             
             future.thenAccept(server -> {
+                server.getPannerOptions().maxDistance = scopeRadiusProperty.get();
                 server.onSessionConnected(player -> {
                     if (player instanceof TestWebPlayer testPlayer) {
                         String connectionIp = testPlayer.getWsContext().session.getRemoteAddress().toString();
