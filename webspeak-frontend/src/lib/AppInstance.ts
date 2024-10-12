@@ -91,7 +91,7 @@ export default class AppInstance {
     /**
      * Attempt to find a player by its ID.
      * @param playerID Player ID to search for.
-     * @param useDummy Make a dummy player if the real player doesn't exist.
+     * @param useDummy Make a dummy player if the real player doesn't exist. Default: `true`
      * @returns Either the real player, a dummy, or `undefined`
      */
     getPlayer(playerID: string, useDummy: boolean = true): WebSpeakPlayer | undefined {

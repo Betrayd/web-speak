@@ -13,6 +13,7 @@ import net.betrayd.webspeak.util.PannerOptions;
  * @apiNote All values are optional. If unset, client will use whatever value it
  *          had before.
  */
+@Deprecated
 public record SetAudioParamsS2CPacket(String playerID, Boolean spatialize, Boolean mute, Boolean overridePanner,
         PannerOptions.Partial pannerOptions) {
 

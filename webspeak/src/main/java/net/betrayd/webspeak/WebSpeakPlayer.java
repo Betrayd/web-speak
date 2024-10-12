@@ -275,7 +275,7 @@ public abstract class WebSpeakPlayer {
         
         AudioModifier modifier = computeAudioModifier(player);
         if (!modifier.equals(audioModifierCache.get(player))) {
-            new SetAudioModifierS2CPacket(playerId, modifier).send(wsContext);
+            new SetAudioModifierS2CPacket(player.playerId, modifier).send(wsContext);
             audioModifierCache.put(player, modifier);
         }
     }

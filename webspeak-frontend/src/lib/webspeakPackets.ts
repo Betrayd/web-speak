@@ -1,6 +1,6 @@
 import AppInstance, { PlayerTransform } from "./AppInstance";
+import { AudioModifier } from "./WebSpeakPlayer";
 import rtcPackets from "./packets/rtcPackets";
-import setAudioParamsS2CPacket from "./packets/setAudioParamsS2CPacket";
 
 module webspeakPackets {
     export function setupPacketListeners(app: AppInstance) {
@@ -22,7 +22,7 @@ module webspeakPackets {
         registerHandler('localPlayerInfo', onLocalPlayerInfo);
         registerHandler('updateTransform', onUpdateTransform);
         registerHandler('setPannerOptions', onSetPannerOptions);
-        registerHandler('setAudioParams', setAudioParamsS2CPacket.handle);
+        registerHandler('setAudioModifier', onSetAudioModifier)
 
         rtcPackets.registerHandlers(app);
         
@@ -53,27 +53,6 @@ module webspeakPackets {
 
         app.updatePlayerTransform(data.playerID, data);
 
-        // console.debug("Recieved update transform from " + data.playerID, data.pos)
-        // let player = app.getPlayer(data.playerID);
-        // if (player) {
-        //     if (data.pos) {
-        //         player.setPos(data.pos);
-        //     }
-            
-        //     if (data.forward) {
-        //         player.setForward(data.forward);
-        //     }
-
-        //     if (data.up) {
-        //         player.setUp(data.up)
-        //     }
-        //     // if (data.rot != null) {
-        //     //     player.setRot(data.rot);
-        //     // }
-        //     player.updateTransform();
-        // } else {
-        //     console.warn("Recieved transform for unknown player: ", data.playerID)
-        // }
     }
 
     function onSetPannerOptions(app: AppInstance, payload: string) {
@@ -81,28 +60,26 @@ module webspeakPackets {
         app.setPannerOptions(options);
     }
 
-    export function sendReturnIce(app: AppInstance, playerID: string, candidate: RTCIceCandidate) {
-        let packet = {
-            playerID,
-            payload: candidate
-        };
-        app.netManager.sendPacket('returnIce', JSON.stringify(packet));
-    }
-
-    export function sendReturnOffer(app: AppInstance, playerID: string, offer: RTCSessionDescriptionInit) {
-        let packet = {
-            playerID,
-            payload: offer
+    function onSetAudioModifier(app: AppInstance, payload: string) {
+        interface PacketPayload {
+            playerID: string,
+            audioModifier: AudioModifier
         }
-        app.netManager.sendPacket('returnOffer', JSON.stringify(packet));
-    }
 
-    export function sendReturnAnswer(app: AppInstance, playerID: string, answer: RTCSessionDescriptionInit) {
-        let packet = {
-            playerID,
-            payload: answer
+        const data: Partial<PacketPayload> = JSON.parse(payload);
+        if (data.playerID == undefined) {
+            throw new Error("Player ID was not sent.");
         }
-        app.netManager.sendPacket('returnAnswer', JSON.stringify(packet));
+        if (data.audioModifier == undefined) {
+            throw new Error("Audio modifier was not sent.");
+        }
+
+        const player = app.getPlayer(data.playerID, true);
+        if (!player) {
+            throw new Error("Invalid player ID: " + data.playerID);
+        }
+
+        player.audioModifier = data.audioModifier;
     }
 }
 
