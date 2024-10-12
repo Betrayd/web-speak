@@ -11,16 +11,16 @@ package net.betrayd.webspeak.util;
  * lower-priority modifier or the default value.
  * </p>
  * 
- * @param muted       If set, server will tell the subject client to mute the
+ * @param silenced    If set, server will tell the subject client to mute the
  *                    target player. This will override any mute/unmute flag on
  *                    the client, and will not be displayed in the UI.
  *                    <b>default: false</b>
  * @param spatialized Whether to spatialize the target player's audio.
  *                    <b>default: true</code>
  */
-public record AudioModifier(Boolean muted, Boolean spatialized) {
+public record AudioModifier(Boolean silenced, Boolean spatialized) {
     public boolean isMuted() {
-        return muted != null ? muted : false;
+        return silenced != null ? silenced : false;
     }
 
     public boolean isSpatialized() {
@@ -41,7 +41,7 @@ public record AudioModifier(Boolean muted, Boolean spatialized) {
             b = DEFAULT;
 
         return new AudioModifier(
-                a.muted != null ? a.muted : b.muted,
+                a.silenced != null ? a.silenced : b.silenced,
                 a.spatialized != null ? a.spatialized : b.spatialized);
     }
 

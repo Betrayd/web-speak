@@ -4,7 +4,7 @@ import rtcPackets from "./packets/rtcPackets";
 import webSpeakAudio from "./webSpeakAudio";
 
 export interface AudioModifier {
-    muted?: boolean,
+    silenced?: boolean,
     spatialized?: boolean
 }
 
@@ -234,7 +234,7 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     }
 
     protected get shouldMute(): boolean {
-        return this.audioModifier.muted !== undefined && this.audioModifier.muted;
+        return this.audioModifier.silenced !== undefined && this.audioModifier.silenced;
     }
     
     private setMuted(muted: boolean) {
