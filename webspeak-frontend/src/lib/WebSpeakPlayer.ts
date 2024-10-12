@@ -168,11 +168,6 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     readonly panner: PannerNode;
 
     mediaStream?: MediaStream;
-
-    protected onSetAudioModifier(modifier: Readonly<AudioModifier>): void {
-        super.onSetAudioModifier(modifier);
-        console.log("Updated audio modifier for player " + this.playerID, modifier);
-    }
     
     /**
      * Construct a webspeak player and a panner for it. Panner options will be supplied bu the app.
@@ -214,9 +209,10 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                 
                 this.audioStream = audioCtx.createMediaStreamSource(mediaStream);
                 this.audioStream.connect(this.panner);
+                this.mediaStream = mediaStream;
                 // Update muted status
                 // this.onSetMuted(this.muted);
-  
+                this.setMuted(this.shouldMute);
                 this.panner.connect(audioCtx.destination);
             } else {
                 console.error("IT WAS THE WRONG TYPE OH NOOOOOOOO");
@@ -229,6 +225,26 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                 rtcPackets.sendReturnIce(app, playerID, event.candidate);
             }
         }
+    }
+
+    protected onSetAudioModifier(modifier: Readonly<AudioModifier>): void {
+        super.onSetAudioModifier(modifier);
+        this.setMuted(this.shouldMute);
+        console.log("Updated audio modifier for player " + this.playerID, modifier);
+    }
+
+    protected get shouldMute(): boolean {
+        return this.audioModifier.muted !== undefined && this.audioModifier.muted;
+    }
+    
+    private setMuted(muted: boolean) {
+        if (!this.mediaStream) return;
+        this.mediaStream.getTracks().forEach(track => {
+            track.enabled = !muted;
+        })
+        // for (let track of this.mediaStream.getTracks()) {
+        //     track.enabled = !muted;
+        // }
     }
 
     private _pannerOptions: Partial<PannerOptions> = {...webSpeakAudio.defaultPannerOptions};
