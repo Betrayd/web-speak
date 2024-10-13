@@ -12,4 +12,6 @@ plugins {
 
 rootProject.name = 'web-speak'
 include('webspeak')
-include('testapp')
+
+if (!System.env.JITPACK)
+    include ':testapp'

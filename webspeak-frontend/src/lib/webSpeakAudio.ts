@@ -7,6 +7,17 @@ module webSpeakAudio {
 
     export let audioCtx: AudioContext | undefined
 
+    /**
+     * A null-safe getter for `audioCtx`
+     * @returns Audio context.
+     */
+    export function getAudioCtx() {
+        if (!audioCtx) {
+            throw new Error("Audio Context is undefined");
+        }
+        return audioCtx;
+    }
+
     export async function requestMicAccess(): Promise<MediaStream> {
         if (audioCtx == undefined) {
             audioCtx = new AudioContext();

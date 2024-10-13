@@ -30,6 +30,10 @@ public class WebSpeakTestServer implements Executor {
         thread.start();
     }
     
+    /**
+     * Wait for the server to finish starting.
+     * @return A future that completes once the server has started.
+     */
     public CompletableFuture<WebSpeakServer> awaitStart() {
         return startFuture;
     }
@@ -43,6 +47,10 @@ public class WebSpeakTestServer implements Executor {
         return webSpeakServer;
     }
 
+    public boolean hasStarted() {
+        return webSpeakServer != null && webSpeakServer.isRunning();
+    }
+
     public boolean isOnThread() {
         return Thread.currentThread().equals(thread);
     }
@@ -54,7 +62,10 @@ public class WebSpeakTestServer implements Executor {
 
     protected void runThread() {
         webSpeakServer = new WebSpeakServer();
-        webSpeakServer.setFlag(WebSpeakFlags.DEBUG_RTC_OFFERS, true);
+        webSpeakServer.setFlag(WebSpeakFlags.DEBUG_CONNECTION_REQUESTS, true);
+        webSpeakServer.setFlag(WebSpeakFlags.DEBUG_KEEPALIVE, true);
+        webSpeakServer.setFlag(WebSpeakFlags.DEBUG_CHANNEL_SWAPS, true);
+        webSpeakServer.getPannerOptions().maxDistance = 5;
         webSpeakServer.start(port);
         startFuture.complete(webSpeakServer);
         while (!shutdownQueued) {
@@ -67,11 +78,15 @@ public class WebSpeakTestServer implements Executor {
             try {
                 Thread.sleep(30);
             } catch (InterruptedException e) {
-                LOGGER.info("WebSpeak Server was inturrupted during sleep.");
+                LOGGER.warn("WebSpeak Server was inturrupted during sleep.");
             }
         }
 
-        webSpeakServer.stop();
+        try {
+            webSpeakServer.stop();
+        } catch (Exception e) {
+            LOGGER.error("Exception stopping WebSpeak server: ", e);
+        }
         shutdownFuture.complete(null);
     }
 

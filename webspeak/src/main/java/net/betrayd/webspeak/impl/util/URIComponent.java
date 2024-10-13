@@ -1,4 +1,4 @@
-package net.betrayd.webspeaktest.ui.util;
+package net.betrayd.webspeak.impl.util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;

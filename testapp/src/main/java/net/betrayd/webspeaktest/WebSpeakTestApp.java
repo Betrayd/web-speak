@@ -1,7 +1,9 @@
 package net.betrayd.webspeaktest;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -11,16 +13,22 @@ import org.slf4j.LoggerFactory;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.FloatProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import net.betrayd.webspeak.WebSpeakChannel;
+import net.betrayd.webspeak.WebSpeakGroup;
+import net.betrayd.webspeak.util.AudioModifier;
 import net.betrayd.webspeaktest.ui.MainUIController;
 
 public class WebSpeakTestApp extends Application {
@@ -57,11 +65,37 @@ public class WebSpeakTestApp extends Application {
         return graphScaleProperty;
     }
 
+    private final FloatProperty scopeRadiusProperty = new SimpleFloatProperty(26);
+
+    public float getScopeRadius() {
+        return scopeRadiusProperty.get();
+    }
+
+    public void setScopeRadius(float scopeRadius) {
+        scopeRadiusProperty.set(scopeRadius);
+    }
+
+    public FloatProperty scopeRadiusProperty() {
+        return scopeRadiusProperty;
+    }
+
+    {
+        scopeRadiusProperty.addListener((prop, oldVal, newVal) -> {
+            WebSpeakTestServer server = this.server.get();
+            if (server == null) return;
+            server.execute(() -> {
+                server.getWebSpeakServer().getPannerOptions().maxDistance = newVal.floatValue();
+                server.getWebSpeakServer().updatePannerOptions();
+            }); 
+        });
+    }
+
     private final ObservableMap<Player, String> connectionIps = FXCollections.observableHashMap();
 
     public ObservableMap<Player, String> getConnectionIps() {
         return connectionIps;
     }
+
 
     private MainUIController mainUIController;
 
@@ -104,9 +138,46 @@ public class WebSpeakTestApp extends Application {
         }
     }
 
+    private final ObservableList<WebSpeakChannel> channels = FXCollections.observableArrayList();
+
+    public ObservableList<WebSpeakChannel> getChannels() {
+        return channels;
+    }
+    
+
+    private final List<WebSpeakGroup> globalGroups = new ArrayList<>();
+    
+    /**
+     * Get a list of groups that will appear in the players' info panels. Shouldn't
+     * be modified after app starts.
+     */
+    public List<WebSpeakGroup> getGlobalGroups() {
+        return globalGroups;
+    }
+
+    private void setupGroups() {
+        var survival = new WebSpeakGroup("Survival Mode");
+        var spectator = new WebSpeakGroup("Spectator");
+        var admins = new WebSpeakGroup("Admins");
+
+        survival.setAudioModifier(spectator, new AudioModifier(true, null));
+        spectator.setAudioModifier(spectator, new AudioModifier(null, false));
+        admins.setAudioModifier(spectator, new AudioModifier(false, null));
+
+        globalGroups.add(survival);
+        globalGroups.add(spectator);
+        globalGroups.add(admins);
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         instance = this;
+        
+        channels.add(WebSpeakChannel.DEFAULT_CHANNEL);
+        channels.add(new WebSpeakChannel("Channel 1"));
+        channels.add(new WebSpeakChannel("Channel 2"));
+
+        setupGroups();
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/ui/mainUI.fxml"));
         Parent root = loader.load();
@@ -130,13 +201,22 @@ public class WebSpeakTestApp extends Application {
         try {
             WebSpeakTestServer webServer = new WebSpeakTestServer(port);
             server.set(webServer);
-
+            
             // Add all players to server
             for (var player : players) {
                 addPlayerToServer(webServer, player);
             }
             
-            webServer.awaitStart().thenAccept(server -> {
+            var future = webServer.awaitStart();
+
+            future.thenAcceptAsync(server -> {
+                for (var channel : getChannels()) {
+                    server.addChannel(channel);
+                }
+            }, Platform::runLater);
+            
+            future.thenAccept(server -> {
+                server.getPannerOptions().maxDistance = scopeRadiusProperty.get();
                 server.onSessionConnected(player -> {
                     if (player instanceof TestWebPlayer testPlayer) {
                         String connectionIp = testPlayer.getWsContext().session.getRemoteAddress().toString();
@@ -149,8 +229,7 @@ public class WebSpeakTestApp extends Application {
                     }
                 }));
             });
-
-
+            
             return true;
         } catch (Exception e) {
             LOGGER.error("Exception starting server: ", e);
@@ -160,7 +239,7 @@ public class WebSpeakTestApp extends Application {
 
     private void addPlayerToServer(WebSpeakTestServer server, Player player) {
         CompletableFuture.supplyAsync(() -> server.getWebSpeakServer()
-                .addPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session)), server)
+                .createPlayer((s, id, session) -> new TestWebPlayer(s, player, id, session)), server)
                 .thenAcceptAsync(p -> player.setWebPlayer(p), Platform::runLater);
     }
 

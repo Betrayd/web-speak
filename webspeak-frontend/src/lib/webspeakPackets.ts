@@ -1,4 +1,6 @@
-import AppInstance from "./AppInstance";
+import AppInstance, { PlayerTransform } from "./AppInstance";
+import { AudioModifier } from "./WebSpeakPlayer";
+import rtcPackets from "./packets/rtcPackets";
 
 module webspeakPackets {
     export function setupPacketListeners(app: AppInstance) {
@@ -7,24 +9,28 @@ module webspeakPackets {
             app.netManager.packetHandlers.set(name, payload => handler(app, payload));
         }
 
-        function registerRTCPacketHandler(name: string, handler: (app: AppInstance, playerID: string, payload: any) => void) {
-            app.netManager.packetHandlers.set(name, payload => {
-                let data: { playerID?: string, payload: any } = JSON.parse(payload);
-                if (data.playerID == undefined) {
-                    throw new Error("Player ID was not sent.");
-                }
-                handler(app, data.playerID, data.payload);
-            })
-        }
+        // function registerRTCPacketHandler(name: string, handler: (app: AppInstance, playerID: string, payload: any) => void) {
+        //     app.netManager.packetHandlers.set(name, payload => {
+        //         let data: { playerID?: string, payload: any } = JSON.parse(payload);
+        //         if (data.playerID == undefined) {
+        //             throw new Error("Player ID was not sent.");
+        //         }
+        //         handler(app, data.playerID, data.payload);
+        //     })
+        // }
 
         registerHandler('localPlayerInfo', onLocalPlayerInfo);
         registerHandler('updateTransform', onUpdateTransform);
+        registerHandler('setPannerOptions', onSetPannerOptions);
+        registerHandler('setAudioModifier', onSetAudioModifier)
+
+        rtcPackets.registerHandlers(app);
         
-        registerRTCPacketHandler('handIce', onHandIce);
-        registerHandler('requestOffer', onRequestOffer);
-        registerRTCPacketHandler('handOffer', onHandOffer);
-        registerRTCPacketHandler('handAnswer', onHandAnswer);
-        registerHandler('disconnectRTC', onDisconnectRTC);
+        // registerRTCPacketHandler('handIce', onHandIce);
+        // registerHandler('requestOffer', onRequestOffer);
+        // registerRTCPacketHandler('handOffer', onHandOffer);
+        // registerRTCPacketHandler('handAnswer', onHandAnswer);
+        // registerHandler('disconnectRTC', onDisconnectRTC);
     }
 
     function onLocalPlayerInfo(app: AppInstance, payload: string) {
@@ -35,91 +41,45 @@ module webspeakPackets {
     }
 
     function onUpdateTransform(app: AppInstance, payload: string) {
-        interface PositionData {
+        interface TransformData extends PlayerTransform {
+            playerID: string
+        }
+
+        const data: Partial<TransformData> = JSON.parse(payload);
+
+        if (data.playerID == undefined) {
+            throw new Error("Player ID was not sent.");
+        }
+
+        app.updatePlayerTransform(data.playerID, data);
+
+    }
+
+    function onSetPannerOptions(app: AppInstance, payload: string) {
+        let options: PannerOptions = JSON.parse(payload);
+        app.setPannerOptions(options);
+    }
+
+    function onSetAudioModifier(app: AppInstance, payload: string) {
+        interface PacketPayload {
             playerID: string,
-            pos: number[],
-            rot: number[]
+            audioModifier: Partial<AudioModifier>
         }
 
-        const data: Partial<PositionData> = JSON.parse(payload);
-
+        const data: Partial<PacketPayload> = JSON.parse(payload);
         if (data.playerID == undefined) {
             throw new Error("Player ID was not sent.");
         }
-
-        let player = app.getPlayer(data.playerID);
-        if (player) {
-            if (data.pos != null) {
-                player.setPos(data.pos);
-            }
-            if (data.rot != null) {
-                player.setRot(data.rot);
-            }
-            player.updateTransform();
-        }
-    }
-
-    async function onRequestOffer(app: AppInstance, payload: string) {
-        const data: { playerID?: string } = JSON.parse(payload);
-        if (data.playerID == undefined) {
-            throw new Error("Player ID was not sent.");
+        if (data.audioModifier == undefined) {
+            throw new Error("Audio modifier was not sent.");
         }
 
-        let offer = await app.requestRTCOffer(data.playerID);
-        sendReturnOffer(app, data.playerID, offer);
-    }
-
-    async function onHandOffer(app: AppInstance, playerID: string, payload: any) {
-        let answer = await app.handleRTCOffer(playerID, payload);
-        sendReturnAnswer(app, playerID, answer);
-    }
-
-    function onHandAnswer(app: AppInstance, playerID: string, payload: any) {
-        app.handleRTCAnswer(playerID, payload);
-    }
-
-    function onHandIce(app: AppInstance, playerID: string, payload: any) {
-        let player = app.getPlayer(playerID);
+        const player = app.getPlayer(data.playerID, true);
         if (!player) {
-            throw new Error("Unknown player ID: " + playerID);
+            throw new Error("Invalid player ID: " + data.playerID);
         }
-
-        if (player.isRemote()) {
-            player.addIceCandidate(payload);
-        }
-    }
-
-    function onDisconnectRTC(app: AppInstance, payload: string) {
-        let data: { playerID?: string } = JSON.parse(payload);
-        if (data.playerID == undefined) {
-            throw new Error("Player ID was not sent.");
-        }
-
-        app.disconnectPlayerRTC(data.playerID);
-    }
-
-    export function sendReturnIce(app: AppInstance, playerID: string, candidate: RTCIceCandidate) {
-        let packet = {
-            playerID,
-            payload: candidate
-        };
-        app.netManager.sendPacket('returnIce', JSON.stringify(packet));
-    }
-
-    export function sendReturnOffer(app: AppInstance, playerID: string, offer: RTCSessionDescriptionInit) {
-        let packet = {
-            playerID,
-            payload: offer
-        }
-        app.netManager.sendPacket('returnOffer', JSON.stringify(packet));
-    }
-
-    export function sendReturnAnswer(app: AppInstance, playerID: string, answer: RTCSessionDescriptionInit) {
-        let packet = {
-            playerID,
-            payload: answer
-        }
-        app.netManager.sendPacket('returnAnswer', JSON.stringify(packet));
+        
+        player.applyAudioModifier(data.audioModifier);
     }
 }
 
