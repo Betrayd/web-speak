@@ -5,7 +5,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
@@ -58,8 +60,13 @@ public class WebSpeakServer implements Executor {
     /**
      * All the players that are relevent to the game
      */
-    // private final Set<WebSpeakPlayer> players = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<String, WebSpeakPlayer> players = new ConcurrentHashMap<>();
+
+    // If the channel is not being referenced by any players or held externally, no need to keep it around.
+    private final Set<WebSpeakChannel> channels = Collections
+            .synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
+    
+    private final WebSpeakChannel defaultChannel;
 
     // private final RelationGraph<WebSpeakPlayer> rtcConnections = new RelationGraph<>();
     private final RTCManager rtcManager = new RTCManager(this);
@@ -127,8 +134,16 @@ public class WebSpeakServer implements Executor {
         return app;
     }
 
+    public boolean isRunning() {
+        return app != null;
+    }
+
     public int getPort() {
         return app != null ? app.port() : -1;
+    }
+
+    public WebSpeakServer() {
+        defaultChannel = createChannel("default");
     }
 
     /**
@@ -140,7 +155,7 @@ public class WebSpeakServer implements Executor {
         if (app != null) {
             throw new IllegalStateException("Server is already started.");
         }
-        app = Javalin.create(config -> {
+        var app = Javalin.create(config -> {
             config.showJavalinBanner = false;
             CONFIGURE_JAVALIN.invoker().accept(config);
         })
@@ -149,6 +164,9 @@ public class WebSpeakServer implements Executor {
 
         CONFIGURE_ENDPOINTS.invoker().accept(app);
         app.start(port);
+        // Assign app at the end for thread safety; if something tries to access the app
+        // before it's done initializing, it will return null.
+        this.app = app;
     }
 
     /**
@@ -196,7 +214,13 @@ public class WebSpeakServer implements Executor {
     }
 
     private void tickScopes() {
-        List<WebSpeakPlayer> connectedPlayers = getPlayers().stream().filter(p -> p.isConnected()).toList();
+        for (var channel : channels) {
+            tickChannelScope(channel);
+        }
+    }
+
+    private void tickChannelScope(WebSpeakChannel channel) {
+        List<WebSpeakPlayer> connectedPlayers = channel.getPlayers().stream().filter(p -> p.isConnected()).toList();
 
         for (var pair : WebSpeakUtils.compareAll(connectedPlayers)) {
             if (pair.a().equals(pair.b())) {
@@ -210,8 +234,8 @@ public class WebSpeakServer implements Executor {
                 scopes.add(pair.a(), pair.b());
                 joinScope(pair.a(), pair.b());
             } else if (wasInScope && !isInScope) {
-                leaveScope(pair.a(), pair.b());
                 scopes.remove(pair.a(), pair.b());
+                leaveScope(pair.a(), pair.b());
             }
         }
     }
@@ -236,6 +260,7 @@ public class WebSpeakServer implements Executor {
         ON_JOIN_SCOPE.invoker().accept(a, b);
     }
 
+    // Left package-private so channel can clear scopes when player removed.
     private void leaveScope(WebSpeakPlayer a, WebSpeakPlayer b) {
         rtcManager.disconnectRTC(a, b);
         a.onLeftScope(b);
@@ -325,8 +350,34 @@ public class WebSpeakServer implements Executor {
     }
 
     /**
+     * Get an unmodifiable collection of all the channels in the server.
+     * @return Unmodifiable view of channels.
+     */
+    public Set<WebSpeakChannel> getChannels() {
+        return Collections.unmodifiableSet(channels);
+    }
+
+    /**
+     * Create a WebSpeak channel.
+     * @param name Channel name. Mainly for debugging purposes.
+     * @return The channel.
+     */
+    public WebSpeakChannel createChannel(String name) {
+        WebSpeakChannel channel = new WebSpeakChannel(name);
+        channels.add(channel);
+        return channel;
+    }
+
+    public synchronized boolean addChannel(WebSpeakChannel channel) {
+        return channels.add(channel);
+    }
+
+    public WebSpeakChannel getDefaultChannel() {
+        return defaultChannel;
+    }
+
+    /**
      * Get an unmodifiable collection of all the players in the server.
-     * 
      * @return All webspeak players
      */
     public Collection<WebSpeakPlayer> getPlayers() {
@@ -424,7 +475,9 @@ public class WebSpeakServer implements Executor {
         } else {
             old = players.put(player.getPlayerId(), player);
         }
-
+        if (player.getChannel() == null) {
+            player.setChannel(defaultChannel);
+        }
         if (old != null) {
             onRemovePlayer(player);
         }
@@ -494,15 +547,20 @@ public class WebSpeakServer implements Executor {
     }
 
     protected void onRemovePlayer(WebSpeakPlayer player) {
-        WsContext ws = wsSessions.remove(player);
-        kickScopes(player);
-        if (ws != null) {
-            ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
-            ON_SESSION_DISCONNECTED.invoker().accept(player);
+        try {
+            WsContext ws = wsSessions.remove(player);
+            player.setChannel(null); // will automatically kick scopes
+            if (ws != null) {
+                ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
+                ON_SESSION_DISCONNECTED.invoker().accept(player);
+            }
+            // rtcManager.kickRTC(player);
+            player.wsContext = null;
+            player.onRemoved();
+            ON_PLAYER_REMOVED.invoker().accept(player);
+        } catch (Exception e) {
+            LOGGER.error("Error removing player " + player.getPlayerId(), e);
         }
-        // rtcManager.kickRTC(player);
-        player.wsContext = null;
-        ON_PLAYER_REMOVED.invoker().accept(player);
     }
     
     private WebSpeakPlayer playerFromSessionId(String sessionId) {

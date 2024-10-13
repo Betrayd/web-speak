@@ -11,6 +11,7 @@ import javafx.beans.property.StringProperty;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
+import net.betrayd.webspeak.WebSpeakChannel;
 import net.betrayd.webspeak.util.WebSpeakVector;
 import net.betrayd.webspeaktest.ui.PlayerAvatarController;
 
@@ -94,12 +95,36 @@ public class Player {
         webPlayerProperty.set(webPlayer);
     }
 
-    public TestWebPlayer getWebplayer() {
-        return webPlayerProperty.get();
-    }
-
     public ReadOnlyObjectProperty<TestWebPlayer> webPlayerProperty() {
         return webPlayerProperty;
+    }
+
+    private final SimpleObjectProperty<WebSpeakChannel> channelProperty = new SimpleObjectProperty<>(WebSpeakChannel.DEFAULT_CHANNEL);
+
+    public WebSpeakChannel getChannel() {
+        return channelProperty.get();
+    }
+
+    public void setChannel(WebSpeakChannel channel) {
+        channelProperty.set(channel);
+    }
+
+    public SimpleObjectProperty<WebSpeakChannel> channelProperty() {
+        return channelProperty;
+    }
+
+    {
+        channelProperty.addListener((prop, oldVal, newVal) -> {
+            var webPlayer = getWebPlayer();
+            if (webPlayer != null) {
+                webPlayer.setChannel(newVal);
+            }
+        });
+        webPlayerProperty.addListener((prop, oldVal, newVal) -> {
+            if (newVal != null) {
+                newVal.setChannel(getChannel());
+            }
+        });
     }
 
     public WebSpeakVector getLocation() {

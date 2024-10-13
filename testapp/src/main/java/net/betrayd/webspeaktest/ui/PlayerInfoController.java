@@ -1,29 +1,29 @@
 package net.betrayd.webspeaktest.ui;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Border;
-import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.BorderStrokeStyle;
-import javafx.scene.layout.BorderWidths;
-import javafx.scene.layout.CornerRadii;
+
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+import javafx.util.StringConverter;
+import net.betrayd.webspeak.WebSpeakChannel;
 import net.betrayd.webspeak.util.WebSpeakEvents;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 import net.betrayd.webspeaktest.Player;
@@ -77,6 +77,12 @@ public class PlayerInfoController {
     @FXML
     private Label connectionText;
 
+    @FXML
+    private ChoiceBox<WebSpeakChannel> channelSelector;
+
+    @FXML
+    private GroupListController groupListController;
+
     private BooleanProperty selectedProperty = new SimpleBooleanProperty(false);
 
     public boolean isSelected() {
@@ -90,6 +96,8 @@ public class PlayerInfoController {
     public BooleanProperty selectedProperty() {
         return selectedProperty;
     }
+
+    private static final PseudoClass SELECTED = PseudoClass.getPseudoClass("selected");
 
     @FXML
     protected void initialize() {
@@ -108,19 +116,57 @@ public class PlayerInfoController {
                 connectionText.setTextFill(Color.GREEN);
             }
         });
-
+        
         selectedProperty.addListener((prop, oldVal, newVal) -> {
-            if (newVal) {
-                // I know I *should* be using CSS but I don't care
-                titledPane.setBorder(new Border(new BorderStroke(Color.LIGHTBLUE, BorderStrokeStyle.SOLID,
-                        CornerRadii.EMPTY, new BorderWidths(2))));
-                titledPane.setExpanded(true);
-            } else {
-                titledPane.setBorder(Border.EMPTY);
-            }
+            gridPane.pseudoClassStateChanged(SELECTED, newVal);
         });
 
         titleBox.prefWidthProperty().bind(titledPane.widthProperty().subtract(60));
+
+        channelSelector.setConverter(new StringConverter<WebSpeakChannel>() {
+
+            @Override
+            public String toString(WebSpeakChannel object) {
+                return object != null ? object.getName() : "null";
+            }
+
+            @Override
+            public WebSpeakChannel fromString(String string) {
+                throw new UnsupportedOperationException("Unimplemented method 'fromString'");
+            }
+            
+        });
+        
+        channelSelector.getSelectionModel().selectedItemProperty().addListener((prop, oldVal, newVal) -> {
+            if (!isChannelUpdating && getPlayer() != null) {
+                isChannelUpdating = true;
+                player.setChannel(newVal);
+                isChannelUpdating = false;
+            }
+        });
+        
+        var channelList = WebSpeakTestApp.getInstance().getChannels();
+        setupChannelList(channelList);
+        channelList.addListener(new ListChangeListener<>() {
+
+            @Override
+            public void onChanged(Change<? extends WebSpeakChannel> c) {
+                setupChannelList(c.getList());
+            }
+            
+        });
+        
+    }
+    
+    private boolean isChannelUpdating = false;
+    
+    private void setupChannelList(List<? extends WebSpeakChannel> channels) {
+        var selected = channelSelector.getSelectionModel().getSelectedItem();
+        channelSelector.getItems().clear();
+        for (var channel : channels) {
+            channelSelector.getItems().add(channel);
+        }
+        channelSelector.getSelectionModel().select(selected);
     }
 
     private StringProperty connectionProperty = new SimpleStringProperty();
@@ -154,13 +200,12 @@ public class PlayerInfoController {
             }
         });
 
-        player.getNode().addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
-            if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2) {
-                titledPane.requestFocus();
-                e.consume();
-            }
+        channelSelector.getSelectionModel().select(player.getChannel());
+        channelSelector.getSelectionModel().selectedItemProperty().addListener((prop, oldVal, newVal) -> {
+            player.setChannel(newVal);
         });
 
+        groupListController.initPlayer(player);
         WebSpeakTestApp.getInstance().getConnectionIps().addListener(mapChangeListener);
     }
 
@@ -189,4 +234,5 @@ public class PlayerInfoController {
     private void removePlayer() {
         ON_REQUEST_REMOVE.invoker().accept(null);
     }
+    
 }
