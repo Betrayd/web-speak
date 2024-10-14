@@ -56,6 +56,37 @@ public abstract class WebSpeakPlayer {
         return server;
     }
 
+    private AudioModifier defaultAudioModifier = AudioModifier.DEFAULT;
+
+    /**
+     * Get the audio modifier that other players will use on this player when
+     * there's no additional modifiers.
+     * 
+     * @return Default audio modifier.
+     */
+    public AudioModifier getDefaultAudioModifier() {
+        return defaultAudioModifier;
+    }
+
+    /**
+     * Set the audio modifier that other players will use on this player when
+     * there's no additional modifiers.
+     * 
+     * @param defaultAudioModifier Default audio modifier.
+     */
+    public void setDefaultAudioModifier(AudioModifier defaultAudioModifier) {
+        if (defaultAudioModifier == null) {
+            defaultAudioModifier = AudioModifier.DEFAULT;
+        }
+        if (this.defaultAudioModifier.equals(defaultAudioModifier)) {
+            return;
+        }
+        this.defaultAudioModifier = defaultAudioModifier;
+        for (var player : server.getPlayersInScope(this)) {
+            player.invalidateAudioModifier(this);
+        }
+    }
+
     private WebSpeakChannel channel = null;
 
     private final List<WebSpeakGroup> groups = new ArrayList<>();

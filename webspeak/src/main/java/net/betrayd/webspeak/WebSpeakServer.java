@@ -286,6 +286,18 @@ public class WebSpeakServer implements Executor {
     public final boolean areInScope(WebSpeakPlayer a, WebSpeakPlayer b) {
         return (a == b) || scopes.containsRelation(a, b);
     }
+    
+    /**
+     * Get a collection of all the players that are in scope with a given player.
+     * 
+     * @param player Player to check.
+     * @return All players in scope.
+     * @apiNote Players can only be considered for scope when they have a web client
+     *          connected.
+     */
+    public final Collection<WebSpeakPlayer> getPlayersInScope(WebSpeakPlayer player) {
+        return scopes.getRelations(player);
+    }
 
     private void setupWebsocket(WsConfig ws) {
         ws.onConnect(ctx -> {
