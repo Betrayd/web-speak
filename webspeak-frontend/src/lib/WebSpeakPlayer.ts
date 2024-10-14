@@ -203,7 +203,7 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         this.directGain.gain.value = 0;
         
         let userMic = webSpeakAudio.userMic;
-        if (userMic != undefined && userMic.active) {
+        if (userMic?.active) {
             for (let track of userMic.getTracks()) {
                 this.connection.addTrack(track, userMic);
             }
@@ -243,8 +243,8 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                 this.mediaStream = mediaStream;
                 // Update muted status
                 // this.onSetMuted(this.muted);
-                this.setMuted(this.shouldMute);
-                this.setSpatialized(this.shouldSpatialize);
+                this.setMuted(this.shouldMute());
+                this.setSpatialized(this.shouldSpatialize());
                 this.panner.connect(audioCtx.destination);
             } else {
                 console.error("IT WAS THE WRONG TYPE OH NOOOOOOOO");
@@ -261,18 +261,33 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
     protected onSetAudioModifier(modifier: Readonly<AudioModifier>): void {
         super.onSetAudioModifier(modifier);
-        this.setMuted(this.shouldMute);
-        this.setSpatialized(this.shouldSpatialize);
+        this.setMuted(this.shouldMute());
+        this.setSpatialized(this.shouldSpatialize());
         console.log("Updated audio modifier for player " + this.playerID, modifier);
     }
 
-    protected get shouldMute(): boolean {
+    /**
+     * Determine whether the audio source should mute based 
+     * on the audio modifier and local player's audio settings.
+     * 
+     * @returns `true` if the audio source should be muted.
+     */
+    public shouldMute() {
         return this.audioModifier.silenced;
     }
     
-    protected get shouldSpatialize(): boolean {
+    /**
+     * Determine whether the audio source should be spatialized 
+     * based on the audio modifier.
+     * 
+     * @returns `true` if the audio source should be spatialized.
+     */
+    public shouldSpatialize() {
         return this.audioModifier.spatialized;
     }
+    // protected get shouldSpatialize(): boolean {
+    //     return this.audioModifier.spatialized;
+    // }
     
     private setMuted(muted: boolean) {
         if (!this.mediaStream) return;

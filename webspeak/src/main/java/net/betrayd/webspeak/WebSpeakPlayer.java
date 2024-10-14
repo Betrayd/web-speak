@@ -86,7 +86,7 @@ public abstract class WebSpeakPlayer {
         groups.add(group);
         onAddGroup(group);
         // Call this here because onAddGroup may need to be called without invalidating modifiers.
-        onInvalidateAudioModifiers(group.getAudioModifiedPlayers());
+        invalidateAudioModifiers(group.getAudioModifiedPlayers());
         return true;
     }
     
@@ -102,7 +102,7 @@ public abstract class WebSpeakPlayer {
         }
         groups.add(index, group);
         onAddGroup(group);
-        onInvalidateAudioModifiers(group.getAudioModifiedPlayers());
+        invalidateAudioModifiers(group.getAudioModifiedPlayers());
         return true;
     }
 
@@ -121,7 +121,7 @@ public abstract class WebSpeakPlayer {
                 invalidPlayers.addAll(group.getAudioModifiedPlayers());
             }
         }
-        onInvalidateAudioModifiers(invalidPlayers);
+        invalidateAudioModifiers(invalidPlayers);
     }
 
     /**
@@ -140,7 +140,7 @@ public abstract class WebSpeakPlayer {
             success = true;
         }
         if (success) {
-            onInvalidateAudioModifiers(invalidPlayers);
+            invalidateAudioModifiers(invalidPlayers);
         }
         return success;
     }
@@ -165,7 +165,7 @@ public abstract class WebSpeakPlayer {
             }
         }
 
-        onInvalidateAudioModifiers(invalidPlayers);
+        invalidateAudioModifiers(invalidPlayers);
         return success;
     }
     
@@ -230,17 +230,30 @@ public abstract class WebSpeakPlayer {
             onRemoveGroup(removed);
         }
         
-        onInvalidateAudioModifiers(invalidModifiers);
+        invalidateAudioModifiers(invalidModifiers);
+    }
+    
+    /**
+     * Queue a collection of players to have their audio modifiers re-calculated.
+     * @param players Players collection.
+     */
+    public void invalidateAudioModifiers(Collection<? extends WebSpeakPlayer> players) {
+        invalidAudioModifiers.addAll(players);
+        // for (var player : players) {
+        //     updatePlayerAudioModifiers(player);
+        // }
     }
 
-    private void onInvalidateAudioModifiers(Collection<? extends WebSpeakPlayer> players) {
-        for (var player : players) {
-            updatePlayerAudioModifiers(player);
-        }
+    /**
+     * Queue a player to have its audio modifier re-calculated.
+     * @param player Target player.
+     */
+    public void invalidateAudioModifier(WebSpeakPlayer player) {
+        invalidAudioModifiers.add(player);
     }
 
-    private final Consumer<Collection<? extends WebSpeakPlayer>> invalidateAudioModifiersListener = this::onInvalidateAudioModifiers;
-
+    private final Consumer<Collection<? extends WebSpeakPlayer>> invalidateAudioModifiersListener = this::invalidateAudioModifiers;
+    
     /**
      * Called when this player is added to a group.
      * @param group Group that was added to.
@@ -264,6 +277,11 @@ public abstract class WebSpeakPlayer {
      * have to constantly re-calculate them.
      */
     private final WeakHashMap<WebSpeakPlayer, AudioModifier> audioModifierCache = new WeakHashMap<>();
+
+    /**
+     * A set of players who need their audio modifiers updated.
+     */
+    private final Set<WebSpeakPlayer> invalidAudioModifiers = new HashSet<>();
     
     /**
      * Re-calculate the audio modifiers used on a given player and send to the client.
@@ -329,6 +347,13 @@ public abstract class WebSpeakPlayer {
         return audioModifierCache.computeIfAbsent(player, this::computeAudioModifier);
     }
 
+    protected synchronized void tickAudioModifiers() {
+        for (var player : invalidAudioModifiers) {
+            updatePlayerAudioModifiers(player);
+        }
+        invalidAudioModifiers.clear();
+    }
+
     public final WebSpeakChannel getChannel() {
         return channel;
     }
@@ -345,7 +370,6 @@ public abstract class WebSpeakPlayer {
             this.channel.onAddPlayer(this);
         }
         if (getServer().getFlag(WebSpeakFlags.DEBUG_CHANNEL_SWAPS)) {
-            // if (channel != null)
                 LOGGER.info("Player joined channel " + (channel != null ? channel.getName() : "null"));
         }
     }
@@ -412,6 +436,7 @@ public abstract class WebSpeakPlayer {
      * Perform any additional ticking this webspeak player desires.
      */
     public void tick() {
+        tickAudioModifiers();
     }
     
     /**

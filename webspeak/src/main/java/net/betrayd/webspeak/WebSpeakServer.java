@@ -210,6 +210,10 @@ public class WebSpeakServer implements Executor {
 
         // rtcManager.tickRTC();
         tickScopes();
+        for (var player : players.values()) {
+            player.tick();
+        }
+
         playerCoordinateManager.tick();
     }
 
