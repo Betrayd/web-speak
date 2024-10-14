@@ -1,4 +1,3 @@
-import { Col, Row } from "react-bootstrap";
 import AppInstance from "../lib/AppInstance";
 import appStatusStores from "../stores/appStatusStores";
 
@@ -14,22 +13,35 @@ export default function ConnectionInfo(props: { app: AppInstance }) {
     }[readyState];
     return (
         <>
-            <Row className="justify-content-md-center">
-                <Col xs lg="2">Server Address:</Col>
+            <dl className="row">
+                <dt className="col-sm-4">Server Address:</dt>
+                <dd className="col-sm-8">{props.app.serverAddress}</dd>
+
+                <dt className="col-sm-4">Connection Status:</dt>
+                <dd className="col-sm-8">{connectionStatus}</dd>
+
+                <dt className="col-sm-4">Session ID:</dt>
+                <dd className="col-sm-8">{props.app.sessionID}</dd>
+
+                <dt className="col-sm-4">Local Player ID:</dt>
+                <dd className="col-sm-8">{localPlayerID}</dd>
+            </dl>
+            {/* <Row className="justify-content-md-center">
+                <Col className="col-sm-4">Server Address:</Col>
                 <Col>{props.app.serverAddress}</Col>
             </Row>
             <Row>
-                <Col xs lg="2">Connection Status:</Col>
+                <Col className="col-sm-4">Connection Status:</Col>
                 <Col>{connectionStatus}</Col>
             </Row>
             <Row>
-                <Col xs lg="2">Session ID:</Col>
+                <Col className="col-sm-4">Session ID:</Col>
                 <Col>{props.app.sessionID}</Col>
             </Row>
             <Row>
-                <Col xs lg="2">Local player ID:</Col>
+                <Col className="col-sm-4">Local player ID:</Col>
                 <Col>{localPlayerID}</Col>
-            </Row>
+            </Row> */}
         </>
     )
 }
