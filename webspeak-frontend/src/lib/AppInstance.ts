@@ -1,5 +1,6 @@
 import NetManager from "./NetManager";
 import WebSpeakPlayer, { WebSpeakDummyPlayer, WebSpeakLocalPlayer, WebSpeakRemotePlayer } from "./WebSpeakPlayer";
+import SimpleEvent from "./util/SimpleEvent";
 import webSpeakAudio from "./webSpeakAudio";
 import webspeakPackets from "./webspeakPackets";
 
@@ -20,6 +21,8 @@ export interface PlayerTransform {
  * An instance of the app, keeping all the relevent data for a connection to a WebSpeak server.
  */
 export default class AppInstance {
+    readonly onSetLocalPlayerID = new SimpleEvent<string>();
+
     readonly serverAddress: string;
     readonly sessionID: string;
 
@@ -82,6 +85,7 @@ export default class AppInstance {
 
         this.localPlayer.playerID = newID;
         console.log("Set local player ID as " + newID);
+        this.onSetLocalPlayerID.dispatch(newID);
     }
 
     get connectionStatus() {

@@ -1,6 +1,7 @@
 import { createContext, useEffect } from "react";
-import { Container } from "react-bootstrap";
+import { Card, Col, Container, Row } from "react-bootstrap";
 import AppInstance from "../lib/AppInstance";
+import ConnectionInfo from "../components/ConnectionInfo";
 
 // Somewhat bullshit, but we know this won't be used until it's been set
 export const AppInstanceContext = createContext<AppInstance>(undefined as any);
@@ -13,11 +14,19 @@ export default function MainUI(props: { appInstance: AppInstance }) {
             app.connect();
         }
     })
-
     return (
         <AppInstanceContext.Provider value={props.appInstance}>
             <Container>
-                <p className="text-danger">Not Connected</p>
+                <Row>
+                    <Col>
+                        <Card>
+                            <Card.Header>Server Connection Status</Card.Header>
+                            <Card.Body>
+                                <ConnectionInfo app={app} />
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
             </Container>
         </AppInstanceContext.Provider>
 

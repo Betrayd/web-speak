@@ -1,7 +1,14 @@
+import SimpleEvent from "./util/SimpleEvent";
+
 /**
  * Recieves and handles packets from the server. Usually, one will exist per app instance.
  */
 export default class NetManager {
+
+    /**
+     * A callback for when the websocket connection status changes.
+     */
+    readonly onConnectionStatusChanged = new SimpleEvent<number>();
 
     /**
      * The combined address to use when establishing websocket connection.
@@ -76,17 +83,22 @@ export default class NetManager {
             this.sendPacket('keepAlive', { timestamp: Date.now() });
         }, 15000)
 
-        ws.onopen = e => this.onWsOpen(e);
+        ws.onopen = e => {
+            this.onWsOpen(e);
+            this.onConnectionStatusChanged.dispatch(ws.readyState);
+        }
         
         ws.onclose = e => {
             this.onWsClose(e);
             this._wsConnection = null;
             clearInterval(this.keepAliveID);
+            this.onConnectionStatusChanged.dispatch(ws.readyState);
         }
 
         ws.onerror = e => {
             this.onWsError(e);
             this._wsConnection = null;
+            this.onConnectionStatusChanged.dispatch(ws.readyState);
         }
 
         ws.onmessage = msg => this.onWsMessage(msg);
