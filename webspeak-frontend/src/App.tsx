@@ -31,6 +31,13 @@ export default class App extends React.Component<any, AppState> {
         }
     }
 
+    closeApp() {
+        if (this.appInstance)
+            this.appInstance.shutdown();
+        this.appInstance = undefined;
+        this.setState({ appInstance: undefined });
+    }
+
     drawContent() {
         // TODO: make this cleaner
         if (!this.state.hasMic) {
@@ -56,7 +63,7 @@ export default class App extends React.Component<any, AppState> {
 
             )
         } else {
-            return <MainUI appInstance={this.state.appInstance} />
+            return <MainUI appInstance={this.state.appInstance} closeApp={this.closeApp.bind(this)} />
         }
 
     }

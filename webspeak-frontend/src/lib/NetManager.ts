@@ -10,6 +10,8 @@ export default class NetManager {
      */
     readonly onConnectionStatusChanged = new SimpleEvent<number>();
 
+    readonly onDisconnect = new SimpleEvent<{message: string, errored: boolean}>();
+
     /**
      * The combined address to use when establishing websocket connection.
      * Example: `http://[serverDomain]/connect?id=[sessionID]`
@@ -93,12 +95,14 @@ export default class NetManager {
             this._wsConnection = null;
             clearInterval(this.keepAliveID);
             this.onConnectionStatusChanged.dispatch(ws.readyState);
+            this.onDisconnect.dispatch({ message: e.reason, errored: false });
         }
 
         ws.onerror = e => {
             this.onWsError(e);
             this._wsConnection = null;
             this.onConnectionStatusChanged.dispatch(ws.readyState);
+            this.onDisconnect.dispatch({ message: "An unknown error has occured.", errored: true });
         }
 
         ws.onmessage = msg => this.onWsMessage(msg);
