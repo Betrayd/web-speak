@@ -20,20 +20,42 @@ module webSpeakAudio {
         return audioCtx;
     }
 
-    export async function requestMicAccess(): Promise<MediaStream> {
+    /**
+     * Request microphone permissions from the user and set it up with the rest of the codebase.
+     * @returns The `MediaStream` of the user's mic, or `null` if they denied access. 
+     */
+    export async function requestMicAccess(): Promise<MediaStream | null> {
+        // This is a convenient place to setup the audio context.
         if (audioCtx == undefined) {
             audioCtx = new AudioContext();
         }
-        let mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        if (mic == undefined) {
-            onMicSet.dispatch(undefined);
-            throw new Error("getUserMedia returned undefined.");
+        try {
+            const mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            if (mic) {
+                userMic = mic;
+                onMicSet.dispatch(userMic);
+                return userMic;
+            }
+        } catch (e) {
+            console.error(e);
         }
-        
-        userMic = mic;
-        onMicSet.dispatch(userMic);
-        return mic;
+        return null;
     }
+
+    // export async function requestMicAccess(): Promise<MediaStream> {
+    //     if (audioCtx == undefined) {
+    //         audioCtx = new AudioContext();
+    //     }
+    //     let mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    //     if (mic == undefined) {
+    //         onMicSet.dispatch(undefined);
+    //         throw new Error("getUserMedia returned undefined.");
+    //     }
+        
+    //     userMic = mic;
+    //     onMicSet.dispatch(userMic);
+    //     return mic;
+    // }
 
     /**
      * Mute or unmute the local user's mic.

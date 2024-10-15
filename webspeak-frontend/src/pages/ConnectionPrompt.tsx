@@ -6,13 +6,13 @@ export interface ConnectionInfo {
     sessionID: string
 }
 
-export default function ConnectionPrompt(props: { onConnect: (info: ConnectionInfo) => void }) {
+export default function ConnectionPrompt(props: { onConnect: (serverAddress: string, sessionID: string) => void }) {
     const [serverAddress, setServerAddress] = useState('');
     const [sessionID, setSessionID] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        props.onConnect({ serverAddress, sessionID });
+        props.onConnect(serverAddress, sessionID);
         console.log("connecting");
     }
 

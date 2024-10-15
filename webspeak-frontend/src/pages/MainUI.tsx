@@ -13,14 +13,14 @@ interface DisconnectedState {
     errored: boolean
 }
 
-export default function MainUI(props: { appInstance: AppInstance, closeApp?: () => void }) {
+export default function MainUI(props: { appInstance: AppInstance, onShutdown?: () => void }) {
     const app = props.appInstance;
 
-    useEffect(() => {
-        if (app.connectionStatus == WebSocket.CLOSED) {
-            app.connect();
-        }
-    }, [])
+    // useEffect(() => {
+    //     if (app.connectionStatus == WebSocket.CLOSED) {
+    //         app.connect();
+    //     }
+    // }, [])
 
     const [disconnected, setDisconnected] = useState<DisconnectedState | undefined>(() => undefined);
 
@@ -37,8 +37,8 @@ export default function MainUI(props: { appInstance: AppInstance, closeApp?: () 
 
     function onCloseDisconnectModal() {
         setDisconnected(undefined);
-        if (props.closeApp) {
-            props.closeApp();
+        if (props.onShutdown) {
+            props.onShutdown();
         }
     }
     return (
