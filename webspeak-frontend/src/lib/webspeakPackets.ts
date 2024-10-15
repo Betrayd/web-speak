@@ -1,5 +1,6 @@
 import AppInstance, { PlayerTransform } from "./AppInstance";
 import { AudioModifier } from "./WebSpeakPlayer";
+import playerListPackets from "./packets/playerListPackets";
 import rtcPackets from "./packets/rtcPackets";
 
 module webspeakPackets {
@@ -25,6 +26,7 @@ module webspeakPackets {
         registerHandler('setAudioModifier', onSetAudioModifier)
 
         rtcPackets.registerHandlers(app);
+        playerListPackets.registerHandlers(app);
         
         // registerRTCPacketHandler('handIce', onHandIce);
         // registerHandler('requestOffer', onRequestOffer);

@@ -2,6 +2,7 @@ package net.betrayd.webspeak;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -33,9 +34,11 @@ import net.betrayd.webspeak.impl.WebSpeakFlagHolder;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 import net.betrayd.webspeak.impl.net.WebSpeakNet.UnknownPacketException;
 import net.betrayd.webspeak.impl.net.packets.LocalPlayerInfoS2CPacket;
+import net.betrayd.webspeak.impl.net.packets.PlayerListPackets;
 import net.betrayd.webspeak.impl.net.packets.SetPannerOptionsC2SPacket;
 import net.betrayd.webspeak.impl.util.WebSpeakUtils;
 import net.betrayd.webspeak.util.PannerOptions;
+import net.betrayd.webspeak.util.WSPlayerListEntry;
 import net.betrayd.webspeak.util.WebSpeakEvents;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 
@@ -197,6 +200,15 @@ public class WebSpeakServer implements Executor {
         CONFIGURE_ENDPOINTS.addListener(callback);
     }
 
+    void onUpdatePlayerListEntry(String playerID, WSPlayerListEntry entry) {
+        Map<String, WSPlayerListEntry> map = Map.of(playerID, entry);
+        for (var player : this.players.values()) {
+            if (player.isConnected()) {
+                PlayerListPackets.SET_PLAYER_ENTRIES_S2C.send(player.getWsContext(), map);
+            }
+        }
+    }
+
     /**
      * ticks the server: updates connections on distance etc.
      */
@@ -321,6 +333,8 @@ public class WebSpeakServer implements Executor {
                 new LocalPlayerInfoS2CPacket(player.getPlayerId()).send(ctx);
 
                 playerCoordinateManager.onPlayerConnected(player);
+                sendEntirePlayerList(player);
+
                 ON_SESSION_CONNECTED.invoker().accept(player);
             }
 
@@ -334,7 +348,6 @@ public class WebSpeakServer implements Executor {
                 if (player != null) {
                     kickScopes(player);
                     player.wsContext = null;
-                    // rtcManager.kickRTC(player);
                     ON_SESSION_DISCONNECTED.invoker().accept(player);
                 }
             }
@@ -363,6 +376,30 @@ public class WebSpeakServer implements Executor {
                 LOGGER.error("Error applying packet: ", e);
             }
         });
+    }
+
+    public synchronized void sendEntirePlayerList(WebSpeakPlayer target) {
+        if (!target.isConnected()) {
+            return;
+        }
+        Map<String, WSPlayerListEntry> entries = new HashMap<>();
+        for (var player : players.values()) {
+            entries.put(player.getPlayerId(), player.getPlayerListEntry());
+        }
+        PlayerListPackets.SET_PLAYER_ENTRIES_S2C.send(target.getWsContext(), entries);
+    }
+
+    /**
+     * Remove a player from everyone's player list.
+     * @param playerID ID of player to remove.
+     */
+    private synchronized void removeFromPlayerList(String playerID) {
+        List<String> payload = Collections.singletonList(playerID);
+        for (var player : players.values()) {
+            if (player.isConnected()) {
+                PlayerListPackets.REMOVE_PLAYER_ENTRIES_S2C.send(player.getWsContext(), payload);
+            }
+        }
     }
 
     /**
@@ -573,6 +610,7 @@ public class WebSpeakServer implements Executor {
             // rtcManager.kickRTC(player);
             player.wsContext = null;
             player.onRemoved();
+            removeFromPlayerList(player.getPlayerId());
             ON_PLAYER_REMOVED.invoker().accept(player);
         } catch (Exception e) {
             LOGGER.error("Error removing player " + player.getPlayerId(), e);

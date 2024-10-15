@@ -178,14 +178,13 @@ public class PlayerInfoController {
         
     };
 
-    public void initPlayer(Player player) {
-        this.player = player;
-        
+    public void initPlayer(Player player) {        
         // titledPane.textProperty().bind(player.nameProperty());
 
         colorPicker.valueProperty().bindBidirectional(player.colorProperty());
 
         // Manually add listener so field can still be updated.
+        nameField.setText(player.getName());
         player.nameProperty().addListener((prop, oldVal, newVal) -> {
             nameField.setText(newVal);
         });
@@ -207,6 +206,7 @@ public class PlayerInfoController {
 
         groupListController.initPlayer(player);
         WebSpeakTestApp.getInstance().getConnectionIps().addListener(mapChangeListener);
+        this.player = player;
     }
 
     @FXML

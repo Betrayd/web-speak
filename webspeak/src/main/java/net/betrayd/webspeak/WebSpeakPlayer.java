@@ -16,6 +16,7 @@ import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.net.packets.SetAudioModifierS2CPacket;
 import net.betrayd.webspeak.impl.util.URIComponent;
 import net.betrayd.webspeak.util.AudioModifier;
+import net.betrayd.webspeak.util.WSPlayerListEntry;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
 public abstract class WebSpeakPlayer {
@@ -54,6 +55,24 @@ public abstract class WebSpeakPlayer {
 
     public final WebSpeakServer getServer() {
         return server;
+    }
+
+    private WSPlayerListEntry playerListEntry = new WSPlayerListEntry("Default Name", "");
+    // Initialize to true so we send updates on our next tick.
+    private boolean isPlayerListDirty = true;
+
+    public WSPlayerListEntry getPlayerListEntry() {
+        return playerListEntry;
+    }
+
+    public void setPlayerListEntry(WSPlayerListEntry playerListEntry) {
+        if (!playerListEntry.isValid()) {
+            throw new IllegalArgumentException(
+                    "Player list entry may not contain null values. (" + playerListEntry + ")");
+        }
+        
+        this.playerListEntry = playerListEntry;
+        this.isPlayerListDirty = true;
     }
 
     private AudioModifier defaultAudioModifier = AudioModifier.DEFAULT;
@@ -468,6 +487,10 @@ public abstract class WebSpeakPlayer {
      */
     public void tick() {
         tickAudioModifiers();
+        if (isPlayerListDirty) {
+            server.onUpdatePlayerListEntry(playerId, playerListEntry);
+            isPlayerListDirty = false;
+        }
     }
     
     /**

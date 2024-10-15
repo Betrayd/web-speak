@@ -12,6 +12,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import net.betrayd.webspeak.WebSpeakChannel;
+import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.util.WebSpeakVector;
 import net.betrayd.webspeaktest.ui.PlayerAvatarController;
 
@@ -42,7 +43,6 @@ public class Player {
 
     private final PlayerAvatarController avatar;
 
-    private final StringProperty nameProperty = new SimpleStringProperty("player");
     
     public Player(PlayerAvatarController avatar, Color color) {
         this.avatar = avatar;
@@ -71,6 +71,8 @@ public class Player {
         return colorProperty;
     }
 
+    private final StringProperty nameProperty = new SimpleStringProperty("player");
+
     public String getName() {
         return nameProperty.get();
     }
@@ -83,6 +85,17 @@ public class Player {
         return nameProperty;
     }
 
+    {
+        nameProperty.addListener((prop, oldVal, newVal) -> onUpdateName(newVal));
+    }
+
+    private void onUpdateName(String name) {
+        WebSpeakPlayer webPlayer = getWebPlayer();
+        if (webPlayer != null) {
+            webPlayer.setPlayerListEntry(webPlayer.getPlayerListEntry().withName(name));
+        }
+    }
+
     private final ObjectProperty<TestWebPlayer> webPlayerProperty = new SimpleObjectProperty<>();
 
     public TestWebPlayer getWebPlayer() {
@@ -93,6 +106,7 @@ public class Player {
         if (webPlayer != null && webPlayer.getPlayer() != this)
             throw new IllegalArgumentException("Web player must point to this player.");
         webPlayerProperty.set(webPlayer);
+        webPlayer.setPlayerListEntry(webPlayer.getPlayerListEntry().withName(getName()));
     }
 
     public ReadOnlyObjectProperty<TestWebPlayer> webPlayerProperty() {

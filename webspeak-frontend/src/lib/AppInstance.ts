@@ -1,5 +1,7 @@
 import NetManager from "./NetManager";
+import WSPlayerList from "./WSPlayerList";
 import WebSpeakPlayer, { WebSpeakDummyPlayer, WebSpeakLocalPlayer, WebSpeakRemotePlayer } from "./WebSpeakPlayer";
+import PlayerListEntry from "./util/PlayerListEntry";
 import SimpleEvent from "./util/SimpleEvent";
 import webSpeakAudio from "./webSpeakAudio";
 import webspeakPackets from "./webspeakPackets";
@@ -27,6 +29,7 @@ export default class AppInstance {
     readonly sessionID: string;
 
     readonly netManager: NetManager;
+    readonly playerList = new WSPlayerList();
 
     /**
      * All the players that this client knows about.
@@ -91,6 +94,7 @@ export default class AppInstance {
     get connectionStatus() {
         return this.netManager.connectionStatus;
     }
+
 
     /**
      * Attempt to find a player by its ID.
@@ -183,7 +187,7 @@ export default class AppInstance {
         this.serverAddress = serverAddress;
         this.sessionID = sessionID;
 
-        this.netManager = new NetManager(new URL(`${serverAddress}/connect?id=${sessionID}`))
+        this.netManager = new NetManager(new URL(`${serverAddress}/connect?id=${sessionID}`), this)
         webspeakPackets.setupPacketListeners(this);
     }
 

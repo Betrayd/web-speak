@@ -381,6 +381,9 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         this.connection.setRemoteDescription(answer);
     }
 
+    /**
+     * Disconnect and remove listeners related to this player.
+     */
     disconnect() {
         this.connection.close();
     }

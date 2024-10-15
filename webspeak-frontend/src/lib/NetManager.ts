@@ -1,3 +1,4 @@
+import AppInstance from "./AppInstance";
 import SimpleEvent from "./util/SimpleEvent";
 
 /**
@@ -22,6 +23,8 @@ export default class NetManager {
      * A map of all packet IDs and functions to handle them.
      */
     readonly packetHandlers: Map<string, (payload: string) => void> = new Map();
+
+    readonly app: AppInstance;
 
     /**
      * Called when there's something wrong with a packet recieved from the server.
@@ -63,12 +66,32 @@ export default class NetManager {
      * Create a net manager instance
      * @param connectionAddress Server connection address
      */
-    constructor(connectionAddress: URL) {
+    constructor(connectionAddress: URL, app: AppInstance) {
         this.connectionAddress = connectionAddress;
+        this.app = app;
         console.log("initializing net manager")
     }
     
     private keepAliveID = -1;
+
+    /**
+     * Register a packet handler on a given packet ID.
+     * @param app Will be passed to handler for convenience
+     * @param packetID Packet ID to register to.
+     * @param handler Handler to register.
+     */
+    public registerHandler(packetID: string, handler: (payload: string, app: AppInstance) => void) {
+        this.packetHandlers.set(packetID, payload => handler(payload, this.app));
+    }
+
+    /**
+     * Register a packet handler that will automatically parse the payload from json.
+     * @param packetID Packet ID to register to.
+     * @param handler Handler to register.
+     */
+    public registerJsonHandler(packetID: string, handler: (payload: any, app: AppInstance) => void) {
+        this.packetHandlers.set(packetID, payload => handler(JSON.parse(payload), this.app));
+    }
 
     /**
      * Attempt to connect to the server, using the established connection address.

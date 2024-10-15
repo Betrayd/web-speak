@@ -27,7 +27,7 @@ export default function App(_props: any) {
     }
 
     async function requestMicAccess() {
-        await webSpeakAudio.requestMicAccess();
+        await webSpeakAudio.setupAudio();
         setHasMic(true);
 
         const urlParams = new URLSearchParams(window.location.search);

@@ -25,7 +25,6 @@ public class WebSpeakNet {
     }
 
     public static <T> String writePacket(S2CPacket<T> packet, T val) {
-        
         return packet.getId() + ";" + packet.write(val);
     }
 
