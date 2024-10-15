@@ -106,7 +106,9 @@ public class Player {
         if (webPlayer != null && webPlayer.getPlayer() != this)
             throw new IllegalArgumentException("Web player must point to this player.");
         webPlayerProperty.set(webPlayer);
-        webPlayer.setPlayerListEntry(webPlayer.getPlayerListEntry().withName(getName()));
+        if (webPlayer != null) {
+            webPlayer.setPlayerListEntry(webPlayer.getPlayerListEntry().withName(getName()));
+        }
     }
 
     public ReadOnlyObjectProperty<TestWebPlayer> webPlayerProperty() {
@@ -131,12 +133,13 @@ public class Player {
         channelProperty.addListener((prop, oldVal, newVal) -> {
             var webPlayer = getWebPlayer();
             if (webPlayer != null) {
-                webPlayer.setChannel(newVal);
+                webPlayer.getServer().execute(() -> webPlayer.setChannel(newVal));
             }
         });
         webPlayerProperty.addListener((prop, oldVal, newVal) -> {
             if (newVal != null) {
-                newVal.setChannel(getChannel());
+                var channel = getChannel();
+                newVal.getServer().execute(() -> newVal.setChannel(channel));
             }
         });
     }

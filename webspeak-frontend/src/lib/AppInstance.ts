@@ -1,7 +1,6 @@
 import NetManager from "./NetManager";
 import WSPlayerList from "./WSPlayerList";
 import WebSpeakPlayer, { WebSpeakDummyPlayer, WebSpeakLocalPlayer, WebSpeakRemotePlayer } from "./WebSpeakPlayer";
-import PlayerListEntry from "./util/PlayerListEntry";
 import SimpleEvent from "./util/SimpleEvent";
 import webSpeakAudio from "./webSpeakAudio";
 import webspeakPackets from "./webspeakPackets";

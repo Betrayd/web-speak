@@ -256,7 +256,10 @@ public class WebSpeakTestApp extends Application {
                 player.setWebPlayer(null);
             }
             server.set(null);
-        }, Platform::runLater);
+        }, Platform::runLater).exceptionally(e -> {
+            LOGGER.error("Error clearing players: ", e);
+            return null;
+        });
     }
 
     public boolean isServerRunning() {
