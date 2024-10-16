@@ -197,12 +197,12 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     constructor(playerID: string, app: AppInstance) {
         super(playerID);
         this.app = app;
-        this.panner = new PannerNode(webSpeakAudio.getAudioCtx(), app.pannerOptions);
-        this.pannerGain = new GainNode(webSpeakAudio.getAudioCtx());
-        this.directGain = new GainNode(webSpeakAudio.getAudioCtx());
+        this.panner = new PannerNode(webSpeakAudio.getAudioManagerOrThrow().audioCtx, app.pannerOptions);
+        this.pannerGain = new GainNode(webSpeakAudio.getAudioManagerOrThrow().audioCtx);
+        this.directGain = new GainNode(webSpeakAudio.getAudioManagerOrThrow().audioCtx);
         this.directGain.gain.value = 0;
         
-        let userMic = webSpeakAudio.userMic;
+        let userMic = webSpeakAudio.getAudioManagerOrThrow().userMic;
         if (userMic?.active) {
             for (let track of userMic.getTracks()) {
                 this.connection.addTrack(track, userMic);
@@ -212,7 +212,8 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         }
 
         this.connection.ontrack = event => {
-            let audioCtx = webSpeakAudio.audioCtx as AudioContext;
+            // let audioCtx = webSpeakAudio.audioCtx as AudioContext;
+            const audioManager = webSpeakAudio.getAudioManagerOrThrow();
             if (event.track.kind === "audio") {
                 let mediaStream = event.streams[0];
 
@@ -230,22 +231,23 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
                     bullshitaudio = null;
                 });
                 
-                this.audioStream = audioCtx.createMediaStreamSource(mediaStream);
+                // this.audioStream = audioCtx.createMediaStreamSource(mediaStream);
+                this.audioStream = audioManager.audioCtx.createMediaStreamSource(mediaStream);
 
                 // Swap between panner node and direct to toggle spatialization
                 this.audioStream.connect(this.pannerGain);
                 this.pannerGain.connect(this.panner);
-                this.panner.connect(audioCtx.destination);
+                this.panner.connect(audioManager.outputNode);
 
                 this.audioStream.connect(this.directGain);
-                this.directGain.connect(audioCtx.destination);
+                this.directGain.connect(audioManager.outputNode);
 
                 this.mediaStream = mediaStream;
                 // Update muted status
                 // this.onSetMuted(this.muted);
                 this.setMuted(this.shouldMute());
                 this.setSpatialized(this.shouldSpatialize());
-                this.panner.connect(audioCtx.destination);
+                // this.panner.connect(audioManager.outputNode);
             } else {
                 console.error("IT WAS THE WRONG TYPE OH NOOOOOOOO");
             }
@@ -367,6 +369,7 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     async createOffer() {
         let offer = await this.connection.createOffer();
         this.connection.setLocalDescription(offer);
+        console.debug("created RTC offer:", offer)
         return offer;
     }
 
@@ -374,6 +377,7 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
         this.connection.setRemoteDescription(offer);
         let answer = await this.connection.createAnswer();
         this.connection.setLocalDescription(answer);
+        console.debug("created RTC answer", answer)
         return answer;
     }
 
@@ -389,11 +393,12 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     }
 
     public updateTransform(): void {
-        if (webSpeakAudio.audioCtx == undefined) {
+        const audioManager = webSpeakAudio.getAudioManager();
+        if (audioManager == undefined) {
             return;
         }
         if (this.panner.positionX) {
-            let currentTime = webSpeakAudio.audioCtx.currentTime;
+            let currentTime = audioManager.audioCtx.currentTime;
             this.panner.positionX.setValueAtTime(this.x, currentTime);
             this.panner.positionY.setValueAtTime(this.y, currentTime);
             this.panner.positionZ.setValueAtTime(this.z, currentTime);
@@ -416,10 +421,11 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 export class WebSpeakLocalPlayer extends WebSpeakPlayer {
 
     updateTransform(): void {
-        if (webSpeakAudio.audioCtx == undefined) {
+        const audioManager = webSpeakAudio.getAudioManager();
+        if (audioManager == undefined) {
             return;
         }
-        const listener = webSpeakAudio.audioCtx.listener;
+        const listener = audioManager.audioCtx.listener;
 
         if (listener.positionX) {
             listener.positionX.value = this.x;

@@ -81,23 +81,6 @@ module webSpeakAudio {
         }
         return audioManager;
     }
-    
-    export let userMic: MediaStream | undefined = undefined;
-
-    export let audioCtx: AudioContext | undefined
-    export let primaryGainNode: GainNode | undefined
-
-    /**
-     * A null-safe getter for `audioCtx`
-     * @returns Audio context.
-     */
-    export function getAudioCtx() {
-        if (!audioCtx) {
-            throw new Error("Audio Context is undefined");
-        }
-        return audioCtx;
-    }
-
     /**
      * Request microphone permissions from the user and set it up with the rest of the codebase.
      * @returns The `MediaStream` of the user's mic, or `null` if they denied access. 
