@@ -169,11 +169,13 @@ public class WebSpeakTestApp extends Application {
         globalGroups.add(admins);
     }
 
+    public static final WebSpeakChannel DEFAULT_CHANNEL = new WebSpeakChannel("Default");
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         instance = this;
         
-        channels.add(WebSpeakChannel.DEFAULT_CHANNEL);
+        channels.add(DEFAULT_CHANNEL);
         channels.add(new WebSpeakChannel("Channel 1"));
         channels.add(new WebSpeakChannel("Channel 2"));
 

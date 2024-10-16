@@ -1,5 +1,6 @@
 package net.betrayd.webspeak;
 
+import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -15,12 +16,12 @@ import java.util.WeakHashMap;
  */
 public class WebSpeakChannel {
 
-    /**
-     * A "default" channel for convenience. Players will use this channel when constructed.
-     */
-    public static final WebSpeakChannel DEFAULT_CHANNEL = new WebSpeakChannel("Default");
-
     private final String name;
+
+    /**
+     * Keep track fo the server we currently belong to.
+     */
+    private WeakReference<WebSpeakServer> associatedServer;
 
     public WebSpeakChannel(String name) {
         this.name = name;
@@ -44,6 +45,10 @@ public class WebSpeakChannel {
      * @apiNote Should only be called by the player's <code>setChannel</code> function.
      */
     protected synchronized boolean onAddPlayer(WebSpeakPlayer player) {
+        WebSpeakServer server = getAssociatedServer();
+        if (server != null && server != player.getServer()) {
+            throw new IllegalArgumentException("Player belongs to the wrong server!");
+        }
         return players.add(player);
     }
     
@@ -58,16 +63,12 @@ public class WebSpeakChannel {
             // Manually remove all players from scope
             // because the scope checker won't check them any more.
             player.getServer().kickScopes(player);
+            if (players.isEmpty()) {
+                associatedServer = null;
+            }
             return true;
         }
         return false;
-    }
-
-    /**
-     * Remove all players from this channel, transferring them to the default channel.
-     */
-    public final void clear() {
-        clear(DEFAULT_CHANNEL);
     }
 
     /**
@@ -83,8 +84,22 @@ public class WebSpeakChannel {
         }
     }
 
+    /**
+     * Get the server that this channel is associated with. A channel is considered
+     * associated with a server when one or more players in the channel belong to
+     * said server. If a channel is associated with a server, only players that
+     * belong to that server may join.
+     * 
+     * @return The associated server. <code>null</code> if there is none.
+     */
+    public WebSpeakServer getAssociatedServer() {
+        return associatedServer != null ? associatedServer.get() : null;
+    }
+
     @Override
     public String toString() {
         return "WebSpeak Channel (" + name + ")";
     }
+
+
 }

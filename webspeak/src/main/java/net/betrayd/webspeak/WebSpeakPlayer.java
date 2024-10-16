@@ -218,6 +218,19 @@ public abstract class WebSpeakPlayer {
         invalidateAudioModifiers(invalidPlayers);
         return success;
     }
+
+    /**
+     * Remove this player from all groups.
+     */
+    public synchronized void clearGroups() {
+        Set<WebSpeakPlayer> invalidPlayers = new HashSet<>();
+        for (var group : groups) {
+            invalidPlayers.addAll(group.getAudioModifiedPlayers());
+            onRemoveGroup(group);
+        }
+        invalidateAudioModifiers(invalidPlayers);
+        groups.clear();
+    }
     
     /**
      * Arbitrarily modify the group list for this player, and call the appropriate
@@ -412,6 +425,14 @@ public abstract class WebSpeakPlayer {
         if (channel == this.channel) {
             return;
         }
+
+        if (channel != null) {
+            WebSpeakServer channelServer = channel.getAssociatedServer();
+            if (channelServer != null && channelServer != getServer()) {
+                throw new IllegalArgumentException("Channel is associated with the wrong server!");
+            }
+        }
+
         if (this.channel != null) {
             this.channel.onRemovePlayer(this);
         }
@@ -513,7 +534,8 @@ public abstract class WebSpeakPlayer {
      * Called after the player is removed from the server.
      */
     protected void onRemoved() {
-
+        setChannel(null);
+        clearGroups();
     }
 
     /**
