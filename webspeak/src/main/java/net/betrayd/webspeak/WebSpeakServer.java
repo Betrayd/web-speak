@@ -40,6 +40,7 @@ import net.betrayd.webspeak.impl.util.WebSpeakUtils;
 import net.betrayd.webspeak.util.PannerOptions;
 import net.betrayd.webspeak.util.WSPlayerListEntry;
 import net.betrayd.webspeak.util.WebSpeakEvents;
+import net.betrayd.webspeak.util.WebSpeakMathUtils;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 
 /**
@@ -115,6 +116,8 @@ public class WebSpeakServer implements Executor {
 
     private final PannerOptions pannerOptions = new PannerOptions();
 
+    private float maxAudioRange = 24;
+
     /**
      * The object used to control the panning config on the client.
      * Make sure to call {@link #updatePannerOptions} after updating.
@@ -127,7 +130,16 @@ public class WebSpeakServer implements Executor {
      * Send an updated copy of the panner options to all clients.
      */
     public void updatePannerOptions() {
+        maxAudioRange = (float) WebSpeakMathUtils.getMaxRange(pannerOptions);
         WebSpeakNet.sendPacketToPlayers(getPlayers(), SetPannerOptionsC2SPacket.PACKET, pannerOptions);
+    }
+
+    /**
+     * Get the max audible range of players based on the current panner options.
+     * @return Max range.
+     */
+    public float getMaxAudioRange() {
+        return maxAudioRange;
     }
 
     /**

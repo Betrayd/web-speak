@@ -6,6 +6,7 @@ import com.google.gson.annotations.SerializedName;
  * Config parameters to send to the client about how to handle audio spatialization.
  */
 public class PannerOptions {
+
     public static enum PanningModelType {
         @SerializedName("HRTF")
         HRTF,
@@ -14,12 +15,12 @@ public class PannerOptions {
     }
 
     public static enum DistanceModelType {
+        @SerializedName("linear")
+        LINEAR,
         @SerializedName("inverse")
         INVERSE,
         @SerializedName("exponential")
-        EXPONENTIAL,
-        @SerializedName("linear")
-        LINEAR
+        EXPONENTIAL
     }
 
     public float coneInnerAngle = 360;
