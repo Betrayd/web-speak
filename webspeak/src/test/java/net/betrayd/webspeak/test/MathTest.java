@@ -9,7 +9,7 @@ import java.util.stream.StreamSupport;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import net.betrayd.webspeak.util.WebSpeakMathUtils;
+import net.betrayd.webspeak.util.WebSpeakMath;
 
 public class MathTest {
     
@@ -23,8 +23,8 @@ public class MathTest {
         if (vals.a() < vals.b())
             return;
             
-        double targetGain = WebSpeakMathUtils.computeExponentialGain(vals.a, vals.b, vals.c);
-        assertEquals(vals.a, WebSpeakMathUtils.invertExponentialGain(targetGain, vals.b, vals.c), 0.001);
+        double targetGain = WebSpeakMath.computeExponentialGain(vals.a, vals.b, vals.c);
+        assertEquals(vals.a, WebSpeakMath.invertExponentialGain(targetGain, vals.b, vals.c), 0.001);
     }
 
     static Stream<ThreeIntValues> threeIntRange() {

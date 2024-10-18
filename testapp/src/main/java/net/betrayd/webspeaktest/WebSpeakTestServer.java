@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import net.betrayd.webspeak.WebSpeakFlags;
 import net.betrayd.webspeak.WebSpeakServer;
+import net.betrayd.webspeak.util.PannerOptions;
 
 public class WebSpeakTestServer implements Executor {
     public static final Logger LOGGER = LoggerFactory.getLogger("WebSpeak Server");
@@ -22,6 +23,8 @@ public class WebSpeakTestServer implements Executor {
     private final CompletableFuture<Void> shutdownFuture = new CompletableFuture<>();
     private final CompletableFuture<WebSpeakServer> startFuture = new CompletableFuture<>();
     private Queue<Runnable> queue = new ConcurrentLinkedDeque<>();
+
+    private final Queue<PannerOptions.Partial> pannerUpdates = new ConcurrentLinkedDeque<>();
 
     public WebSpeakTestServer(int port) {
         this.port = port;
@@ -60,6 +63,16 @@ public class WebSpeakTestServer implements Executor {
             throw new IllegalStateException("WebSpeak server called from incorrect thread: " + Thread.currentThread().getName());
     }
 
+    /**
+     * Queue an update the panner options to be added on the next tick.
+     * @param newOptions
+     */
+    public void updatePannerOptions(PannerOptions.Partial newOptions) {
+        if (newOptions == null)
+            return;
+        pannerUpdates.add(newOptions);
+    }
+
     protected void runThread() {
         webSpeakServer = new WebSpeakServer();
         webSpeakServer.setFlag(WebSpeakFlags.DEBUG_CONNECTION_REQUESTS, true);
@@ -91,6 +104,17 @@ public class WebSpeakTestServer implements Executor {
     }
 
     protected void tick() {
+
+        boolean updatedPanner = false;
+        PannerOptions.Partial update;
+        while ((update = pannerUpdates.poll()) != null) {
+            webSpeakServer.getPannerOptions().copyFrom(update);
+            updatedPanner = true;
+        }
+        if (updatedPanner) {
+            webSpeakServer.updatePannerOptions();
+        }
+
         webSpeakServer.tick();
     }
     

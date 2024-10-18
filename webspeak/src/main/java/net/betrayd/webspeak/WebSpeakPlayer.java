@@ -499,7 +499,7 @@ public abstract class WebSpeakPlayer {
             return true;
         }
 
-        float range = server.getPannerOptions().maxDistance;
+        float range = server.getMaxAudioRange();
         return this.getLocation().squaredDistanceTo(other.getLocation()) <= range * range;
     }
 

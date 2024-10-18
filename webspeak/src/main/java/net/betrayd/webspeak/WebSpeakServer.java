@@ -40,7 +40,7 @@ import net.betrayd.webspeak.impl.util.WebSpeakUtils;
 import net.betrayd.webspeak.util.PannerOptions;
 import net.betrayd.webspeak.util.WSPlayerListEntry;
 import net.betrayd.webspeak.util.WebSpeakEvents;
-import net.betrayd.webspeak.util.WebSpeakMathUtils;
+import net.betrayd.webspeak.util.WebSpeakMath;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 
 /**
@@ -130,7 +130,7 @@ public class WebSpeakServer implements Executor {
      * Send an updated copy of the panner options to all clients.
      */
     public void updatePannerOptions() {
-        maxAudioRange = (float) WebSpeakMathUtils.getMaxRange(pannerOptions);
+        maxAudioRange = (float) WebSpeakMath.getMaxRange(pannerOptions);
         WebSpeakNet.sendPacketToPlayers(getPlayers(), SetPannerOptionsC2SPacket.PACKET, pannerOptions);
     }
 

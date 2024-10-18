@@ -2,7 +2,12 @@ package net.betrayd.webspeak.util;
 
 import net.betrayd.webspeak.util.PannerOptions.DistanceModelType;
 
-public class WebSpeakMathUtils {
+public class WebSpeakMath {
+
+    /**
+     * The point at which volume attenuation is considered silent.
+     */
+    public static final double GAIN_EPSILON = 0.05d;
 
     /**
      * Compute the gain for an audio source using the <code>linear</code> model.
@@ -29,7 +34,7 @@ public class WebSpeakMathUtils {
      * @return The distance at which gain = 0.
      */
     public static double linearGainRange(double maxDistance, double refDistance, double rolloffFactor) {
-        return (-maxDistance + refDistance / rolloffFactor) + refDistance;
+        return -((-maxDistance + refDistance - refDistance * rolloffFactor) / rolloffFactor);
     }
 
     /**
@@ -122,6 +127,6 @@ public class WebSpeakMathUtils {
      * @return The max audible range.
      */
     public static double getMaxRange(PannerOptions pannerOptions) {
-        return getMaxRange(pannerOptions, 0.1f);
+        return getMaxRange(pannerOptions, GAIN_EPSILON);
     }
 }

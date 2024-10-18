@@ -13,11 +13,9 @@ import org.slf4j.LoggerFactory;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.FloatProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -39,6 +37,12 @@ public class WebSpeakTestApp extends Application {
 
     public static WebSpeakTestApp getInstance() {
         return instance;
+    }
+    
+    private final PannerOptionsManager pannerOptionsManager = new PannerOptionsManager(this);
+
+    public PannerOptionsManager getPannerOptionsManager() {
+        return pannerOptionsManager;
     }
 
     private final ObjectProperty<WebSpeakTestServer> server = new SimpleObjectProperty<>(null);
@@ -65,30 +69,6 @@ public class WebSpeakTestApp extends Application {
         return graphScaleProperty;
     }
 
-    private final FloatProperty scopeRadiusProperty = new SimpleFloatProperty(26);
-
-    public float getScopeRadius() {
-        return scopeRadiusProperty.get();
-    }
-
-    public void setScopeRadius(float scopeRadius) {
-        scopeRadiusProperty.set(scopeRadius);
-    }
-
-    public FloatProperty scopeRadiusProperty() {
-        return scopeRadiusProperty;
-    }
-
-    {
-        scopeRadiusProperty.addListener((prop, oldVal, newVal) -> {
-            WebSpeakTestServer server = this.server.get();
-            if (server == null) return;
-            server.execute(() -> {
-                server.getWebSpeakServer().getPannerOptions().maxDistance = newVal.floatValue();
-                server.getWebSpeakServer().updatePannerOptions();
-            }); 
-        });
-    }
 
     private final ObservableMap<Player, String> connectionIps = FXCollections.observableHashMap();
 
@@ -218,7 +198,8 @@ public class WebSpeakTestApp extends Application {
             }, Platform::runLater);
             
             future.thenAccept(server -> {
-                server.getPannerOptions().maxDistance = scopeRadiusProperty.get();
+                // server.getPannerOptions().maxDistance = scopeRadiusProperty.get();
+                getPannerOptionsManager().applyAllPannerOptions(server);
                 server.onSessionConnected(player -> {
                     if (player instanceof TestWebPlayer testPlayer) {
                         String connectionIp = testPlayer.getWsContext().session.getRemoteAddress().toString();

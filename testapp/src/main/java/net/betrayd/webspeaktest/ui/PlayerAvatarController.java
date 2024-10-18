@@ -67,8 +67,6 @@ public class PlayerAvatarController {
     @FXML
     public void initialize() {
 
-
-
         scopeCircle = new Circle();
         scopeCircle.setFill(Color.rgb(0, 127, 255, .125));
         scopeCircle.setStroke(Color.rgb(0, 127, 255));
@@ -80,7 +78,7 @@ public class PlayerAvatarController {
         scopeCircle.setDisable(true);
 
         var graphScaleProp = WebSpeakTestApp.getInstance().graphScaleProperty();
-        var scopeSizeProp = WebSpeakTestApp.getInstance().scopeRadiusProperty();
+        var scopeSizeProp = WebSpeakTestApp.getInstance().getPannerOptionsManager().scopeRadiusProperty();
         scopeCircle.radiusProperty().bind(Bindings.multiply(graphScaleProp, scopeSizeProp));
 
         root.getChildren().add(scopeCircle);

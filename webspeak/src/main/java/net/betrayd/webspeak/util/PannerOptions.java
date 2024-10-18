@@ -65,7 +65,7 @@ public class PannerOptions {
      * 
      * @param partial Partial instance.
      */
-    public void fromPartial(Partial partial) {
+    public void copyFrom(Partial partial) {
         if (partial.coneInnerAngle != null)
             coneInnerAngle = partial.coneInnerAngle;
         if (partial.coneOuterAngle != null)

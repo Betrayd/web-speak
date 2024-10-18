@@ -89,6 +89,9 @@
                </BorderPane.margin>
             </HBox>
          </bottom>
+         <left>
+            <fx:include source="pannerOptionsMenu.fxml" />
+         </left>
       </BorderPane>
    </children>
 </VBox>

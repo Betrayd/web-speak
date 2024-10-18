@@ -35,7 +35,8 @@ public class WebSpeakNet {
     public static <T> void sendPacketToPlayers(Iterable<? extends WebSpeakPlayer> players, S2CPacket<T> packet, T val) {
         String payload = writePacket(packet, val);
         for (var player : players) {
-            player.getWsContext().send(payload);
+            if (player.isConnected())
+                player.getWsContext().send(payload);
         }
     }
 
