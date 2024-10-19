@@ -16,7 +16,7 @@ export default function PlayerListEntryComponent(props: PlayerListEntryProps) {
         {props.volume !== undefined ?
             <Row>
                 <Form.Label>Player Volume</Form.Label>
-                <VolumeSlider value={props.volume} min={0} max={1.5} onChange={props.onSetVolume} />
+                <VolumeSlider value={props.volume} min={0} max={2} onChange={props.onSetVolume} />
             </Row>
             : null}
     </>

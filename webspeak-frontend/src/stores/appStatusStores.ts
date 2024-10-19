@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from "react";
 import AppInstance from "../lib/AppInstance";
-import WSPlayerList from "../lib/WSPlayerList";
 
 module appStatusStores {
 
@@ -33,28 +32,14 @@ module appStatusStores {
         return useSyncExternalStore(listener => localPlayerIDStore.subscribe(app, listener), () => localPlayerIDStore.getSnapshot(app));
     }
 
+    
+
     function subscribePlayerList(app: AppInstance, listener: () => void) {
         app.playerList.onUpdatePlayerList.addListener(listener);
         return () => app.playerList.onUpdatePlayerList.removeListener(listener);
     }
-
     export function usePlayerList(app: AppInstance) {
-        return useSyncExternalStore(listener => subscribePlayerList(app, listener), () => app.playerList.playerList)
-    }
-
-    function subscribePlayerVolume(playerList: WSPlayerList, playerID: string, listener: () => void) {
-        let actualListener = ([id, _val]: [string, number]) => {
-            if (id == playerID) {
-                listener();
-            }
-        };
-        playerList.onUpdatePlayerVolume.addListener(actualListener);
-        return () => playerList.onUpdatePlayerVolume.removeListener(actualListener);
-    }
-
-    export function usePlayerVolume(playerList: WSPlayerList, playerID: string) {
-        return useSyncExternalStore(listener => subscribePlayerVolume(playerList, playerID, listener),
-            () => playerList.getVolume(playerID));
+        return useSyncExternalStore(listener => subscribePlayerList(app, listener), () => app.playerList.playerListObject)
     }
 }
 

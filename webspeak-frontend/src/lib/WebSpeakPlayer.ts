@@ -160,17 +160,6 @@ export default abstract class WebSpeakPlayer {
     }
 
     protected onSetAudioModifier(_modifier: Readonly<AudioModifier>) {};
-    
-    // private _spatialized: boolean = true;
-
-    // get spatialized() {
-    //     return this._spatialized;
-    // }
-
-    // set spatialized(spatialized: boolean) {
-    //     this._spatialized = spatialized;
-    //     this.onSetSpatialized;
-    // }
 }
 
 /**
@@ -186,8 +175,18 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
     private readonly pannerGain: GainNode;
     private readonly directGain: GainNode;
+    private readonly masterGain: GainNode;
 
     mediaStream?: MediaStream;
+
+
+    public get gain() {
+        return this.masterGain.gain.value;
+    }
+
+    public set gain(value: number) {
+        this.masterGain.gain.value = value;
+    }
     
     /**
      * Construct a webspeak player and a panner for it. Panner options will be supplied bu the app.
@@ -197,9 +196,23 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
     constructor(playerID: string, app: AppInstance) {
         super(playerID);
         this.app = app;
-        this.panner = new PannerNode(webSpeakAudio.getAudioManagerOrThrow().audioCtx, app.pannerOptions);
-        this.pannerGain = new GainNode(webSpeakAudio.getAudioManagerOrThrow().audioCtx);
-        this.directGain = new GainNode(webSpeakAudio.getAudioManagerOrThrow().audioCtx);
+        const audioManager = webSpeakAudio.getAudioManagerOrThrow();
+        const audioCtx = audioManager.audioCtx;
+
+        // SETUP AUDIO NODES
+        this.panner = new PannerNode(audioCtx, app.pannerOptions);
+
+        this.pannerGain = audioCtx.createGain();
+        this.directGain = audioCtx.createGain();
+        this.directGain.gain.value = 0;
+
+        this.masterGain = audioCtx.createGain();
+
+        this.pannerGain.connect(this.panner);
+        this.panner.connect(this.masterGain);
+        this.directGain.connect(this.masterGain);
+        this.masterGain.connect(audioManager.outputNode);
+
         this.directGain.gain.value = 0;
         
         let userMic = webSpeakAudio.getAudioManagerOrThrow().userMic;
@@ -236,18 +249,12 @@ export class WebSpeakRemotePlayer extends WebSpeakPlayer {
 
                 // Swap between panner node and direct to toggle spatialization
                 this.audioStream.connect(this.pannerGain);
-                this.pannerGain.connect(this.panner);
-                this.panner.connect(audioManager.outputNode);
-
                 this.audioStream.connect(this.directGain);
-                this.directGain.connect(audioManager.outputNode);
-
                 this.mediaStream = mediaStream;
+
                 // Update muted status
-                // this.onSetMuted(this.muted);
                 this.setMuted(this.shouldMute());
                 this.setSpatialized(this.shouldSpatialize());
-                // this.panner.connect(audioManager.outputNode);
             } else {
                 console.error("IT WAS THE WRONG TYPE OH NOOOOOOOO");
             }

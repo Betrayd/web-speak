@@ -1,43 +1,58 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AppInstanceContext } from "./MainUI";
 import { Form, Row } from "react-bootstrap";
 import VolumeSlider from "../components/VolumeSlider";
 import appStatusStores from "../stores/appStatusStores";
 import PlayerListEntry from "../lib/util/PlayerListEntry";
 import PlayerListEntryComponent from "../components/PlayerListEntryComponent";
+import webSpeakAudio from "../lib/webSpeakAudio";
 
 export default function PlayerList(_props: any) {
     const app = useContext(AppInstanceContext);
     const playerList = appStatusStores.usePlayerList(app);
 
     const [masterVolume, setMasterVolume] = useState(() => 1);
-    function drawPlayers() {
-        const data = Array.from((playerList.entries()))
-        return data.map(entry => <>
-            <RemotePlayer key={entry[0]} playerID={entry[0]} meta={entry[1]} />
-            <hr/>
-        </>)
-    }
+
+    useEffect(() => {
+        webSpeakAudio.getAudioManagerOrThrow().setVolume(masterVolume);
+    }, [masterVolume])
+
+    const playerComponents = Object.entries(playerList).map(([key, value]) => (
+        <>
+            <Row key={key}>
+                <RemotePlayer key={key} playerID={key} meta={value} />
+                <hr key={key + ".hr"} />
+            </Row>
+        </>
+    ));
 
     return (
         <>
-            <Row>
-                <Form.Label>Master Volume</Form.Label>
-                <VolumeSlider value={masterVolume} min={0} max={1.5} onChange={setMasterVolume} />
-                {drawPlayers()}
+            <Row key="header">
+                <Form.Label key="header.label">Master Volume</Form.Label>
+                <VolumeSlider key="header.volume" value={masterVolume} min={0} max={2} onChange={setMasterVolume} />
+                <hr />
             </Row>
-            
+            {playerComponents}
         </>
     )
 }
 
 export function RemotePlayer(props: { playerID: string, meta: PlayerListEntry }) {
     const app = useContext(AppInstanceContext);
-    const volume = appStatusStores.usePlayerVolume(app.playerList, props.playerID);
+    const [volume, setVolume] = useState(() => 1);
 
-    function onSetVolume(value: number) {
-        app.playerList.setVolume(props.playerID, value);
-    }
+    // Init volume
+    useEffect(() => {
+        let newVolume = app.getPlayerVolume(props.playerID);
+        if (newVolume !== 1) {
+            setVolume(newVolume);
+        }
+    }, [])
+    
+    useEffect(() => {
+        app.setPlayerVolume(props.playerID, volume);
+    }, [volume])
 
-    return <PlayerListEntryComponent playerName={props.meta.name} avatar={props.meta.avatar} volume={volume} onSetVolume={onSetVolume} />
+    return <PlayerListEntryComponent playerName={props.meta.name} avatar={props.meta.avatar} volume={volume} onSetVolume={setVolume} />
 }

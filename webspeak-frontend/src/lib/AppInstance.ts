@@ -44,6 +44,12 @@ export default class AppInstance {
 
     private readonly _pannerOptions: PannerOptions = webSpeakAudio.defaultPannerOptions;
 
+    /**
+     * Store player volumes seperately from player so we can adjust the volume of
+     * players not in scope.
+     */
+    private readonly playerVolumes = new Map<String, number>();
+
     get pannerOptions(): Readonly<PannerOptions> {
         return this._pannerOptions;
     }
@@ -94,6 +100,18 @@ export default class AppInstance {
         return this.netManager.connectionStatus;
     }
 
+    getPlayerVolume(playerID: string) {
+        let vol = this.playerVolumes.get(playerID);
+        return vol !== undefined ? vol : 1;
+    }
+
+    setPlayerVolume(playerID: string, volume: number) {
+        this.playerVolumes.set(playerID, volume);
+        let player = this.players.get(playerID);
+        if (player !== undefined) {
+            player.gain = volume;
+        }
+    }
 
     /**
      * Attempt to find a player by its ID.
@@ -131,6 +149,7 @@ export default class AppInstance {
             player.copyFrom(dummy);
             this.dummyPlayers.delete(playerID);
         }
+        player.gain = this.getPlayerVolume(playerID);
         return player;
     }
 

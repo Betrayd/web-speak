@@ -45,6 +45,7 @@ export default function MainUI(props: { appInstance: AppInstance, onShutdown?: (
   return (
     <AppInstanceContext.Provider value={props.appInstance}>
       <Container>
+        <h2>Behold the worst UI ever created!</h2>
         <Row>
           <Col>
             <Card>
