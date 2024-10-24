@@ -1,107 +1,31 @@
 package net.betrayd.webspeak;
 
-import org.eclipse.jetty.websocket.api.Callback;
-import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.StatusCode;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketOpen;
 import org.eclipse.jetty.websocket.api.annotations.WebSocket;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import net.betrayd.webspeak.impl.net.S2CPacket;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
-import net.betrayd.webspeak.impl.net.WebSpeakNet.UnknownPacketException;
-import net.betrayd.webspeak.impl.util.NetUtils;
 
 @WebSocket
-public class PlayerConnection {
-    private static final Logger LOGGER = LoggerFactory.getLogger(PlayerConnection.class);
+public interface PlayerConnection {
 
-    private final WebSpeakServer server;
+    public WebSpeakServer getServer();
 
-    private Session session;
-    private WebSpeakPlayer player;
+    public WebSpeakPlayer getPlayer();
 
-    private String sessionID;
+    public boolean isConnected();
 
-    public PlayerConnection(WebSpeakServer server) {
-        this.server = server;
-    }
 
-    public WebSpeakServer getServer() {
-        return server;
-    }
+    public void sendText(String message);
 
-    public WebSpeakPlayer getPlayer() {
-        return player;
-    }
-
-    public boolean isConnected() {
-        return session != null && session.isOpen();
-    }
-
-    @OnWebSocketOpen
-    public void onWebSocketOpen(Session session) {
-        if (this.session != null) {
-            throw new IllegalStateException("Session is already connected!");
-        }
-
-        this.session = session;
-        this.sessionID = NetUtils.splitQueryString(session.getUpgradeRequest().getQueryString()).get("id");
-        WebSpeakPlayer player = server.getPlayerBySessionID(sessionID);
-
-        if (player == null) {
-            session.close(StatusCode.BAD_PAYLOAD, "No player exists with session ID " + sessionID, Callback.NOOP);
-            return;
-        }
-
-        if (player.isConnected()) {
-            session.close(StatusCode.BAD_PAYLOAD, "Session " + sessionID + " already has a player connected!", Callback.NOOP);
-        }
-        this.player = player;
-        player.connection = this;
-        player.getServer().onWebsocketConnected(this);
-    }
-    
-    @OnWebSocketMessage
-    public void onWebSocketMessage(String message) {
-        try {
-            WebSpeakNet.applyPacket(player, message);
-        } catch (UnknownPacketException e) {
-            session.close(StatusCode.BAD_PAYLOAD, "Unknown packet type: " + e.getPacketId(), Callback.NOOP);
-            LOGGER.warn("{} sent unknown packet '{}'", player.getPlayerId(), e.getPacketId());
-        } catch (Exception e) {
-            session.close(StatusCode.SERVER_ERROR, e.getMessage(), Callback.NOOP);
-        }
-    }
-
-    @OnWebSocketClose
-    public void onWsClose(int statusCode, String reason) {
-        if (player != null && player.connection == this) {
-            player.connection = null;
-            server.onWebsocketDisconnected(this);
-        }
-    }
-
-    public void sendText(String message) {
-        session.sendText(message, Callback.NOOP);
-    }
-
-    public <T> void sendPacket(S2CPacket<T> packet, T val) {
+    default <T> void sendPacket(S2CPacket<T> packet, T val) {
         sendText(WebSpeakNet.writePacket(packet, val));
     }
 
-    public void disconnect(int statusCode, String reason) {
-        session.close(statusCode, reason, Callback.NOOP);
+    public void disconnect(int statusCode, String reason);
+    default void disconnect(String reason) {
+        this.disconnect(StatusCode.NORMAL, reason);
     }
 
-    public void disconnect(String reason) {
-        session.close(StatusCode.NORMAL, reason, Callback.NOOP);
-    }
-
-    public String getRemoteAddress() {
-        return session.getRemoteSocketAddress().toString();
-    }
+    public String getRemoteAddress();
 }

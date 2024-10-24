@@ -534,6 +534,14 @@ public abstract class WebSpeakPlayer {
     }
 
     /**
+     * Set the player's connection. Should not be used except internally.
+     * @param connection New connection.
+     */
+    public void setConnection(PlayerConnection connection) {
+        this.connection = connection;
+    }
+
+    /**
      * Called after the player is removed from the server.
      */
     protected void onRemoved() {

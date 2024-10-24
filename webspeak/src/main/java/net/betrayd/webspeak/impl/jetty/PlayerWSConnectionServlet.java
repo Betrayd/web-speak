@@ -3,7 +3,6 @@ package net.betrayd.webspeak.impl.jetty;
 import org.eclipse.jetty.ee10.websocket.server.JettyWebSocketServlet;
 import org.eclipse.jetty.ee10.websocket.server.JettyWebSocketServletFactory;
 
-import net.betrayd.webspeak.PlayerConnection;
 import net.betrayd.webspeak.WebSpeakServer;
 
 public class PlayerWSConnectionServlet extends JettyWebSocketServlet {
@@ -18,7 +17,7 @@ public class PlayerWSConnectionServlet extends JettyWebSocketServlet {
     protected void configure(JettyWebSocketServletFactory factory) {
         // TODO: can we do player validation here?
         factory.setCreator((req, resp) -> {
-            return new PlayerConnection(server);
+            return new PlayerWSConnection(server);
         });
     }
     

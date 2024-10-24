@@ -15,10 +15,6 @@ import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
-import org.eclipse.jetty.ee10.servlet.ServletHolder;
-import org.eclipse.jetty.ee10.websocket.server.config.JettyWebSocketServletContainerInitializer;
-import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,8 +22,9 @@ import net.betrayd.webspeak.WebSpeakFlags.WebSpeakFlag;
 import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
 import net.betrayd.webspeak.impl.RelationGraph;
+import net.betrayd.webspeak.impl.ServerBackend;
 import net.betrayd.webspeak.impl.WebSpeakFlagHolder;
-import net.betrayd.webspeak.impl.jetty.PlayerWSConnectionServlet;
+import net.betrayd.webspeak.impl.jetty.JettyServerBackend;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 import net.betrayd.webspeak.impl.net.packets.LocalPlayerInfoS2CPacket;
 import net.betrayd.webspeak.impl.net.packets.PlayerListPackets;
@@ -56,8 +53,10 @@ public class WebSpeakServer implements Executor {
 
     // private Javalin app;
 
-    private Server jettyServer;
-    private int port = -1;
+    // private Server jettyServer;
+    // private int port = -1;
+
+    private final ServerBackend serverBackend = new JettyServerBackend(this);
 
     private final Queue<Runnable> tasks = new ConcurrentLinkedQueue<>();
 
@@ -150,11 +149,11 @@ public class WebSpeakServer implements Executor {
     // }
 
     public boolean isRunning() {
-        return jettyServer != null && jettyServer.isRunning();
+        return serverBackend.isRunning();
     }
 
     public int getPort() {
-        return port;
+        return serverBackend.getPort();
     }
 
     public WebSpeakServer() {
@@ -168,24 +167,25 @@ public class WebSpeakServer implements Executor {
      * @throws Exception If something bad happens while starting the server.
      */
     public synchronized void start(int port) throws Exception {
-        if (jettyServer != null) {
-            throw new IllegalStateException("Server has already started.");
-        }
-        this.port = port;
-        var server = jettyServer = new Server(port);
+        serverBackend.start(port);
+        // if (jettyServer != null) {
+        //     throw new IllegalStateException("Server has already started.");
+        // }
+        // this.port = port;
+        // var server = jettyServer = new Server(port);
 
-        ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
-        context.setContextPath("/");
-        server.setHandler(context);
+        // ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        // context.setContextPath("/");
+        // server.setHandler(context);
 
-        JettyWebSocketServletContainerInitializer.configure(context, null);
-        ServletHolder wsHolder = new ServletHolder("connect", new PlayerWSConnectionServlet(this));
-        context.addServlet(wsHolder, "/connect");
+        // JettyWebSocketServletContainerInitializer.configure(context, null);
+        // ServletHolder wsHolder = new ServletHolder("connect", new PlayerWSConnectionServlet(this));
+        // context.addServlet(wsHolder, "/connect");
 
-        // Assign app at the end for thread safety; if something tries to access the app
-        // before it's done initializing, it will return null.
-        server.start();
-        jettyServer = server;
+        // // Assign app at the end for thread safety; if something tries to access the app
+        // // before it's done initializing, it will return null.
+        // server.start();
+        // jettyServer = server;
     }
      
     // public synchronized void start(int port) {
@@ -211,7 +211,7 @@ public class WebSpeakServer implements Executor {
      */
     public void stop() {
         synchronized(this) {
-            if (jettyServer == null)
+            if (!serverBackend.isRunning())
                 return;
             
             for (var playerID : List.copyOf(players.keySet())) {
@@ -219,7 +219,7 @@ public class WebSpeakServer implements Executor {
             }
         }
         try {
-            jettyServer.stop();
+            serverBackend.stop();
         } catch (Exception e) {
             LOGGER.error("Error stopping WebSpeak server.", e);
         }
@@ -358,11 +358,11 @@ public class WebSpeakServer implements Executor {
         return scopes.getRelations(player);
     }
 
-    protected void onClientConnect(PlayerConnection connection) {
-        
-    }
-
-    void onWebsocketConnected(PlayerConnection connection) {
+    /**
+     * Called when a websocket connection is established. Should not be used except internally.
+     * @param connection New connection.
+     */
+    public void onWebsocketConnected(PlayerConnection connection) {
         new LocalPlayerInfoS2CPacket(connection.getPlayer().getPlayerId()).send(connection);
 
         playerCoordinateManager.onPlayerConnected(connection.getPlayer());
@@ -371,7 +371,11 @@ public class WebSpeakServer implements Executor {
         ON_SESSION_CONNECTED.invoker().accept(connection.getPlayer());
     }
 
-    void onWebsocketDisconnected(PlayerConnection connection) {
+    /**
+     * Called when a websocket has disconnected. Should not be used except internally.
+     * @param connection The connection.
+     */
+    public void onWebsocketDisconnected(PlayerConnection connection) {
         kickScopes(connection.getPlayer());
         LOGGER.info("Player {} disconnected from voice.", connection.getPlayer().getPlayerId());
     }
