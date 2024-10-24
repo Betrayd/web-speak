@@ -63,11 +63,6 @@ public class PlayerCoordinateManager {
             if (connection == null || !server.areInScope(target, player))
                 continue;
             connection.sendText(packet);
-            // WsContext ws = target.getWsContext();
-            // if (ws == null || !server.areInScope(target, player))
-            //     continue;
-            
-            // ws.send(packet);
         }
     }
 

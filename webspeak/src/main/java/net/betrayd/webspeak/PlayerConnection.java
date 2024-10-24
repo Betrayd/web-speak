@@ -1,12 +1,10 @@
 package net.betrayd.webspeak;
 
 import org.eclipse.jetty.websocket.api.StatusCode;
-import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 
 import net.betrayd.webspeak.impl.net.S2CPacket;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
 
-@WebSocket
 public interface PlayerConnection {
 
     public WebSpeakServer getServer();
@@ -23,6 +21,7 @@ public interface PlayerConnection {
     }
 
     public void disconnect(int statusCode, String reason);
+    
     default void disconnect(String reason) {
         this.disconnect(StatusCode.NORMAL, reason);
     }

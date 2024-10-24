@@ -14,9 +14,4 @@ public class PlayerListPackets {
     public static final S2CPacket<Map<String, WSPlayerListEntry>> SET_PLAYER_ENTRIES_S2C = new JsonS2CPacket<>("setPlayerEntries");
 
     public static final S2CPacket<List<String>> REMOVE_PLAYER_ENTRIES_S2C = new JsonS2CPacket<>("removePlayerEntries");
-
-    // /**
-    //  * Remove a player list entry from the client.
-    //  */
-    // public static final S2CPacket<String> REMOVE_PLAYER_ENTRY_S2C = new StringS2CPacket("removePlayerEntry");
 }

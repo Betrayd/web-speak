@@ -45,18 +45,6 @@ public class WebSpeakNet {
         }
     }
 
-    // public static <T> void sendPacket(WsContext ws, S2CPacket<T> packet, T val) {
-    //     ws.send(writePacket(packet, val));
-    // }
-
-    // public static <T> void sendPacketToPlayers(Iterable<? extends WebSpeakPlayer> players, S2CPacket<T> packet, T val) {
-    //     String payload = writePacket(packet, val);
-    //     for (var player : players) {
-    //         if (player.isConnected())
-    //             player.getWsContext().send(payload);
-    //     }
-    // }
-
     public static void applyPacket(WebSpeakPlayer player, String data) {
         int colon = data.indexOf(';');
         if (colon < 0) {
