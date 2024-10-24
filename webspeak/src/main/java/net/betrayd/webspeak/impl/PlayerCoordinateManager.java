@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.PlayerConnection;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
@@ -59,11 +59,15 @@ public class PlayerCoordinateManager {
                 UpdateTransformS2CPacket.fromPlayer(player));
 
         for (var target : targets) {
-            WsContext ws = target.getWsContext();
-            if (ws == null || !server.areInScope(target, player))
+            PlayerConnection connection = target.getConnection();
+            if (connection == null || !server.areInScope(target, player))
                 continue;
+            connection.sendText(packet);
+            // WsContext ws = target.getWsContext();
+            // if (ws == null || !server.areInScope(target, player))
+            //     continue;
             
-            ws.send(packet);
+            // ws.send(packet);
         }
     }
 

@@ -202,7 +202,7 @@ public class WebSpeakTestApp extends Application {
                 getPannerOptionsManager().applyAllPannerOptions(server);
                 server.onSessionConnected(player -> {
                     if (player instanceof TestWebPlayer testPlayer) {
-                        String connectionIp = testPlayer.getWsContext().session.getRemoteAddress().toString();
+                        String connectionIp = testPlayer.getConnection().getRemoteAddress();
                         Platform.runLater(() -> connectionIps.put(testPlayer.getPlayer(), connectionIp));
                     }
                 });

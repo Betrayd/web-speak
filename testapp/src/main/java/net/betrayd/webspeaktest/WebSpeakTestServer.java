@@ -79,7 +79,13 @@ public class WebSpeakTestServer implements Executor {
         webSpeakServer.setFlag(WebSpeakFlags.DEBUG_KEEPALIVE, true);
         webSpeakServer.setFlag(WebSpeakFlags.DEBUG_CHANNEL_SWAPS, true);
         webSpeakServer.getPannerOptions().maxDistance = 5;
-        webSpeakServer.start(port);
+
+        try {
+            webSpeakServer.start(port);
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to start WebSpeak server.", e);
+        }
+        
         startFuture.complete(webSpeakServer);
         while (!shutdownQueued) {
             Runnable task;

@@ -1,10 +1,9 @@
 package net.betrayd.webspeak.impl.net.packets;
 
-import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.PlayerConnection;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.impl.net.S2CPacket;
 import net.betrayd.webspeak.impl.net.S2CPacket.JsonS2CPacket;
-import net.betrayd.webspeak.impl.net.WebSpeakNet;
 import net.betrayd.webspeak.util.WebSpeakVector;
 
 public record UpdateTransformS2CPacket(String playerID, WebSpeakVector pos, WebSpeakVector forward, WebSpeakVector up) {
@@ -14,7 +13,7 @@ public record UpdateTransformS2CPacket(String playerID, WebSpeakVector pos, WebS
         return new UpdateTransformS2CPacket(player.getPlayerId(), player.getLocation(), player.getForward(), player.getUp());
     }
 
-    public void send(WsContext ws) {
-        WebSpeakNet.sendPacket(ws, PACKET, this);
+    public void send(PlayerConnection connection) {
+        connection.sendPacket(PACKET, this);
     }
 }

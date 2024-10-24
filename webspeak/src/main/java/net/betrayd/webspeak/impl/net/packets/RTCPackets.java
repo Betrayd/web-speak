@@ -5,14 +5,13 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonElement;
 
-import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.PlayerConnection;
 import net.betrayd.webspeak.WebSpeakFlags;
 import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.impl.net.C2SPacket;
 import net.betrayd.webspeak.impl.net.C2SPacket.JsonC2SPacket;
 import net.betrayd.webspeak.impl.net.S2CPacket;
 import net.betrayd.webspeak.impl.net.S2CPacket.JsonS2CPacket;
-import net.betrayd.webspeak.impl.net.WebSpeakNet;
 
 public class RTCPackets {
 
@@ -45,8 +44,8 @@ public class RTCPackets {
             throw new IllegalArgumentException("Unknown player: " + data.playerID);
         }
         
-        WsContext targetWs = targetPlayer.getWsContext();
-        if (targetWs == null) {
+        PlayerConnection targetConnection = targetPlayer.getConnection();
+        if (targetConnection == null) {
             LOGGER.warn("Tried to send rtc offer from {} to disconnected player {}",
                     player.getPlayerId(), targetPlayer.getPlayerId());
             return;
@@ -57,7 +56,7 @@ public class RTCPackets {
         }
 
         // Hand offer to other client, giving it the source player's ID.
-        WebSpeakNet.sendPacket(targetWs, HAND_OFFER_S2C, new RTCPacketData(player.getPlayerId(), data.payload));
+        targetConnection.sendPacket(HAND_OFFER_S2C, new RTCPacketData(player.getPlayerId(), data.payload));
     }
 
     private static void onReturnAnswer(WebSpeakPlayer player, RTCPacketData data) {
@@ -67,8 +66,8 @@ public class RTCPackets {
             throw new IllegalArgumentException("Unknown player: " + data.playerID);
         }
         
-        WsContext targetWs = targetPlayer.getWsContext();
-        if (targetWs == null) {
+        PlayerConnection targetConnection = targetPlayer.getConnection();
+        if (targetConnection == null) {
             LOGGER.warn("Tried to send rtc offer from {} to disconnected player {}",
                     player.getPlayerId(), targetPlayer.getPlayerId());
             return;
@@ -78,7 +77,7 @@ public class RTCPackets {
             LOGGER.info("Sending RTC answer from {} to {}", player.getPlayerId(), targetPlayer.getPlayerId());
         }
 
-        WebSpeakNet.sendPacket(targetWs, HAND_ANSWER_S2C, new RTCPacketData(player.getPlayerId(), data.payload));
+        targetConnection.sendPacket(HAND_ANSWER_S2C, new RTCPacketData(player.getPlayerId(), data.payload));
     }
 
     private static void onReturnIce(WebSpeakPlayer player, RTCPacketData data) {
@@ -88,8 +87,8 @@ public class RTCPackets {
             throw new IllegalArgumentException("Unknown player: " + data.playerID);
         }
 
-        WsContext targetWs = targetPlayer.getWsContext();
-        if (targetWs == null) {
+        PlayerConnection targetConnection = targetPlayer.getConnection();
+        if (targetConnection == null) {
             LOGGER.warn("Tried to send ice response from {} to disconnected player {}",
                     player.getPlayerId(), targetPlayer.getPlayerId());
             return;
@@ -99,6 +98,6 @@ public class RTCPackets {
             LOGGER.info("Sending ICE responce from {} to {}", player.getPlayerId(), targetPlayer.getPlayerId());
         }
 
-        WebSpeakNet.sendPacket(targetWs, HAND_ICE_S2C, new RTCPacketData(player.getPlayerId(), data.payload));
+         targetConnection.sendPacket(HAND_ICE_S2C, new RTCPacketData(player.getPlayerId(), data.payload));
     }
 }
