@@ -31,6 +31,7 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
     }
 
     //TODO: determine if we need a wrapper class for sessions to get all data we would get in a real connection or if this is enough
+    //TODO: LOW_PRIORITY: don't accept packets except connection packets if we are not yet connected.
     /**
      * When the client has connected to the relay
      * @param connectionContext the context of the connection. Currently this is hardcoded to the remote adress because that's all we need. We may need a wrapper class in the future
