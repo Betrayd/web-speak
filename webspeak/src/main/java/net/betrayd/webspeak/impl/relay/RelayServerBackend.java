@@ -1,4 +1,4 @@
-package net.betrayd.webspeak.impl.jetty;
+package net.betrayd.webspeak.impl.relay;
 
 import java.io.IOException;
 import java.net.URI;

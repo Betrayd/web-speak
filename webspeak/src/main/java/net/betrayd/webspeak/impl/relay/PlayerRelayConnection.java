@@ -1,4 +1,4 @@
-package net.betrayd.webspeak.impl.jetty;
+package net.betrayd.webspeak.impl.relay;
 
 import org.eclipse.jetty.websocket.api.Callback;
 import org.eclipse.jetty.websocket.api.Session;
@@ -23,10 +23,33 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
     private Session session;
 
     private boolean connected = false;
+    private String remoteAdress = null;
 
     public PlayerRelayConnection(WebSpeakServer server, WebSpeakPlayer player) {
         this.server = server;
         this.player = player;
+    }
+
+    //TODO: determine if we need a wrapper class for sessions to get all data we would get in a real connection or if this is enough
+    /**
+     * When the client has connected to the relay
+     * @param connectionContext the context of the connection. Currently this is hardcoded to the remote adress because that's all we need. We may need a wrapper class in the future
+     */
+    public void clientConnected(String connectionContext)
+    {
+        this.connected = true;
+        this.remoteAdress = connectionContext;
+        player.getServer().onWebsocketConnected(this);
+    }
+
+    /**
+     * When the client has disconnected from the relay
+     */
+    public void clientDisconnected(int statusCode, String reason)
+    {
+        connected = false;
+        this.remoteAdress = null;
+        server.onWebsocketDisconnected(this);
     }
 
     @Override
@@ -56,8 +79,7 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
 
     @Override
     public String getRemoteAddress() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRemoteAddress'");
+        return remoteAdress;
     }
 
     @Override
@@ -73,7 +95,6 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
     @Override
     public void onWebSocketText(String message)
     {
-        //implement something for connection started and ended here
         try {
             WebSpeakNet.applyPacket(player, message);
         } catch (UnknownPacketException e) {
