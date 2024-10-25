@@ -1,5 +1,6 @@
 package net.betrayd.webspeak.impl;
 
+import net.betrayd.webspeak.WebSpeakPlayer;
 import net.betrayd.webspeak.WebSpeakServer;
 
 /**
@@ -19,6 +20,10 @@ public interface ServerBackend {
      * @throws Exception If something goes wrong during startup.
      */
     public void start(int port) throws Exception;
+
+    public default void addPlayer(WebSpeakPlayer player){}
+
+    public default void removePlayer(WebSpeakPlayer player){}
 
     /**
      * Stop the server, and block until it has fully stopped.

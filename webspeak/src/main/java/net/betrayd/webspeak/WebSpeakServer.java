@@ -478,7 +478,6 @@ public class WebSpeakServer implements Executor {
             if (player == null) {
                 player = factory.create(this, playerID, UUID.randomUUID().toString());
                 players.put(playerID, player);
-                onAddPlayer(player);
                 added = true;
             };
         }
@@ -491,6 +490,7 @@ public class WebSpeakServer implements Executor {
     }
 
     private void onAddPlayer(WebSpeakPlayer player) {
+        serverBackend.addPlayer(player);
         ON_PLAYER_ADDED.invoker().accept(player);
     }
 
@@ -532,6 +532,8 @@ public class WebSpeakServer implements Executor {
             }
             player.onRemoved();
             removeFromPlayerList(player.getPlayerId());
+
+            serverBackend.removePlayer(player);
             ON_PLAYER_REMOVED.invoker().accept(player);
         } catch (Exception e) {
             LOGGER.error("Error removing player from server: " + player.getPlayerId(), e);
