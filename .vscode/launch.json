@@ -18,6 +18,14 @@
             "mainClass": "net.betrayd.webspeaktest.Entrypoint",
             "projectName": "testapp",
             "console": "internalConsole"
+        },
+        {
+            "type": "java",
+            "name": "Relay Server",
+            "request": "launch",
+            "mainClass": "net.betrayd.webspeak.relay.WebSpeakRelay",
+            "projectName": "webspeak-relay",
+            "console": "internalConsole"
         }
     ]
 }
