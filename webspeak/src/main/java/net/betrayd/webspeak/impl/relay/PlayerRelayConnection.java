@@ -30,14 +30,18 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
         this.player = player;
     }
 
-    //TODO: determine if we need a wrapper class for sessions to get all data we would get in a real connection or if this is enough
-    //TODO: LOW_PRIORITY: don't accept packets except connection packets if we are not yet connected.
+    // TODO: determine if we need a wrapper class for sessions to get all data we
+    // would get in a real connection or if this is enough
+    // TODO: LOW_PRIORITY: don't accept packets except connection packets if we are
+    // not yet connected.
     /**
      * When the client has connected to the relay
-     * @param connectionContext the context of the connection. Currently this is hardcoded to the remote adress because that's all we need. We may need a wrapper class in the future
+     * 
+     * @param connectionContext the context of the connection. Currently this is
+     *                          hardcoded to the remote adress because that's all we
+     *                          need. We may need a wrapper class in the future
      */
-    public void clientConnected(String connectionContext)
-    {
+    public void clientConnected(String connectionContext) {
         this.connected = true;
         this.remoteAdress = connectionContext;
         player.getServer().onWebsocketConnected(this);
@@ -46,8 +50,7 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
     /**
      * When the client has disconnected from the relay
      */
-    public void clientDisconnected(int statusCode, String reason)
-    {
+    public void clientDisconnected(int statusCode, String reason) {
         connected = false;
         this.remoteAdress = null;
         server.onWebsocketDisconnected(this);
@@ -84,8 +87,7 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
     }
 
     @Override
-    public void onWebSocketOpen(Session session)
-    {
+    public void onWebSocketOpen(Session session) {
         // The WebSocket endpoint has been opened.
 
         // Store the session to be able to send data to the remote peer.
@@ -94,8 +96,7 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
     }
 
     @Override
-    public void onWebSocketText(String message)
-    {
+    public void onWebSocketText(String message) {
         try {
             WebSpeakNet.applyPacket(player, message);
         } catch (UnknownPacketException e) {
@@ -107,8 +108,7 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
     }
 
     @Override
-    public void onWebSocketError(Throwable cause)
-    {
+    public void onWebSocketError(Throwable cause) {
         // The WebSocket endpoint failed.
 
         // You may log the error.
