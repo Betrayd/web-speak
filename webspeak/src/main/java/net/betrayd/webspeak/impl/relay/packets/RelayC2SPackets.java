@@ -12,15 +12,15 @@ public class RelayC2SPackets {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("WebSpeak RelayC2SPackets");
 
-    public static record RelayDisconnectData(int statusCode, String reason) {
-    };
+    public static record RelayConnectData(String context){};
+    public static record RelayDisconnectData(int statusCode, String reason) {};
 
-    public static final C2SPacket<String> RELAY_CLIENT_CONNECTED_C2S_PACKET = new JsonC2SPacket<>(String.class, RelayC2SPackets::onClientConnected);
+    public static final C2SPacket<RelayConnectData> RELAY_CLIENT_CONNECTED_C2S_PACKET = new JsonC2SPacket<>(RelayConnectData.class, RelayC2SPackets::onClientConnected);
     public static final C2SPacket<RelayDisconnectData> RELAY_CLIENT_DISCONNECTED_C2S_PACKET = new JsonC2SPacket<>(RelayDisconnectData.class, RelayC2SPackets::onClientDisconnected);
 
-    private static void onClientConnected(WebSpeakPlayer player, String context) {
+    private static void onClientConnected(WebSpeakPlayer player, RelayConnectData data) {
         if (player.getConnection() instanceof PlayerRelayConnection relayConnection && !relayConnection.isConnected()) {
-            relayConnection.clientConnected(context);
+            relayConnection.clientConnected(data.context);
         } else {
             LOGGER.warn("We recived a relay connect packet, but have no relay connection to the player or are already connected!");
         }
