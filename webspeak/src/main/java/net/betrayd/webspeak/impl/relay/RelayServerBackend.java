@@ -3,6 +3,7 @@ package net.betrayd.webspeak.impl.relay;
 import java.io.IOException;
 import java.net.URI;
 
+import org.eclipse.jetty.websocket.api.Callback;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.slf4j.Logger;
@@ -96,13 +97,23 @@ public class RelayServerBackend implements ServerBackend {
     /*
      * Class for our core connection
      */
+    //TODO: add keep alive packets
     private static class CoreRelay implements Session.Listener.AutoDemanding
     {
         private final RelayServerBackend backend;
 
+        private Session session;
+
         private CoreRelay(RelayServerBackend backend)
         {
             this.backend = backend;
+        }
+
+        @Override
+        public void onWebSocketOpen(Session session) {
+            this.session = session;
+            //TODO: add server idetifier here as payload
+            session.sendText("server", Callback.NOOP);
         }
 
         //nothing fancy here just take the string and use it to tell our class what the heck our ID is. No wrappers.
