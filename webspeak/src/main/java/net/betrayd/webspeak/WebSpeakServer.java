@@ -37,6 +37,8 @@ import net.betrayd.webspeak.util.WebSpeakEvents;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 import net.betrayd.webspeak.util.WebSpeakMath;
 
+//TODO: remove everthing I changed to this class in the last commit and make it good. THis class is the worst offender of the slapped together code I threw in
+
 /**
  * The primary WebSpeak server
  * 
