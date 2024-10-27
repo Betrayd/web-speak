@@ -2,7 +2,9 @@ package net.betrayd.webspeak.impl.relay;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 
+import org.eclipse.jetty.util.NanoTime;
 import org.eclipse.jetty.websocket.api.Callback;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
@@ -22,6 +24,8 @@ public class RelayServerBackend implements ServerBackend {
     private final String relayAddress;
     private WebSocketClient webSocketClient;
 
+    private CoreRelay coreConnection;
+
     private final String serverID;
     private String privateRelayKey = null;
 
@@ -31,14 +35,31 @@ public class RelayServerBackend implements ServerBackend {
         this.serverID = serverID;
     }
 
+    int tickTime = 20;
+
+    public void tickBaseConnection()
+    {
+        if(coreConnection == null)
+        {
+            return;
+        }
+        if(tickTime > 20)
+        {
+            tickTime = 0;
+            coreConnection.sendKeepAlive();
+        }
+        tickTime++;
+    }
+
     /**
      * Initialize our base webSocket connection to let the server tell us what we
      * are identified as
      */
     private void createBaseConnection() {
+        LOGGER.info("adress: "+relayAddress+"/host");
         URI serverURI = URI.create(relayAddress + "/host");
 
-        CoreRelay coreConnection = new CoreRelay(this, serverID);
+        coreConnection = new CoreRelay(this, serverID);
 
         try {
             webSocketClient.connect(coreConnection, serverURI);
@@ -90,15 +111,14 @@ public class RelayServerBackend implements ServerBackend {
 
     @Override
     public int getPort() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPort'");
+        return -1;
     }
 
     /*
      * Class for our core connection
      */
     // TODO: add keep alive packets
-    private static class CoreRelay implements Session.Listener.AutoDemanding {
+    public static class CoreRelay implements Session.Listener.AutoDemanding {
         private final RelayServerBackend backend;
 
         private Session session;
@@ -107,6 +127,17 @@ public class RelayServerBackend implements ServerBackend {
         private CoreRelay(RelayServerBackend backend, String serverID) {
             this.backend = backend;
             this.serverID = serverID;
+        }
+
+        public void sendKeepAlive()
+        {
+            if(session == null)
+            {
+                return;
+            }
+            //LOGGER.info("Ah^ ah^ ah- ah-...");
+            ByteBuffer buffer = ByteBuffer.allocate(8).putLong(NanoTime.now()).flip();
+            session.sendPing(buffer, Callback.NOOP);
         }
 
         @Override

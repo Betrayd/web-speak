@@ -5,9 +5,11 @@ import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketOpen;
+import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 
 import net.betrayd.webspeak.relay.ServerConnection.LinkedConnection;
 
+@WebSocket
 public class ServerPlayerConnection {
 
     private Session session;
@@ -22,7 +24,7 @@ public class ServerPlayerConnection {
         this.connectedClient = connection;
 
         //TODO: do this properly
-        this.send("RELAY_CLIENT_CONNECTED_C2S_PACKET;{context:\""+context+"\"}");
+        this.send("relayClientConnect;{context:\""+context+"\"}");
     }
 
     public void disconnectClient(int statusCode, String reason)
@@ -30,7 +32,7 @@ public class ServerPlayerConnection {
         this.connectedClient = null;
 
         //TODO: do this properly too
-        this.send("RELAY_CLIENT_DISCONNECTED_C2S_PACKET;{statusCode:"+statusCode+",reason:\""+reason+"\"}");
+        this.send("relayClientDisconnect;{statusCode:"+statusCode+",reason:\""+reason+"\"}");
     }
 
     public void disconnect()
@@ -45,6 +47,7 @@ public class ServerPlayerConnection {
 
     @OnWebSocketOpen
     public void onWebSocketOpen(Session session) {
+        System.out.println("Server opened player with params: "+session.getUpgradeRequest().getQueryString()+", server:" + session.getRemoteSocketAddress());
         if (this.session != null) {
             throw new IllegalStateException("Session is already connected!");
         }
@@ -68,6 +71,7 @@ public class ServerPlayerConnection {
     @OnWebSocketClose
     public void OnWebSocketClose(int statusCode, String reason)
     {
+        System.out.println("Server player connection closed. PlayerID: "+sessionID+", Server: " + session.getRemoteSocketAddress());
         if(connectedClient == null)
         {
             return;
@@ -77,7 +81,7 @@ public class ServerPlayerConnection {
     }
 
     @OnWebSocketMessage
-    public void onWebSocketMessage(Session session, String message)
+    public void onWebSocketMessage(String message)
     {
         if(connectedClient == null)
         {

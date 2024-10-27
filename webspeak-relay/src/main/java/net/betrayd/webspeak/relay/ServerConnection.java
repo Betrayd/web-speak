@@ -9,7 +9,9 @@ import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketOpen;
+import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 
+@WebSocket
 public class ServerConnection {
 
     private String privateID = null;
@@ -29,6 +31,7 @@ public class ServerConnection {
     @OnWebSocketOpen
     public void onWebSocketOpen(Session session) {
 
+        System.out.println("new server connecting to the relay... "+this.toString());
         //generate the connecting server's private ID
         //Probably could be reverse engineered by getting a lot of keys by connecting a lot and then using those to figure out an internal state, but if it gets big enough people care to do that I consider it a win
         privateID = UUID.randomUUID().toString();
@@ -41,7 +44,7 @@ public class ServerConnection {
         //I'm not using the whole packet system fot this. Use their message as their ID. Blank is keep alive
         if(message.length() > 0)
         {
-            if(publicID == null || WebSpeakRelay.servers.containsKey(message))
+            if(publicID != null || WebSpeakRelay.servers.containsKey(message))
             {
                 return;
             }
@@ -60,6 +63,8 @@ public class ServerConnection {
         }
         connections.clear();
         WebSpeakRelay.servers.remove(publicID);
+
+        System.out.println("server disconnected: "+this.toString());
     }
     
     public static class LinkedConnection

@@ -6,10 +6,11 @@ import org.eclipse.jetty.websocket.api.StatusCode;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketOpen;
+import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 
 import net.betrayd.webspeak.relay.ServerConnection.LinkedConnection;
 
-
+@WebSocket
 public class ClientPlayerConnection {
     private Session session;
 
@@ -36,6 +37,11 @@ public class ClientPlayerConnection {
     public void onWebSocketOpen(Session session) {
         if (this.session != null) {
             throw new IllegalStateException("Session is already connected!");
+        }
+        if(this.serverID == null)
+        {
+            session.close(StatusCode.BAD_DATA, serverID, Callback.NOOP);
+            return;
         }
 
         this.session = session;

@@ -63,7 +63,7 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
 
     @Override
     public WebSpeakPlayer getPlayer() {
-        return this.getPlayer();
+        return this.player;
     }
 
     @Override

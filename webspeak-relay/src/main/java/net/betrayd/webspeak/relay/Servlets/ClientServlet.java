@@ -9,10 +9,15 @@ public class ClientServlet extends JettyWebSocketServlet {
 
     @Override
     protected void configure(JettyWebSocketServletFactory factory) {
-        // TODO: can we do player validation here?
         factory.setCreator((req, resp) -> {
             //don't need a check here we already made sure that the path contained a / to get here
-            String server = req.getRequestPath().split("/")[1];
+            String[] path = req.getRequestPath().split("/");
+            String server = null;
+            if(path.length > 3)
+            {
+                server = path[2];
+            }
+            System.out.println("client asking for server: "+server);
             return new ClientPlayerConnection(server);
         });
     }

@@ -37,6 +37,7 @@ public class WebSpeakRelay {
     private static int port = -1;
 
     public static void start(int port) throws Exception {
+        System.out.println("Starting server...");
         if (jettyServer != null) {
             throw new IllegalStateException("Server has already started.");
         }
@@ -55,9 +56,10 @@ public class WebSpeakRelay {
         ServletHolder wsConnectionHolder = new ServletHolder("addplayer", new ServerAddPlayerServlet());
         context.addServlet(wsConnectionHolder, "/addplayer");
         ServletHolder wsClientHolder = new ServletHolder("connect", new ClientServlet());
-        context.addServlet(wsClientHolder, "/connect");
+        context.addServlet(wsClientHolder, "/relay/*");
 
         server.start();
         jettyServer = server;
+        System.err.println("Server started!");
     }
 }

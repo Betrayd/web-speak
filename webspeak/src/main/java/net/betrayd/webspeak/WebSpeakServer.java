@@ -29,6 +29,7 @@ import net.betrayd.webspeak.impl.net.WebSpeakNet;
 import net.betrayd.webspeak.impl.net.packets.LocalPlayerInfoS2CPacket;
 import net.betrayd.webspeak.impl.net.packets.PlayerListPackets;
 import net.betrayd.webspeak.impl.net.packets.SetPannerOptionsC2SPacket;
+import net.betrayd.webspeak.impl.relay.RelayServerBackend;
 import net.betrayd.webspeak.impl.util.WebSpeakUtils;
 import net.betrayd.webspeak.util.PannerOptions;
 import net.betrayd.webspeak.util.WSPlayerListEntry;
@@ -51,7 +52,8 @@ public class WebSpeakServer implements Executor {
         public T create(WebSpeakServer server, String playerId, String sessionId);
     }
 
-    private final ServerBackend serverBackend = new JettyServerBackend(this);
+    //private final ServerBackend serverBackend = new JettyServerBackend(this);
+    private final ServerBackend serverBackend = new RelayServerBackend(this, "ws://localhost:8080", "theoneandonlyserver");
 
     private final Queue<Runnable> tasks = new ConcurrentLinkedQueue<>();
 
@@ -188,6 +190,12 @@ public class WebSpeakServer implements Executor {
      * ticks the server: updates connections on distance etc.
      */
     public synchronized void tick() {
+
+        if(serverBackend instanceof RelayServerBackend b)
+        {
+            b.tickBaseConnection();
+        }
+
         if (!isRunning())
             return;
         Runnable task;

@@ -9,7 +9,6 @@ public class ServerAddPlayerServlet extends JettyWebSocketServlet {
 
     @Override
     protected void configure(JettyWebSocketServletFactory factory) {
-        // TODO: can we do player validation here?
         factory.setCreator((req, resp) -> {
             return new ServerPlayerConnection();
         });
