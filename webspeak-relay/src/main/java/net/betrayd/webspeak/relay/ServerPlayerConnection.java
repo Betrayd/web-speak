@@ -33,6 +33,11 @@ public class ServerPlayerConnection {
         this.send("RELAY_CLIENT_DISCONNECTED_C2S_PACKET;{statusCode:"+statusCode+",reason:\""+reason+"\"}");
     }
 
+    public void disconnect()
+    {
+        session.close();
+    }
+
     public void send(String message)
     {
         session.sendText(message, Callback.NOOP);

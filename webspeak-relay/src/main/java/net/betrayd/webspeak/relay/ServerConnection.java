@@ -53,7 +53,12 @@ public class ServerConnection {
     }
 
     @OnWebSocketClose
-    public void onWebSocketOpen(int statusCode, String message) {
+    public void onWebSocketClose(int statusCode, String message) {
+        for(LinkedConnection con : connections.values())
+        {
+            con.server.disconnect();
+        }
+        connections.clear();
         WebSpeakRelay.servers.remove(publicID);
     }
     

@@ -19,24 +19,26 @@ public class RelayServerBackend implements ServerBackend {
     private static final Logger LOGGER = LoggerFactory.getLogger(RelayServerBackend.class);
 
     private final WebSpeakServer webSpeakServer;
+    private final String relayAddress;
     private WebSocketClient webSocketClient;
 
-    private String ourRelayConnectionID = null;
+    private final String serverID;
+    private String privateRelayKey = null;
 
-    public RelayServerBackend(WebSpeakServer webSpeakServer)
-    {
+    public RelayServerBackend(WebSpeakServer webSpeakServer, String relayAddress, String serverID) {
         this.webSpeakServer = webSpeakServer;
+        this.relayAddress = relayAddress;
+        this.serverID = serverID;
     }
 
     /**
-     * Initialize our base webSocket connection to let the server tell us what we are identified as
+     * Initialize our base webSocket connection to let the server tell us what we
+     * are identified as
      */
-    private void createBaseConnection()
-    {
-        //TODO: add correct base connection IP
-        URI serverURI = URI.create("wss://domain.com/path");
+    private void createBaseConnection() {
+        URI serverURI = URI.create(relayAddress + "/host");
 
-        CoreRelay coreConnection = new CoreRelay(this);
+        CoreRelay coreConnection = new CoreRelay(this, serverID);
 
         try {
             webSocketClient.connect(coreConnection, serverURI);
@@ -51,10 +53,8 @@ public class RelayServerBackend implements ServerBackend {
     }
 
     @Override
-    public void addPlayer(WebSpeakPlayer player)
-    {
-        //TODO: add correct connection URI fromn config here
-        URI serverURI = URI.create("wss://domain.com/path");
+    public void addPlayer(WebSpeakPlayer player) {
+        URI serverURI = URI.create(relayAddress + "/addplayer?server=" + serverID + "&key="+privateRelayKey+"&id="+player.getSessionId());
 
         PlayerRelayConnection connection = new PlayerRelayConnection(webSpeakServer, player);
 
@@ -79,13 +79,13 @@ public class RelayServerBackend implements ServerBackend {
 
     @Override
     public void stop() throws Exception {
-        ourRelayConnectionID = null;
+        privateRelayKey = null;
         webSocketClient.stop();
     }
 
     @Override
     public boolean isRunning() {
-        return webSocketClient != null && ourRelayConnectionID != null && webSocketClient.isRunning();
+        return webSocketClient != null && privateRelayKey != null && webSocketClient.isRunning();
     }
 
     @Override
@@ -93,43 +93,41 @@ public class RelayServerBackend implements ServerBackend {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getPort'");
     }
-    
+
     /*
      * Class for our core connection
      */
-    //TODO: add keep alive packets
-    private static class CoreRelay implements Session.Listener.AutoDemanding
-    {
+    // TODO: add keep alive packets
+    private static class CoreRelay implements Session.Listener.AutoDemanding {
         private final RelayServerBackend backend;
 
         private Session session;
+        private final String serverID;
 
-        private CoreRelay(RelayServerBackend backend)
-        {
+        private CoreRelay(RelayServerBackend backend, String serverID) {
             this.backend = backend;
+            this.serverID = serverID;
         }
 
         @Override
         public void onWebSocketOpen(Session session) {
             this.session = session;
-            //TODO: add server idetifier here as payload
-            session.sendText("server", Callback.NOOP);
+            // TODO: add server idetifier here as payload
+            session.sendText(serverID, Callback.NOOP);
         }
 
-        //nothing fancy here just take the string and use it to tell our class what the heck our ID is. No wrappers.
+        // nothing fancy here just take the string and use it to tell our class what the
+        // heck our ID is. No wrappers.
         @Override
         public void onWebSocketText(String message) {
-            this.backend.ourRelayConnectionID = message;
+            this.backend.privateRelayKey = message;
         }
 
         @Override
-        public void onWebSocketClose(int statusCode, String reason)
-        {
-            try{
+        public void onWebSocketClose(int statusCode, String reason) {
+            try {
                 backend.stop();
-            }
-            catch(Exception e)
-            {
+            } catch (Exception e) {
                 LOGGER.error("Our relay just disconnected. That should not have happened", e);
             }
         }
@@ -137,14 +135,12 @@ public class RelayServerBackend implements ServerBackend {
         @Override
         public void onWebSocketError(Throwable cause) {
             // The WebSocket endpoint failed.
-    
+
             // You may log the error.
             LOGGER.error("Failed to connect to the relay!", cause);
-            try{
+            try {
                 backend.stop();
-            }
-            catch(Exception e)
-            {
+            } catch (Exception e) {
                 LOGGER.error("Tried and failed to stop the server", e);
             }
         }

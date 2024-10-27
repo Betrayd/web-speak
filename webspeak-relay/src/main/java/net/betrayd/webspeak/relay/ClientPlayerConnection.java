@@ -2,6 +2,7 @@ package net.betrayd.webspeak.relay;
 
 import org.eclipse.jetty.websocket.api.Callback;
 import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.StatusCode;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketOpen;
@@ -42,7 +43,7 @@ public class ClientPlayerConnection {
         ServerConnection server = WebSpeakRelay.servers.get(serverID);
         if(server == null)
         {
-            session.close(1014, "The server being connected to does not exist", Callback.NOOP);
+            session.close(StatusCode.INVALID_UPSTREAM_RESPONSE, "The server being connected to does not exist", Callback.NOOP);
         }
         LinkedConnection link = server.connections.get(NetUtils.splitQueryString(session.getUpgradeRequest().getQueryString()).get("id"));
         
