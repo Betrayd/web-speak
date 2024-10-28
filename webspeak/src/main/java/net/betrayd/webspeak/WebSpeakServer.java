@@ -54,8 +54,7 @@ public class WebSpeakServer implements Executor {
         public T create(WebSpeakServer server, String playerId, String sessionId);
     }
 
-    //private final ServerBackend serverBackend = new JettyServerBackend(this);
-    private final ServerBackend serverBackend = new RelayServerBackend(this, "ws://localhost:8080", "theoneandonlyserver");
+    private ServerBackend serverBackend;
 
     private final Queue<Runnable> tasks = new ConcurrentLinkedQueue<>();
 
@@ -155,10 +154,18 @@ public class WebSpeakServer implements Executor {
      * @param port The port to start on.
      * @throws Exception If something bad happens while starting the server.
      */
-    public synchronized void start(int port) throws Exception {
+    public synchronized void startJetty(int port) throws Exception {
+        serverBackend = new JettyServerBackend(this);
         serverBackend.start(port);
     }
-
+    
+    public synchronized void startRelay(String relayServerURL) throws Exception {
+        //create a relayServer backed with our ID set to a random UUID because the chance we make a duplicate one is about 0
+        String serverID = UUID.randomUUID().toString();
+        LOGGER.info("Server ID is: " + serverID);
+        serverBackend = new RelayServerBackend(this, "ws://localhost:8080", serverID);
+        serverBackend.start(-1);
+    }
 
     /**
      * Synchronously shutdown the server instance. Could block for some time.

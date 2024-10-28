@@ -181,7 +181,8 @@ public class WebSpeakTestApp extends Application {
         }
         connectionIps.clear();
         try {
-            WebSpeakTestServer webServer = new WebSpeakTestServer(port);
+            //TODO: make this also not hardcoded
+            WebSpeakTestServer webServer = new WebSpeakTestServer(port, true);
             server.set(webServer);
             
             // Add all players to server

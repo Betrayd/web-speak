@@ -1,5 +1,8 @@
 package net.betrayd.webspeak.impl.relay;
 
+import java.nio.ByteBuffer;
+
+import org.eclipse.jetty.util.NanoTime;
 import org.eclipse.jetty.websocket.api.Callback;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.StatusCode;
@@ -28,6 +31,31 @@ public class PlayerRelayConnection implements PlayerConnection, Session.Listener
     public PlayerRelayConnection(WebSpeakServer server, WebSpeakPlayer player) {
         this.server = server;
         this.player = player;
+    }
+
+    /*
+     * while we wait for the player make sure we keep alive
+     */
+    int ticks = 0;
+    public void tick()
+    {
+        if(!isConnected() && ticks > 20)
+        {
+            ticks = 0;
+            sendKeepAlive();
+        }
+        ticks++;
+    }
+
+    private void sendKeepAlive()
+    {
+        if(session == null)
+        {
+            return;
+        }
+        //LOGGER.info("Ah^ ah^ ah- ah-...");
+        ByteBuffer buffer = ByteBuffer.allocate(8).putLong(NanoTime.now()).flip();
+        session.sendPing(buffer, Callback.NOOP);
     }
 
     // TODO: determine if we need a wrapper class for sessions to get all data we

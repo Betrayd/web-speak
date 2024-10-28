@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.betrayd.webspeak.impl.net.packets.SetAudioModifierS2CPacket;
+import net.betrayd.webspeak.impl.relay.PlayerRelayConnection;
 import net.betrayd.webspeak.impl.util.URIComponent;
 import net.betrayd.webspeak.util.AudioModifier;
 import net.betrayd.webspeak.util.WSPlayerListEntry;
@@ -506,6 +507,10 @@ public abstract class WebSpeakPlayer {
      * Perform any additional ticking this webspeak player desires.
      */
     public void tick() {
+        if(this.connection instanceof PlayerRelayConnection playerCon)
+        {
+            playerCon.tick();
+        }
         tickAudioModifiers();
         if (isPlayerListDirty) {
             server.onUpdatePlayerListEntry(playerId, playerListEntry);
@@ -526,7 +531,7 @@ public abstract class WebSpeakPlayer {
     // }
     
     public final boolean isConnected() {
-        return connection != null;
+        return connection != null && connection.isConnected();
     }
     
     public PlayerConnection getConnection() {
