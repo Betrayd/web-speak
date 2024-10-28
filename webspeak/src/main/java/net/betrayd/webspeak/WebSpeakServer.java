@@ -163,7 +163,7 @@ public class WebSpeakServer implements Executor {
         //create a relayServer backed with our ID set to a random UUID because the chance we make a duplicate one is about 0
         String serverID = UUID.randomUUID().toString();
         LOGGER.info("Server ID is: " + serverID);
-        serverBackend = new RelayServerBackend(this, "ws://localhost:8080", serverID);
+        serverBackend = new RelayServerBackend(this, relayServerURL, serverID);
         serverBackend.start(-1);
     }
 
