@@ -149,7 +149,7 @@ public class WebSpeakServer implements Executor {
     }
 
     /**
-     * Start the server.
+     * Start the server as a websocket endpoint.
      * 
      * @param port The port to start on.
      * @throws Exception If something bad happens while starting the server.
@@ -159,12 +159,55 @@ public class WebSpeakServer implements Executor {
         serverBackend.start(port);
     }
     
+    /**
+     * A function to start the server using websocket client connections to bypass SSL and port forwarding limitations
+     * @param relayServerURL the URL of the relay server
+     * @throws Exception
+     */
     public synchronized void startRelay(String relayServerURL) throws Exception {
         //create a relayServer backed with our ID set to a random UUID because the chance we make a duplicate one is about 0
         String serverID = UUID.randomUUID().toString();
         LOGGER.info("Server ID is: " + serverID);
         serverBackend = new RelayServerBackend(this, relayServerURL, serverID);
         serverBackend.start(-1);
+    }
+
+    /**
+     * Starts the server in relay mode, with a given ID. 
+     * <p><b>This method is not recommended as if another server uses the same id the relay may refuse the connection</b></p>
+     * @param relayServerURL the URL of the relay server
+     * @param serverID our ID on the relay server
+     * @throws Exception
+     */
+    public synchronized void startRelay(String relayServerURL, String serverID) throws Exception {
+        serverBackend = new RelayServerBackend(this, relayServerURL, serverID);
+        serverBackend.start(-1);
+    }
+
+    /**
+     * Get the Address the relay server is using
+     * @return the address the relay server is running on, or NULL if we are not in relay mode
+     */
+    public String getRelayAddress(){
+        if(serverBackend instanceof RelayServerBackend relayB)
+        {
+            return relayB.getRelayAddress();
+        }
+        //this should throw but I don't know what to throw so this is fine I guess
+        return null;
+    }
+
+    /**
+     * Get the ID assosiated with the server on the relay
+     * @return the ID used on the relay, or NULL if we are not in relay mode
+     */
+    public String getRelayServerID() {
+        if(serverBackend instanceof RelayServerBackend relayB)
+        {
+            return relayB.getServerID();
+        }
+        //this should throw but I don't know what to throw so this is fine I guess
+        return null;
     }
 
     /**

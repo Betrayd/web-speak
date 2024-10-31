@@ -35,6 +35,16 @@ public class RelayServerBackend implements ServerBackend {
         this.serverID = serverID;
     }
 
+    public String getRelayAddress()
+    {
+        return this.relayAddress;
+    }
+
+    public String getServerID()
+    {
+        return this.serverID;
+    }
+
     int tickTime = 20;
 
     public void tickBaseConnection()
