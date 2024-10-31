@@ -12,8 +12,8 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.impl.net.packets.SetAudioModifierS2CPacket;
+import net.betrayd.webspeak.impl.relay.PlayerRelayConnection;
 import net.betrayd.webspeak.impl.util.URIComponent;
 import net.betrayd.webspeak.util.AudioModifier;
 import net.betrayd.webspeak.util.WSPlayerListEntry;
@@ -27,7 +27,7 @@ public abstract class WebSpeakPlayer {
     
     protected final Logger LOGGER;
 
-    WsContext wsContext;
+    PlayerConnection connection;
     
     public WebSpeakPlayer(WebSpeakServer server, String playerId, String sessionId) {
         LOGGER = LoggerFactory.getLogger("WebSpeak Player (" + playerId + ")");
@@ -365,7 +365,7 @@ public abstract class WebSpeakPlayer {
     }
 
     private synchronized void sendAudioModifierUpdate(WebSpeakPlayer target, AudioModifier modifier) {
-        new SetAudioModifierS2CPacket(target.playerId, modifier).send(wsContext);
+        new SetAudioModifierS2CPacket(target.playerId, modifier).send(connection);
     }
     
     /**
@@ -450,7 +450,7 @@ public abstract class WebSpeakPlayer {
      * @param other The other player.
      */
     protected void onJoinedScope(WebSpeakPlayer other) {
-        if (wsContext != null) {
+        if (isConnected()) {
             sendAudioModifierUpdate(other, getAudioModifier(other));
         }
     }
@@ -507,6 +507,10 @@ public abstract class WebSpeakPlayer {
      * Perform any additional ticking this webspeak player desires.
      */
     public void tick() {
+        if(this.connection instanceof PlayerRelayConnection playerCon)
+        {
+            playerCon.tick();
+        }
         tickAudioModifiers();
         if (isPlayerListDirty) {
             server.onUpdatePlayerListEntry(playerId, playerListEntry);
@@ -522,14 +526,26 @@ public abstract class WebSpeakPlayer {
         return playerId;
     }
 
-    public final WsContext getWsContext() {
-        return wsContext;
-    }
+    // public final WsContext getWsContext() {
+    //     return wsContext;
+    // }
     
     public final boolean isConnected() {
-        return wsContext != null;
+        return connection != null && connection.isConnected();
     }
     
+    public PlayerConnection getConnection() {
+        return connection;
+    }
+
+    /**
+     * Set the player's connection. Should not be used except internally.
+     * @param connection New connection.
+     */
+    public void setConnection(PlayerConnection connection) {
+        this.connection = connection;
+    }
+
     /**
      * Called after the player is removed from the server.
      */

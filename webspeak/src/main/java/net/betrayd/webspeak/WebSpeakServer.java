@@ -18,30 +18,26 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-
-import io.javalin.Javalin;
-import io.javalin.config.JavalinConfig;
-import io.javalin.websocket.WsCloseStatus;
-import io.javalin.websocket.WsConfig;
-import io.javalin.websocket.WsContext;
 import net.betrayd.webspeak.WebSpeakFlags.WebSpeakFlag;
 import net.betrayd.webspeak.impl.PlayerCoordinateManager;
 import net.betrayd.webspeak.impl.RTCManager;
 import net.betrayd.webspeak.impl.RelationGraph;
+import net.betrayd.webspeak.impl.ServerBackend;
 import net.betrayd.webspeak.impl.WebSpeakFlagHolder;
+import net.betrayd.webspeak.impl.jetty.JettyServerBackend;
 import net.betrayd.webspeak.impl.net.WebSpeakNet;
-import net.betrayd.webspeak.impl.net.WebSpeakNet.UnknownPacketException;
 import net.betrayd.webspeak.impl.net.packets.LocalPlayerInfoS2CPacket;
 import net.betrayd.webspeak.impl.net.packets.PlayerListPackets;
 import net.betrayd.webspeak.impl.net.packets.SetPannerOptionsC2SPacket;
+import net.betrayd.webspeak.impl.relay.RelayServerBackend;
 import net.betrayd.webspeak.impl.util.WebSpeakUtils;
 import net.betrayd.webspeak.util.PannerOptions;
 import net.betrayd.webspeak.util.WSPlayerListEntry;
 import net.betrayd.webspeak.util.WebSpeakEvents;
-import net.betrayd.webspeak.util.WebSpeakMath;
 import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
+import net.betrayd.webspeak.util.WebSpeakMath;
+
+//TODO: remove everthing I changed to this class in the last commit and make it good. THis class is the worst offender of the slapped together code I threw in
 
 /**
  * The primary WebSpeak server
@@ -51,13 +47,14 @@ import net.betrayd.webspeak.util.WebSpeakEvents.WebSpeakEvent;
 public class WebSpeakServer implements Executor {
     // This is a bit of a monoclass lol, but I think it's okay.
 
+    @SuppressWarnings("exports")
     public static final Logger LOGGER = LoggerFactory.getLogger(WebSpeakServer.class);
 
     public static interface WebSpeakPlayerFactory<T extends WebSpeakPlayer> {
         public T create(WebSpeakServer server, String playerId, String sessionId);
     }
 
-    private Javalin app;
+    private ServerBackend serverBackend;
 
     private final Queue<Runnable> tasks = new ConcurrentLinkedQueue<>();
 
@@ -82,20 +79,10 @@ public class WebSpeakServer implements Executor {
      */
     private final RelationGraph<WebSpeakPlayer> scopes = new RelationGraph<>();
 
-    /**
-     * All the websocket connections, orginized by their "session ID"
-     * The session ID is a unique value stored with each player, defined in
-     * WebSpeakPlayerData
-     */
-    private final BiMap<WebSpeakPlayer, WsContext> wsSessions = HashBiMap.create();
-
-    protected final WebSpeakEvent<Consumer<JavalinConfig>> CONFIGURE_JAVALIN = WebSpeakEvents.createSimple();
-    protected final WebSpeakEvent<Consumer<Javalin>> CONFIGURE_ENDPOINTS = WebSpeakEvents.createSimple();
-
-    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_CONNECTED = WebSpeakEvents.createSimple();
-    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_DISCONNECTED = WebSpeakEvents.createSimple();
-    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_ADDED = WebSpeakEvents.createSimple();
-    protected final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_REMOVED = WebSpeakEvents.createSimple();
+    final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_CONNECTED = WebSpeakEvents.createSimple();
+    final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_SESSION_DISCONNECTED = WebSpeakEvents.createSimple();
+    final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_ADDED = WebSpeakEvents.createSimple();
+    final WebSpeakEvent<Consumer<WebSpeakPlayer>> ON_PLAYER_REMOVED = WebSpeakEvents.createSimple();
 
     protected final WebSpeakEvent<BiConsumer<WebSpeakPlayer, WebSpeakPlayer>> ON_JOIN_SCOPE = WebSpeakEvents.createBiConsumer();
     protected final WebSpeakEvent<BiConsumer<WebSpeakPlayer, WebSpeakPlayer>> ON_LEAVE_SCOPE = WebSpeakEvents.createBiConsumer();
@@ -131,7 +118,7 @@ public class WebSpeakServer implements Executor {
      */
     public void updatePannerOptions() {
         maxAudioRange = (float) WebSpeakMath.getMaxRange(pannerOptions);
-        WebSpeakNet.sendPacketToPlayers(getPlayers(), SetPannerOptionsC2SPacket.PACKET, pannerOptions);
+        WebSpeakNet.sendPacketTo(getPlayers(), SetPannerOptionsC2SPacket.PACKET, pannerOptions);
     }
 
     /**
@@ -145,16 +132,16 @@ public class WebSpeakServer implements Executor {
     /**
      * Get the base Javalin app
      */
-    public Javalin getApp() {
-        return app;
-    }
+    // public Javalin getApp() {
+    //     return app;
+    // }
 
     public boolean isRunning() {
-        return app != null;
+        return serverBackend.isRunning();
     }
 
     public int getPort() {
-        return app != null ? app.port() : -1;
+        return serverBackend.getPort();
     }
 
     public WebSpeakServer() {
@@ -165,58 +152,45 @@ public class WebSpeakServer implements Executor {
      * Start the server.
      * 
      * @param port The port to start on.
+     * @throws Exception If something bad happens while starting the server.
      */
-    public synchronized void start(int port) {
-        if (app != null) {
-            throw new IllegalStateException("Server is already started.");
-        }
-        var app = Javalin.create(config -> {
-            config.showJavalinBanner = false;
-            CONFIGURE_JAVALIN.invoker().accept(config);
-        })
-                .get("/", ctx -> ctx.result("Hello World: " + ctx))
-                .ws("/connect", this::setupWebsocket);
-
-        CONFIGURE_ENDPOINTS.invoker().accept(app);
-        app.start(port);
-        // Assign app at the end for thread safety; if something tries to access the app
-        // before it's done initializing, it will return null.
-        this.app = app;
+    public synchronized void startJetty(int port) throws Exception {
+        serverBackend = new JettyServerBackend(this);
+        serverBackend.start(port);
+    }
+    
+    public synchronized void startRelay(String relayServerURL) throws Exception {
+        //create a relayServer backed with our ID set to a random UUID because the chance we make a duplicate one is about 0
+        String serverID = UUID.randomUUID().toString();
+        LOGGER.info("Server ID is: " + serverID);
+        serverBackend = new RelayServerBackend(this, relayServerURL, serverID);
+        serverBackend.start(-1);
     }
 
     /**
      * Synchronously shutdown the server instance. Could block for some time.
      */
-    public synchronized void stop() {
-        if (app == null)
-            return;
-        for (var player : List.copyOf(players.values())) {
-            removePlayer(player);
+    public void stop() {
+        synchronized(this) {
+            if (!serverBackend.isRunning())
+                return;
+            
+            for (var playerID : List.copyOf(players.keySet())) {
+                removePlayer(playerID);
+            }
         }
-        app.stop();
-    }
-
-    /**
-     * Add a callback to add additional config options to Javalin.
-     * @param callback Config callback.
-     */
-    public void configureJavalin(Consumer<JavalinConfig> callback) {
-        CONFIGURE_JAVALIN.addListener(callback);
-    }
-
-    /**
-     * Add a callback to add additional endpoints to the web server.
-     * @param callback Callback to add endpoints.
-     */
-    public void configureEndpoints(Consumer<Javalin> callback) {
-        CONFIGURE_ENDPOINTS.addListener(callback);
+        try {
+            serverBackend.stop();
+        } catch (Exception e) {
+            LOGGER.error("Error stopping WebSpeak server.", e);
+        }
     }
 
     void onUpdatePlayerListEntry(String playerID, WSPlayerListEntry entry) {
         Map<String, WSPlayerListEntry> map = Map.of(playerID, entry);
         for (var player : this.players.values()) {
             if (player.isConnected()) {
-                PlayerListPackets.SET_PLAYER_ENTRIES_S2C.send(player.getWsContext(), map);
+                player.getConnection().sendPacket(PlayerListPackets.SET_PLAYER_ENTRIES_S2C, map);
             }
         }
     }
@@ -225,7 +199,13 @@ public class WebSpeakServer implements Executor {
      * ticks the server: updates connections on distance etc.
      */
     public synchronized void tick() {
-        if (app == null)
+
+        if(serverBackend instanceof RelayServerBackend b)
+        {
+            b.tickBaseConnection();
+        }
+
+        if (!isRunning())
             return;
         Runnable task;
         while ((task = tasks.poll()) != null) {
@@ -323,82 +303,34 @@ public class WebSpeakServer implements Executor {
         return scopes.getRelations(player);
     }
 
-    private void setupWebsocket(WsConfig ws) {
-        ws.onConnect(ctx -> {
-            synchronized(this) {
-                System.out.print(Thread.currentThread().getName());
-                String sessionId = ctx.queryParam("id");
-                WebSpeakPlayer player = playerFromSessionId(sessionId);
-                if (player == null) {
-                    ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "No session found with ID " + sessionId);
-                    return;
-                }
-    
-                // Will be non-null if something was already there.
-                if (wsSessions.putIfAbsent(player, ctx) != null) {
-                    ctx.closeSession(WsCloseStatus.POLICY_VIOLATION, "Session " + sessionId + " already has a client connected.");
-                    return;
-                }
-                
-                player.wsContext = ctx;
-                wsSessions.put(player, ctx);
-                new LocalPlayerInfoS2CPacket(player.getPlayerId()).send(ctx);
+    /**
+     * Called when a websocket connection is established. Should not be used except internally.
+     * @param connection New connection.
+     */
+    public void onWebsocketConnected(PlayerConnection connection) {
+        new LocalPlayerInfoS2CPacket(connection.getPlayer().getPlayerId()).send(connection);
 
-                playerCoordinateManager.onPlayerConnected(player);
-                sendEntirePlayerList(player);
+        playerCoordinateManager.onPlayerConnected(connection.getPlayer());
+        sendEntirePlayerList(connection);
 
-                ON_SESSION_CONNECTED.invoker().accept(player);
-            }
-
-            WebSpeakNet.sendPacket(ctx, SetPannerOptionsC2SPacket.PACKET, pannerOptions);
-        });
-
-        ws.onClose(ctx -> {
-            WebSpeakPlayer player;
-            synchronized(this) {
-                player = wsSessions.inverse().remove(ctx);
-                if (player != null) {
-                    kickScopes(player);
-                    player.wsContext = null;
-                    ON_SESSION_DISCONNECTED.invoker().accept(player);
-                }
-            }
-            if (player != null)
-                LOGGER.info("Player {} disconnected from voice.", player.getPlayerId());
-        });
-
-        ws.onMessage(ctx -> {
-            WebSpeakPlayer player;
-            synchronized(this) {
-                player = wsSessions.inverse().get(ctx);
-            }
-            if (player == null) {
-                LOGGER.warn("Recieved WS message from unknown player: " + ctx.message());
-                return;
-            }
-            
-            try {
-                WebSpeakNet.applyPacket(player, ctx.message());
-            } catch (UnknownPacketException e) {
-                ctx.closeSession(WsCloseStatus.UNSUPPORTED_DATA, e.getMessage());
-                LOGGER.warn("{} sent unknown packet '{}'", player.getPlayerId(), e.getPacketId());
-            } catch (Exception e) {
-                ctx.closeSession(WsCloseStatus.PROTOCOL_ERROR, e.getMessage());
-                LOGGER.warn("{} was disconnected because packet failed to apply.", player.getPlayerId());
-                LOGGER.error("Error applying packet: ", e);
-            }
-        });
+        ON_SESSION_CONNECTED.invoker().accept(connection.getPlayer());
     }
 
-    public synchronized void sendEntirePlayerList(WebSpeakPlayer target) {
-        if (!target.isConnected()) {
-            return;
-        }
+    /**
+     * Called when a websocket has disconnected. Should not be used except internally.
+     * @param connection The connection.
+     */
+    public void onWebsocketDisconnected(PlayerConnection connection) {
+        kickScopes(connection.getPlayer());
+        LOGGER.info("Player {} disconnected from voice.", connection.getPlayer().getPlayerId());
+    }
+
+    public synchronized void sendEntirePlayerList(PlayerConnection target) {
         Map<String, WSPlayerListEntry> entries = new HashMap<>();
         for (var player : players.values()) {
             entries.put(player.getPlayerId(), player.getPlayerListEntry());
         }
-        PlayerListPackets.SET_PLAYER_ENTRIES_S2C.send(target.getWsContext(), entries);
+        target.sendPacket(PlayerListPackets.SET_PLAYER_ENTRIES_S2C, entries);
     }
 
     /**
@@ -407,11 +339,8 @@ public class WebSpeakServer implements Executor {
      */
     private synchronized void removeFromPlayerList(String playerID) {
         List<String> payload = Collections.singletonList(playerID);
-        for (var player : players.values()) {
-            if (player.isConnected()) {
-                PlayerListPackets.REMOVE_PLAYER_ENTRIES_S2C.send(player.getWsContext(), payload);
-            }
-        }
+        WebSpeakNet.sendPacketTo(players.values(), PlayerListPackets.REMOVE_PLAYER_ENTRIES_S2C, payload);
+
     }
 
     /**
@@ -566,7 +495,6 @@ public class WebSpeakServer implements Executor {
             if (player == null) {
                 player = factory.create(this, playerID, UUID.randomUUID().toString());
                 players.put(playerID, player);
-                onAddPlayer(player);
                 added = true;
             };
         }
@@ -579,6 +507,7 @@ public class WebSpeakServer implements Executor {
     }
 
     private void onAddPlayer(WebSpeakPlayer player) {
+        serverBackend.addPlayer(player);
         ON_PLAYER_ADDED.invoker().accept(player);
     }
 
@@ -613,25 +542,35 @@ public class WebSpeakServer implements Executor {
 
     protected void onRemovePlayer(WebSpeakPlayer player) {
         try {
-            WsContext ws = wsSessions.remove(player);
             player.setChannel(null); // will automatically kick scopes
-            if (ws != null) {
-                ws.closeSession(WsCloseStatus.NORMAL_CLOSURE, "Player removed from server");
-                ON_SESSION_DISCONNECTED.invoker().accept(player);
+            PlayerConnection connection = player.getConnection();
+            if (connection != null) {
+                connection.disconnect("Player removed from server");
             }
-            // rtcManager.kickRTC(player);
-            player.wsContext = null;
             player.onRemoved();
             removeFromPlayerList(player.getPlayerId());
+
+            serverBackend.removePlayer(player);
             ON_PLAYER_REMOVED.invoker().accept(player);
         } catch (Exception e) {
-            LOGGER.error("Error removing player " + player.getPlayerId(), e);
+            LOGGER.error("Error removing player from server: " + player.getPlayerId(), e);
         }
     }
-    
-    private WebSpeakPlayer playerFromSessionId(String sessionId) {
-        for (WebSpeakPlayer player : players.values()) {
-            if (player.getSessionId().equals(sessionId))
+
+    /**
+     * Find a player by its session ID.
+     * 
+     * @param sessionID Session ID to look for.
+     * @return First player with that session ID. <code>null</code> if no player was
+     *         found.
+     * @implNote This method works by iterating through all players until it finds
+     *           one with the session ID. It probably shouldn't be used in a loop.
+     */
+    public WebSpeakPlayer getPlayerBySessionID(String sessionID) {
+        if (sessionID == null)
+            return null;
+        for (var player : players.values()) {
+            if (player.getSessionId().equals(sessionID))
                 return player;
         }
         return null;
@@ -639,6 +578,7 @@ public class WebSpeakServer implements Executor {
 
     /**
      * Called when a web client connects.
+     * 
      * @param listener Event listener
      */
     public final void onSessionConnected(Consumer<WebSpeakPlayer> listener) {

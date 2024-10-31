@@ -17,6 +17,7 @@ public class WebSpeakTestServer implements Executor {
 
     private final Thread thread;
     private final int port;
+    private final boolean relay;
     private WebSpeakServer webSpeakServer;
 
     private boolean shutdownQueued;
@@ -26,8 +27,9 @@ public class WebSpeakTestServer implements Executor {
 
     private final Queue<PannerOptions.Partial> pannerUpdates = new ConcurrentLinkedDeque<>();
 
-    public WebSpeakTestServer(int port) {
+    public WebSpeakTestServer(int port, boolean relay) {
         this.port = port;
+        this.relay = relay;
         thread = new Thread(this::runThread, "WebSpeak Server");
         thread.setDaemon(false);
         thread.start();
@@ -79,7 +81,19 @@ public class WebSpeakTestServer implements Executor {
         webSpeakServer.setFlag(WebSpeakFlags.DEBUG_KEEPALIVE, true);
         webSpeakServer.setFlag(WebSpeakFlags.DEBUG_CHANNEL_SWAPS, true);
         webSpeakServer.getPannerOptions().maxDistance = 5;
-        webSpeakServer.start(port);
+
+        try {
+            if(this.relay) {
+                //TODO: make this not hardcoded
+                webSpeakServer.startRelay("ws://localhost:8080");
+            }
+            else {
+                webSpeakServer.startJetty(port);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to start WebSpeak server.", e);
+        }
+        
         startFuture.complete(webSpeakServer);
         while (!shutdownQueued) {
             Runnable task;

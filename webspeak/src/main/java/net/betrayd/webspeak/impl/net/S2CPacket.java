@@ -2,7 +2,7 @@ package net.betrayd.webspeak.impl.net;
 
 import com.google.gson.Gson;
 
-import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.PlayerConnection;
 
 public abstract class S2CPacket<T> {
     private final String id;
@@ -22,8 +22,9 @@ public abstract class S2CPacket<T> {
      * @param context Websocket context to send to.
      * @param val Packet value.
      */
-    public void send(WsContext context, T val) {
-        context.send(WebSpeakNet.writePacket(this, val));
+    @Deprecated
+    public void send(PlayerConnection context, T val) {
+        context.sendText(WebSpeakNet.writePacket(this, val));
     }
 
     public static class JsonS2CPacket<T> extends S2CPacket<T> {

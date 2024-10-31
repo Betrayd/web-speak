@@ -1,6 +1,6 @@
 package net.betrayd.webspeak.impl.net;
 
-import io.javalin.websocket.WsContext;
+import net.betrayd.webspeak.PlayerConnection;
 import net.betrayd.webspeak.WebSpeakPlayer;
 
 /**
@@ -28,15 +28,20 @@ public class WebSpeakNet {
         return packet.getId() + ";" + packet.write(val);
     }
 
-    public static <T> void sendPacket(WsContext ws, S2CPacket<T> packet, T val) {
-        ws.send(writePacket(packet, val));
+    public static <T> void sendPacket(Iterable<? extends PlayerConnection> players, S2CPacket<T> packet, T val) {
+        String text = writePacket(packet, val);
+        for (var connection : players) {
+            connection.sendText(text);
+        }
     }
 
-    public static <T> void sendPacketToPlayers(Iterable<? extends WebSpeakPlayer> players, S2CPacket<T> packet, T val) {
-        String payload = writePacket(packet, val);
+    public static <T> void sendPacketTo(Iterable<? extends WebSpeakPlayer> players, S2CPacket<T> packet, T val) {
+        String text = writePacket(packet, val);
         for (var player : players) {
-            if (player.isConnected())
-                player.getWsContext().send(payload);
+            PlayerConnection connection = player.getConnection();
+            if (connection != null) {
+                connection.sendText(text);
+            }
         }
     }
 
