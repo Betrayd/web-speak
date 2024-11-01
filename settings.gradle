@@ -13,6 +13,7 @@ plugins {
 rootProject.name = 'web-speak'
 include('webspeak')
 
-if (!System.env.JITPACK)
+if (!System.env.JITPACK) {
     include ':testapp'
     include ':webspeak-relay'
+}
