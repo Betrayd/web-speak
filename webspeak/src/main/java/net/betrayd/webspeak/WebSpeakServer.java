@@ -351,7 +351,8 @@ public class WebSpeakServer implements Executor {
      * @param connection New connection.
      */
     public void onWebsocketConnected(PlayerConnection connection) {
-        new LocalPlayerInfoS2CPacket(connection.getPlayer().getPlayerId()).send(connection);
+        connection.sendPacket(LocalPlayerInfoS2CPacket.PACKET, new LocalPlayerInfoS2CPacket(connection.getPlayer().getPlayerId()));
+        connection.sendPacket(SetPannerOptionsC2SPacket.PACKET, pannerOptions);
 
         playerCoordinateManager.onPlayerConnected(connection.getPlayer());
         sendEntirePlayerList(connection);
