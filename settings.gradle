@@ -15,5 +15,4 @@ include('webspeak')
 
 if (!System.env.JITPACK) {
     include ':testapp'
-    include ':webspeak-relay'
 }
