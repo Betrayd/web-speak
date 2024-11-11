@@ -64,7 +64,7 @@ function AppUI() {
     }
 
     function connect(serverAddress: string, sessionID: string) {
-        // Ensure valid
+        // Ensure values entered
         if (!serverAddress || !sessionID) {
             let detail = serverAddress ? "Please enter a session ID." : "Please enter a server address.";
             setModal({title: "Unable to connect", type: ModalType.ERROR, detail});
@@ -80,8 +80,23 @@ function AppUI() {
         }
 
         const app = new AppInstance(serverAddress, sessionID);
+        
+
+        try {
+            app.connect();
+        } catch (e) {
+            console.warn("Error initializing websocket", e);
+            let errorText = "";
+            if (e instanceof Error) {
+                errorText = e.message;
+            } else {
+                errorText = "An unknown error occured. See console for details."
+            }
+            setModal({ title: "Error initializing websocket", type: ModalType.ERROR, detail: errorText })
+            return;
+        }
         setApp(app);
-        app.connect();
+        
     }
 
     async function requestMicAccess() {
