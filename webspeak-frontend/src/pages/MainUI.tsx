@@ -1,32 +1,28 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { Card, Col, Container, Row } from "react-bootstrap";
 import AppInstance from "../lib/AppInstance";
 import ConnectionInfo from "../components/ConnectionInfo";
 import MicInfo from "../components/MicInfo";
-import { DisconnectedModal } from "../components/DisconnectedModal";
 import PlayerList from "./PlayerList";
+import { ModalProvider } from "../App";
+import { ModalType } from "../util/ModalContents";
 
 // Somewhat bullshit, but we know this won't be used until it's been set
 export const AppInstanceContext = createContext<AppInstance>(undefined as any);
 
-interface DisconnectedState {
-  message: string,
-  errored: boolean
-}
-
 export default function MainUI(props: { appInstance: AppInstance, onShutdown?: () => void }) {
   const app = props.appInstance;
-
-  // useEffect(() => {
-  //     if (app.connectionStatus == WebSocket.CLOSED) {
-  //         app.connect();
-  //     }
-  // }, [])
-
-  const [disconnected, setDisconnected] = useState<DisconnectedState | undefined>(() => undefined);
+  const [_modal, setModal] = useContext(ModalProvider);
 
   function onDisconnected(event: { message: string, errored: boolean }) {
-    setDisconnected(event);
+    setModal({
+      title: "Disconnected from server",
+      type: event.errored ? ModalType.ERROR : ModalType.STANDARD,
+      detail: event.message
+    })
+    if (props.onShutdown) {
+      props.onShutdown();
+    }
   }
 
   useEffect(() => {
@@ -36,12 +32,6 @@ export default function MainUI(props: { appInstance: AppInstance, onShutdown?: (
     }
   }, [props.appInstance])
 
-  function onCloseDisconnectModal() {
-    setDisconnected(undefined);
-    if (props.onShutdown) {
-      props.onShutdown();
-    }
-  }
   return (
     <AppInstanceContext.Provider value={props.appInstance}>
       <Container>
@@ -75,10 +65,6 @@ export default function MainUI(props: { appInstance: AppInstance, onShutdown?: (
           </Col>
         </Row>
       </Container>
-      {disconnected ? <DisconnectedModal show
-        message={disconnected.message}
-        errored={disconnected.errored}
-        onClose={onCloseDisconnectModal} /> : undefined}
     </AppInstanceContext.Provider>
   )
 }

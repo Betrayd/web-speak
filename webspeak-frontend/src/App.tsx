@@ -1,17 +1,60 @@
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import './App.css';
 import AppInstance from "./lib/AppInstance";
 import ConnectionPrompt from "./pages/ConnectionPrompt";
 import MainUI from "./pages/MainUI";
 import webSpeakAudio from "./lib/webSpeakAudio";
 import { Button, Container } from "react-bootstrap";
+import ModalContents, { ModalType } from "./util/ModalContents";
+import SimpleModal from "./components/SimpleModal";
 
-export default function App(_props: any) {
-    // Note: mic permissions may not actually be granted. 
+type ModalContentsHandle = [Readonly<ModalContents> | null, (val: ModalContents | null) => any];
+
+/**
+ * Allows various parts of the code to add modals to the screen.
+ */
+export const ModalProvider = createContext<ModalContentsHandle>([null, () => {}]);
+
+export default function App() {
+    const [modalContents, setModalContents] = useState<ModalContents | null>(null);
+
+    // No reason to draw whole components here when therse are just
+    // helper functions that return one component each.
+    return (
+        <ModalProvider.Provider value={[modalContents, setModalContents]}>
+            <AppUI />
+            {modalContents ? SimpleModalWithContents(
+                {
+                    contents: modalContents,
+                    onClose: () => setModalContents(null)
+                }) : null}
+        </ModalProvider.Provider>
+    )
+}
+
+function SimpleModalWithContents(props: { contents: ModalContents, onClose: () => any }) {
+    return <SimpleModal
+        title={props.contents.title}
+        type={props.contents.type}
+        onClose={props.onClose}
+        show
+    >
+        <p>{props.contents.detail}</p>
+    </SimpleModal>
+}
+
+/**
+ * Main app UI could be a number of different things.
+ * This simply returns the correct page for the given context.
+ * @returns React element.
+ */
+function AppUI() {
+    // Note: mic permissions may not actually be granted.
     // This just signifies that this step has been completed.
     const [hasMic, setHasMic] = useState(() => false);
 
     const [app, setApp] = useState<AppInstance | null>(() => null);
+    const [_modal, setModal] = useContext(ModalProvider);
 
     function closeApp() {
         if (app) {
@@ -21,6 +64,21 @@ export default function App(_props: any) {
     }
 
     function connect(serverAddress: string, sessionID: string) {
+        // Ensure valid
+        if (!serverAddress || !sessionID) {
+            let detail = serverAddress ? "Please enter a session ID." : "Please enter a server address.";
+            setModal({title: "Unable to connect", type: ModalType.ERROR, detail});
+            return;
+        }
+
+        // Ensure URL is valid
+        try {
+            new URL(serverAddress);
+        } catch (e) {
+            setModal({ title: "Unable to connect", type: ModalType.ERROR, detail: "The supplied URL is invalid." });
+            return;
+        }
+
         const app = new AppInstance(serverAddress, sessionID);
         setApp(app);
         app.connect();
@@ -57,117 +115,3 @@ export default function App(_props: any) {
         )
     }
 }
-
-// interface AppState {
-//     hasMic: boolean,
-//     appInstance: AppInstance | undefined
-// }
-
-// export default class App extends React.Component<any, AppState> {
-
-//     constructor(props: any) {
-//         super(props);
-//         this.state = { hasMic: false, appInstance: undefined };
-//     }
-
-//     private appInstance?: AppInstance
-
-//     componentDidMount(): void {
-//         // Try to get address and session ID from URL params.
-//         const urlParams = new URLSearchParams(window.location.search);
-//         let urlServerAddress = urlParams.get("server");
-//         let urlSessionID = urlParams.get("id");
-
-//         if (urlServerAddress != null && urlSessionID != null) {
-//             this.setState({ appInstance: this.launchApp(urlServerAddress, urlSessionID) });
-//         }
-//     }
-
-//     closeApp() {
-//         if (this.appInstance)
-//             this.appInstance.shutdown();
-//         this.appInstance = undefined;
-//         this.setState({ appInstance: undefined });
-//     }
-
-//     drawContent() {
-//         // TODO: make this cleaner
-//         if (!this.state.hasMic) {
-//             return (
-//                 <Container>
-//                     <Button type="button" onClick={e => {
-//                         e.preventDefault();
-//                         this.requestMicAccess();
-//                     }}>Request mic access</Button>
-//                 </Container>
-//             )
-
-//         }
-
-//         if (this.state.appInstance == undefined) {
-//             console.log("drawing connection prompt")
-//             return (
-//                 <Container>
-//                     <ConnectionPrompt onConnect={info => {
-//                         this.setState({ appInstance: this.launchApp(info.serverAddress, info.sessionID) });
-//                     }} />
-//                 </Container>
-
-//             )
-//         } else {
-//             return <MainUI appInstance={this.state.appInstance} closeApp={this.closeApp.bind(this)} />
-//         }
-
-//     }
-
-//     async requestMicAccess() {
-//         try {
-//             await webSpeakAudio.requestMicAccess();
-//             this.setState({ hasMic: true });
-//         } catch (e) {
-//             console.log(e);
-//         }
-//     }
-
-//     launchApp(serverAddress: string, sessionID: string): AppInstance {
-//         if (this.appInstance == undefined) {
-//             this.appInstance = new AppInstance(serverAddress, sessionID);
-//         }
-//         return this.appInstance;
-//     }
-
-//     render(): React.ReactNode {
-
-//         return (
-//             <>
-//                 <Navbar className="navbar-expand-lg navbar-dark bg-dark mb-4">
-//                     <Container>
-//                         <Navbar.Brand>WebSpeak</Navbar.Brand>
-//                         <Navbar.Text>hello world</Navbar.Text>
-//                     </Container>
-//                 </Navbar>
-//                 {this.drawContent()}
-//             </>
-//         )
-//     }
-// }
-
-// function App() {
-//     const [appInstance, setAppInstance] = useState<AppInstance | undefined>();
-
-
-
-//     return (
-//         <>
-//             <Navbar className="navbar-expand-lg navbar-dark bg-dark mb-4">
-//                 <Container>
-//                     <Navbar.Brand>WebSpeak</Navbar.Brand>
-//                     <Navbar.Text>hello world</Navbar.Text>
-//                 </Container>
-//             </Navbar>
-//             {appInstance != undefined ? <MainUI appInstance={appInstance} /> : null}
-//         </>
-//     )
-// }
-
-// export default App;
