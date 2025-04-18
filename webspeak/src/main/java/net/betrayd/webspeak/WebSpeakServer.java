@@ -50,6 +50,8 @@ public class WebSpeakServer implements Executor {
     @SuppressWarnings("exports")
     public static final Logger LOGGER = LoggerFactory.getLogger(WebSpeakServer.class);
 
+    public static final String VERSIO_STRING = "1.0";
+
     public static interface WebSpeakPlayerFactory<T extends WebSpeakPlayer> {
         public T create(WebSpeakServer server, String playerId, String sessionId);
     }
